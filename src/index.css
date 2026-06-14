@@ -1,0 +1,266 @@
+@import "tailwindcss";
+
+@theme {
+  /* Primary Blue Spectrum */
+  --color-duo-green:        #00d4ff;   /* Cyan-electric "primary action" */
+  --color-duo-green-shadow: #0099bb;
+  --color-duo-blue:         #3b82f6;   /* Bright blue */
+  --color-duo-blue-shadow:  #1d4ed8;
+  --color-duo-purple:       #818cf8;   /* Indigo-violet */
+  --color-duo-purple-shadow:#4f46e5;
+  --color-duo-red:          #f472b6;   /* Pink accent (replaces red) */
+  --color-duo-red-shadow:   #be185d;
+  --color-duo-orange:       #38bdf8;   /* Sky blue (replaces orange) */
+  --color-duo-orange-shadow:#0284c7;
+  --color-duo-gold:         #a78bfa;   /* Violet-gold */
+  --color-duo-gold-shadow:  #7c3aed;
+
+  /* App Theme Variables */
+  --color-app-bg:           var(--app-bg);
+  --color-app-fg:           var(--app-fg);
+  --color-app-fg-muted:     var(--app-fg-muted);
+  --color-border-subtle:    var(--border-subtle);
+  --color-panel:            var(--duo-card-bg);
+  --color-brand:            var(--color-duo-blue);
+
+  /* Font Families */
+  --font-hind:              "Hind Siliguri", sans-serif;
+  --font-nunito:            "Nunito", sans-serif;
+}
+
+:root {
+  /* Light: icy blue-white */
+  --app-bg:        #f0f7ff;
+  --app-fg:        #0f2644;
+  --app-fg-muted:  #5b7fa6;
+  --duo-card-bg:   #ffffff;
+  --border-subtle: #c7dff7;
+  --sidebar-width: 280px;
+  --shadow-color:  rgba(59, 130, 246, 0.18);
+}
+
+.dark {
+  /* Dark: deep navy */
+  --app-bg:        #060e1f;
+  --app-fg:        #e2eeff;
+  --app-fg-muted:  #6b8db5;
+  --duo-card-bg:   #0d1b35;
+  --border-subtle: #1a2f52;
+  --shadow-color:  rgba(59, 130, 246, 0.25);
+}
+
+/* Base */
+body {
+  background-color: var(--app-bg);
+  color: var(--app-fg);
+  font-family: 'Hind Siliguri', 'Nunito', sans-serif;
+  overflow-x: hidden;
+  transition: background-color 0.3s ease;
+}
+
+/* ─── 3D Buttons ─────────────────────────────────── */
+.btn-duo {
+  @apply relative inline-flex items-center justify-center font-black rounded-2xl transition-all active:translate-y-[2px] active:scale-95 disabled:opacity-50 disabled:pointer-events-none;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  box-shadow: 0 4px 0 var(--shadow-color);
+}
+.btn-duo:active {
+  box-shadow: 0 0 0 transparent;
+}
+
+/* Primary CTA — cyan-electric */
+.btn-duo-green {
+  @apply bg-[#00d4ff] text-[#060e1f] border-2 border-[#0099bb] hover:brightness-110;
+}
+
+/* Blue */
+.btn-duo-blue {
+  @apply bg-blue-500 text-white border-2 border-blue-700 hover:brightness-110;
+}
+
+/* Pink/Danger */
+.btn-duo-red {
+  @apply bg-pink-400 text-white border-2 border-pink-700 hover:brightness-110;
+}
+
+/* Violet-gold */
+.btn-duo-gold {
+  @apply bg-violet-400 text-white border-2 border-violet-700 hover:brightness-110;
+}
+
+/* Secondary */
+.btn-duo-secondary {
+  background-color: var(--duo-card-bg);
+  border-color: var(--border-subtle);
+  @apply text-blue-400 border-2 hover:bg-blue-50 dark:hover:bg-blue-950/30;
+}
+
+/* ─── Cards ──────────────────────────────────────── */
+.card-duo {
+  background-color: var(--duo-card-bg);
+  border-color: var(--border-subtle);
+  @apply border-2 rounded-3xl transition-all shadow-sm hover:shadow-md active:scale-[0.98];
+}
+
+.card-duo-selected {
+  @apply ring-4 ring-blue-400/40 border-blue-500 bg-blue-500/5;
+}
+
+/* ─── Path / Progress ────────────────────────────── */
+.progress-rail {
+  @apply absolute top-1/2 left-0 right-0 h-4 -translate-y-1/2 rounded-full z-0 overflow-hidden;
+  background: var(--border-subtle);
+}
+
+.progress-fill {
+  @apply h-full transition-all duration-700 ease-out;
+  background: linear-gradient(90deg, #00d4ff, #3b82f6);
+  background-image: linear-gradient(90deg, #00d4ff, #3b82f6),
+    repeating-linear-gradient(45deg, rgba(255,255,255,0.08) 0, rgba(255,255,255,0.08) 1px, transparent 0, transparent 50%);
+  background-size: 100% 100%, 20px 20px;
+  animation: stripe-move 2s linear infinite;
+}
+
+@keyframes stripe-move {
+  from { background-position: 0 0, 0 0; }
+  to   { background-position: 0 0, 40px 0; }
+}
+
+/* ─── Animations ─────────────────────────────────── */
+@keyframes bounce-subtle {
+  0%, 100% { transform: translateY(0); }
+  50%       { transform: translateY(-8px); }
+}
+@keyframes pulse-soft {
+  0%, 100% { opacity: 1; transform: scale(1); }
+  50%       { opacity: 0.8; transform: scale(1.05); }
+}
+@keyframes glow {
+  0%, 100% { box-shadow: 0 0 20px rgba(0, 212, 255, 0.35); }
+  50%       { box-shadow: 0 0 45px rgba(0, 212, 255, 0.7),
+                           0 0 80px rgba(59, 130, 246, 0.25); }
+}
+@keyframes shake {
+  0%, 100%   { transform: translateX(0); }
+  20%, 60%   { transform: translateX(-10px); }
+  40%, 80%   { transform: translateX(10px); }
+}
+@keyframes float-in {
+  from { opacity: 0; transform: translateY(16px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+.animate-bounce-subtle { animation: bounce-subtle 3s ease-in-out infinite; }
+.animate-pulse-soft     { animation: pulse-soft   4s ease-in-out infinite; }
+.animate-glow           { animation: glow         2s ease-in-out infinite; }
+.animate-shake          { animation: shake        0.5s ease-in-out; }
+.animate-float-in       { animation: float-in     0.4s ease-out both; }
+
+/* ─── Scrollbars ─────────────────────────────────── */
+::-webkit-scrollbar             { width: 6px; height: 6px; }
+::-webkit-scrollbar-track       { background: var(--app-bg); }
+::-webkit-scrollbar-thumb       { background: var(--border-subtle); border-radius: 10px; }
+::-webkit-scrollbar-thumb:hover { background: #3b82f6; }
+
+/* ─── Code ───────────────────────────────────────── */
+.code-block {
+  background-color: #0d1b35;
+  border-color: var(--border-subtle);
+  @apply rounded-2xl p-4 font-mono text-sm border-2 shadow-inner;
+  color: #c7dff7;
+}
+
+/* Light mode override for code blocks - keeping them dark but with better contrast */
+:root .code-block {
+  background-color: #0f172a;
+  color: #e2e8f0;
+  border-color: #cbd5e1;
+}
+
+/* ─── Utilities ──────────────────────────────────── */
+.hide-scrollbar::-webkit-scrollbar { display: none; }
+.hide-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
+
+.bg-app-bg   { background-color: var(--app-bg); }
+.text-app-fg { color: var(--app-fg); }
+.border-subtle { border-color: var(--border-subtle); }
+.bg-panel    { background-color: var(--duo-card-bg); }
+.text-app-fg { color: var(--app-fg); }
+.text-app-fg-muted { color: var(--app-fg-muted); }
+
+.horizontal-path {
+  @apply py-20 -my-20;
+}
+
+/* ─── Glassmorphism ──────────────────────────────── */
+.glass {
+  background: rgba(59, 130, 246, 0.06);
+  backdrop-filter: blur(14px);
+  -webkit-backdrop-filter: blur(14px);
+  border: 1px solid rgba(99, 179, 237, 0.15);
+}
+.dark .glass {
+  background: rgba(15, 38, 80, 0.55);
+  border: 1px solid rgba(59, 130, 246, 0.12);
+}
+
+/* ─── Gradient text ──────────────────────────────── */
+.gradient-text {
+  @apply bg-clip-text text-transparent;
+  background-image: linear-gradient(135deg, #00d4ff 0%, #3b82f6 50%, #818cf8 100%);
+}
+
+.gradient-brand {
+  background: linear-gradient(135deg, #00d4ff 0%, #3b82f6 50%, #818cf8 100%);
+}
+
+.gradient-brand-vertical {
+  background: linear-gradient(180deg, #00d4ff 0%, #3b82f6 50%, #818cf8 100%);
+}
+
+.gradient-success {
+  background: linear-gradient(135deg, #22c55e 0%, #10b981 100%);
+}
+
+.gradient-danger {
+  background: linear-gradient(135deg, #ef4444 0%, #ec4899 100%);
+}
+
+.gradient-warning {
+  background: linear-gradient(135deg, #f59e0b 0%, #d97706 100%);
+}
+
+/* ─── Snap ───────────────────────────────────────── */
+.snap-y      { scroll-snap-type: y mandatory; }
+.snap-center { scroll-snap-align: center; }
+
+/* ─── Global blue tint overrides ─────────────────── */
+
+/* Input / Select focus rings */
+input:focus, select:focus, textarea:focus {
+  outline: 2px solid #3b82f6;
+  outline-offset: 2px;
+}
+
+/* Selection highlight */
+::selection {
+  background: rgba(59, 130, 246, 0.35);
+  color: #fff;
+}
+
+/* Light-mode subtle blue card tint */
+:root .card-duo {
+  background: linear-gradient(135deg, #ffffff 0%, #f0f7ff 100%);
+}
+
+/* Dark-mode card glow edge */
+.dark .card-duo {
+  background: linear-gradient(135deg, #0d1b35 0%, #0a1528 100%);
+  box-shadow: 0 0 0 1px rgba(59, 130, 246, 0.08), 0 4px 24px rgba(0,0,0,0.3);
+}
+
+/* ─── Nav / Bottom-bar tint ──────────────────────── */
+nav, footer {
+  border-color: var(--border-subtle);
+}
