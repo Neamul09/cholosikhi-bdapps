@@ -12,6 +12,18 @@ export interface Achievement {
   unlockedAt?: number;
 }
 
+export interface LeaderboardUser {
+  id: string;
+  name: string;
+  avatar: string;
+  total_xp: number;
+  league: string;
+  streak: number;
+  /** UI-friendly alias for `total_xp`; populated at the map boundary. */
+  xp?: number;
+  isMe?: boolean;
+}
+
 export interface UserState {
   name: string;
   avatar: string;
@@ -68,9 +80,9 @@ export interface UserState {
    // Social Actions
   toggleFollow: (targetUserId: string) => Promise<void>;
   isFollowing: (targetUserId: string) => Promise<boolean>;
-  searchUsers: (query: string) => Promise<any[]>;
-  loadLeaderboard: () => Promise<any[]>;
-  loadFriendsLeaderboard: () => Promise<any[]>;
+  searchUsers: (query: string) => Promise<LeaderboardUser[]>;
+  loadLeaderboard: () => Promise<LeaderboardUser[]>;
+  loadFriendsLeaderboard: () => Promise<LeaderboardUser[]>;
 
   // Activity Actions
   interactWithVisualizer: () => void;
@@ -300,7 +312,7 @@ export const useUserStore = create<UserState>()(
         const state = get();
         const { data, error } = await supabase
           .from('profiles')
-          .select('id, name, avatar, weekly_xp, total_xp, league')
+          .select('id, name, avatar, weekly_xp, total_xp, league, streak')
           .eq('league', state.league)
           .order('weekly_xp', { ascending: false, nullsFirst: false })
           .order('total_xp', { ascending: false })
@@ -314,15 +326,17 @@ export const useUserStore = create<UserState>()(
           console.error('Error loading leaderboard:', error);
           return [];
         }
-        
+
         const { data: { session } } = await supabase.auth.getSession();
-        return (data || []).map(p => ({
+        return (data || []).map((p): LeaderboardUser => ({
           id: p.id,
           name: p.name || (p.id.substring(0, 4) === 'bot_' ? 'CholoSikhi Bot' : 'Sikhi Student'),
           avatar: p.avatar || 'code',
+          total_xp: p.total_xp ?? 0,
           xp: (p.weekly_xp != null ? p.weekly_xp : p.total_xp) ?? 0,
-          league: p.league,
-          isMe: p.id === session?.user?.id
+          league: p.league ?? 'wood',
+          streak: p.streak ?? 0,
+          isMe: p.id === session?.user?.id,
         }));
       },
 
@@ -351,12 +365,15 @@ export const useUserStore = create<UserState>()(
           return [];
         }
 
-        return profiles.map(p => ({
+        return profiles.map((p): LeaderboardUser => ({
           id: p.id,
           name: p.name || 'Anonymous',
           avatar: p.avatar || 'user',
-          xp: p.weekly_xp || 0,
-          isMe: p.id === session.user.id
+          total_xp: p.weekly_xp ?? 0,
+          xp: p.weekly_xp ?? 0,
+          league: 'wood',
+          streak: 0,
+          isMe: p.id === session.user.id,
         }));
       },
 
@@ -479,11 +496,12 @@ export const useUserStore = create<UserState>()(
         const { data: { session } } = await supabase.auth.getSession();
         if (!session?.user) return;
 
-        let { data: profile, error: loadError } = await supabase
+        const { data: initialProfile, error: loadError } = await supabase
           .from('profiles')
           .select('*')
           .eq('id', session.user.id)
           .single();
+        let profile = initialProfile;
 
         if (loadError && loadError.code !== 'PGRST116') {
           console.error('Supabase Load Error:', loadError);
@@ -646,15 +664,19 @@ export const useUserStore = create<UserState>()(
         if (!query || query.length < 2) return [];
         const { data, error } = await supabase
           .from('profiles')
-          .select('id, name, avatar, total_xp, league')
+          .select('id, name, avatar, total_xp, league, streak')
           .ilike('name', `%${query}%`)
           .limit(10);
-        
+
         if (error) return [];
-        return data.map(p => ({
-          ...p,
+        return data.map((p): LeaderboardUser => ({
+          id: p.id,
           name: p.name || 'Sikhi Student',
-          xp: p.total_xp
+          avatar: p.avatar || 'user',
+          total_xp: p.total_xp ?? 0,
+          xp: p.total_xp ?? 0,
+          league: p.league ?? 'wood',
+          streak: p.streak ?? 0,
         }));
       },
 

@@ -1,4 +1,5 @@
 import { useEffect } from 'react';
+import type React from 'react';
 import { motion } from 'framer-motion';
 import { useNavigate } from 'react-router-dom';
 import { 
@@ -14,8 +15,8 @@ import { pythonSections } from '@/content/python/metadata';
 import { cppSections } from '@/content/cpp/metadata';
 import { useQuestStore } from '@/store/questStore';
 
-const iconMap: Record<string, any> = {
-  MessageSquare, Calculator, Brain, GitBranch, Binary, Repeat, RotateCcw, List, Zap, Trophy, Star
+const iconMap: Record<string, React.ComponentType<{ size?: number; className?: string; strokeWidth?: number }>> = {
+  MessageSquare, Calculator, Brain, GitBranch, Binary, Repeat, RotateCcw, List, Zap, Trophy, Star,
 };
 
 export default function Home() {

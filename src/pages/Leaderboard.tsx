@@ -1,5 +1,5 @@
 import { motion } from 'framer-motion';
-import { useUserStore } from '@/store/userStore';
+import { useUserStore, type LeaderboardUser } from '@/store/userStore';
 import { useSettingsStore } from '@/store/settingsStore';
 import { Trophy, ArrowUp, ArrowDown, Search, X } from 'lucide-react';
 import IconAvatar from '@/components/common/IconAvatar';
@@ -13,11 +13,11 @@ export default function LeaderboardView() {
   const { loadLeaderboard, loadFriendsLeaderboard, toggleFollow, searchUsers } = useUserStore();
   const { language } = useSettingsStore();
   const [filter, setFilter] = useState<'global' | 'friends'>('global');
-  const [users, setUsers] = useState<any[]>([]);
+  const [users, setUsers] = useState<LeaderboardUser[]>([]);
   const [followingIds, setFollowingIds] = useState<Set<string>>(new Set());
   const [loading, setLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState('');
-  const [searchResults, setSearchResults] = useState<any[]>([]);
+  const [searchResults, setSearchResults] = useState<LeaderboardUser[]>([]);
   const [searching, setSearching] = useState(false);
 
   useEffect(() => {
@@ -33,7 +33,7 @@ export default function LeaderboardView() {
         setFollowingIds(new Set(follows?.map(f => f.following_id) || []));
       }
       
-      const mapped = data.map((u: any) => ({
+      const mapped = data.map((u) => ({
         ...u,
         isMe: u.id === userId
       }));

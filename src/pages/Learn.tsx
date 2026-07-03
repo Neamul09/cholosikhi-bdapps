@@ -19,7 +19,7 @@ export default function LearnSection() {
 
   if (!section) return <div className="p-8 text-center">Section not found</div>;
 
-  const translate = (ls: any): string => {
+  const translate = (ls: import('@/content/schema').LocalizedString | undefined | null): string => {
     if (!ls) return '';
     if (typeof ls === 'string') return ls;
     return language === 'bn' ? ls.bn : ls.en;

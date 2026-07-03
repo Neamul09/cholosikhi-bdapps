@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import { X, Heart, Info, Bot, Trophy } from 'lucide-react';
@@ -6,15 +6,18 @@ import { clsx } from 'clsx';
 import { useSettingsStore } from '@/store/settingsStore';
 import { allPythonLessons as pythonLessons } from '@/content/python/lessons';
 import { cppLessons } from '@/content/cpp/lessons';
+import type { Exercise, Lesson } from '@/content/schema';
 import { useProgressStore } from '@/store/progressStore';
 import { useUserStore } from '@/store/userStore';
 import { LevelUpModal, CorrectOverlay, WrongOverlay } from '@/components/modals';
 import { MCQExercise, FillBlankExercise, OutputPredictExercise, BugHuntExercise, CodeArrangeExercise } from '@/components/exercises';
 
 // A single item in the session queue
-type SessionItem = 
-  | { type: 'theory', content: any, id: string }
-  | { type: 'exercise', content: any, id: string };
+type TheoryBlock = Lesson['theory'][number];
+type ExplainedExercise = Exclude<Exercise, { type: 'mini_challenge' }>;
+type SessionItem =
+  | { type: 'theory'; content: TheoryBlock; id: string }
+  | { type: 'exercise'; content: ExplainedExercise; id: string };
 
 export default function SessionView() {
   const { lessonId } = useParams();
@@ -25,38 +28,38 @@ export default function SessionView() {
 
   const lessons = currentCourse === 'python' ? pythonLessons : cppLessons;
   const lesson = lessons.find((l) => l.id === lessonId);
-  
-  const [queue, setQueue] = useState<SessionItem[]>([]);
+
+  const [queue, setQueue] = useState<SessionItem[]>(() => {
+    if (!lesson) return [];
+    const items: SessionItem[] = [];
+    const maxLen = Math.max(lesson.theory.length, lesson.exercises.length);
+    for (let i = 0; i < maxLen; i++) {
+      const theoryBlock = lesson.theory[i];
+      if (theoryBlock) items.push({ type: 'theory', content: theoryBlock, id: `t_${i}` });
+      const exercise = lesson.exercises[i];
+      // `mini_challenge` exercises don't fit this view (no `explanation`); skip them.
+      if (exercise && exercise.type !== 'mini_challenge') {
+        items.push({ type: 'exercise', content: exercise, id: `e_${exercise.id}` });
+      }
+    }
+    return items;
+  });
   const [currentIndex, setCurrentIndex] = useState(0);
-  const [totalItems, setTotalItems] = useState(1);
   const [sessionState, setSessionState] = useState<'playing' | 'checking_correct' | 'checking_wrong' | 'done'>('playing');
   const [wrongExplanation, setWrongExplanation] = useState('');
   const [correctExplanation, setCorrectExplanation] = useState('');
-  
-  const [startLevel] = useState(level);
   const [showLevelUp, setShowLevelUp] = useState(false);
 
-  // Initialize interleaved queue
-  useEffect(() => {
-    if (!lesson) return;
-    
-    // Interleave theory and exercises
-    const newQueue: SessionItem[] = [];
-    const maxLen = Math.max(lesson.theory.length, lesson.exercises.length);
-    for (let i = 0; i < maxLen; i++) {
-      if (lesson.theory[i]) newQueue.push({ type: 'theory', content: lesson.theory[i], id: `t_${i}` });
-      if (lesson.exercises[i]) newQueue.push({ type: 'exercise', content: lesson.exercises[i], id: `e_${lesson.exercises[i].id}` });
-    }
-    setQueue(newQueue);
-    setTotalItems(newQueue.length);
-  }, [lesson]);
+  const totalItems = queue.length;
+  const [startLevel] = useState(level);
 
   if (!lesson) return <div className="p-8 text-center text-app-fg font-bold">{language === 'bn' ? 'পাঠটি খুঁজে পাওয়া যায়নি' : 'Lesson not found'}</div>;
 
   const currentItem = queue[currentIndex];
 
   const handleAnswer = (correct: boolean) => {
-    const expl = currentItem.type === 'exercise' && currentItem.content.explanation;
+    const exerciseContent = currentItem.type === 'exercise' ? currentItem.content : null;
+    const expl = exerciseContent?.explanation;
     const explText = expl ? (typeof expl === 'string' ? expl : expl[language]) : '';
 
     if (correct) {

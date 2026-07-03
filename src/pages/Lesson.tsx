@@ -28,7 +28,7 @@ export default function LessonView() {
 
   if (!lesson) return <div className="p-8 text-center">Lesson not found</div>;
 
-  const translate = (ls: any) => {
+  const translate = (ls: import('@/content/schema').LocalizedString | undefined | null) => {
     if (!ls) return '';
     if (typeof ls === 'string') return ls;
     return language === 'bn' ? ls.bn : ls.en;

@@ -5,6 +5,7 @@ import { X, Heart, Trophy } from 'lucide-react';
 import { useSettingsStore } from '@/store/settingsStore';
 import { allPythonLessons as pythonLessons } from '@/content/python/lessons';
 import { cppLessons } from '@/content/cpp/lessons';
+import type { Exercise } from '@/content/schema';
 import { useProgressStore } from '@/store/progressStore';
 import { useUserStore } from '@/store/userStore';
 import { XPToast, CorrectOverlay, WrongOverlay } from '@/components/modals';
@@ -28,21 +29,23 @@ export default function PracticeView() {
   const [wrongExplanation, setWrongExplanation] = useState('');
   const [correctExplanation, setCorrectExplanation] = useState('');
 
-  if (!lesson) return <div className="p-8 text-center text-app-fg font-bold">{language === 'bn' ? 'পাঠটি খুঁজে পাওয়া যায়নি' : 'Lesson not found'}</div>;
-  
+  // Hooks must run unconditionally on every render — early returns come below.
   useEffect(() => {
     if (lesson && lesson.exercises.length === 0) {
       setLessonComplete(lesson.id, 100, 5, currentCourse);
       navigate(`/`);
     }
-  }, [lesson, setLessonComplete, navigate, currentCourse]);
+  }, [lesson, lesson?.exercises.length, setLessonComplete, navigate, currentCourse]);
 
+  if (!lesson) return <div className="p-8 text-center text-app-fg font-bold">{language === 'bn' ? 'পাঠটি খুঁজে পাওয়া যায়নি' : 'Lesson not found'}</div>;
   if (lesson.exercises.length === 0) return null;
 
   const ex = lesson.exercises[step];
 
   const handleAnswer = (correct: boolean) => {
-    const expl = 'explanation' in ex ? ex.explanation : undefined;
+    const hasExplanation = (e: Exercise): e is Exercise & { explanation: Exercise extends { explanation: infer T } ? T : never } =>
+      'explanation' in e;
+    const expl = hasExplanation(ex) ? ex.explanation : undefined;
     const explText = expl ? (typeof expl === 'string' ? expl : expl[language]) : '';
 
     if (correct) {

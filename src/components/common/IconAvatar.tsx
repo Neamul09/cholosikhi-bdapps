@@ -1,13 +1,8 @@
 import * as Icons from 'lucide-react';
 import { clsx } from 'clsx';
+import { AVATAR_ICONS, type IconName } from './iconAvatarList';
 
-export type IconName = keyof typeof Icons;
-
-export const AVATAR_ICONS: IconName[] = [
-  'User', 'Cpu', 'Zap', 'Ghost', 'Cat', 'Dog', 'Fish', 'Bird',
-  'Gamepad2', 'Rocket', 'Heart', 'Star', 'Crown', 'Music', 'Coffee',
-  'Code2', 'Terminal', 'Brain', 'Smile', 'Lightbulb', 'Target', 'Trophy'
-];
+export { AVATAR_ICONS, type IconName };
 
 // Runtime allowlist — defense-in-depth so untrusted `name` values (e.g. from
 // URL params, profile JSON, or future remote sources) can't resolve arbitrary

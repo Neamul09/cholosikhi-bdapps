@@ -19,9 +19,8 @@ export const isSupabaseConfigured: boolean = Boolean(
 
 if (!isSupabaseConfigured && import.meta.env.DEV) {
   // Loud, actionable message in dev — never silently fall through to a fake host.
-  // eslint-disable-next-line no-console
-  console.error(
-    '[supabase] Missing or invalid VITE_SUPABASE_URL / VITE_SUPABASE_ANON_KEY.\n' +
+  console.warn(
+    '[supabase] Missing VITE_SUPABASE_URL / VITE_SUPABASE_ANON_KEY. ' +
     'Create a `.env.local` in the project root (see .env.example) and restart `npm run dev`.',
   );
 }

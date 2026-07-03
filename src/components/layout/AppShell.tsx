@@ -15,16 +15,17 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
   const location = useLocation();
   const { language, theme, toggleTheme, currentCourse } = useSettingsStore();
   const { showLevelUp, setShowLevelUp, showStreak, setShowStreak, hasSeenTutorial, setHasSeenTutorial } = useUserStore();
-  const [showTutorial, setShowTutorial] = useState(false);
+  const [shouldShowTutorial, setShouldShowTutorial] = useState(false);
 
+  // Schedule the tutorial popup the first time the user lands here.
+  // `showTutorial` is a pure derivation: visible while deferred AND not yet seen.
   useEffect(() => {
-    if (!hasSeenTutorial) {
-      const timer = setTimeout(() => setShowTutorial(true), 1500);
-      return () => clearTimeout(timer);
-    } else {
-      setShowTutorial(false);
-    }
+    if (hasSeenTutorial) return;
+    const timer = setTimeout(() => setShouldShowTutorial(true), 1500);
+    return () => clearTimeout(timer);
   }, [hasSeenTutorial]);
+
+  const showTutorial = shouldShowTutorial && !hasSeenTutorial;
 
   const navItems = [
     { id: '/',            icon: Home,     label: language === 'bn' ? 'শিখুন'       : 'LEARN'       },
@@ -40,7 +41,7 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
 
   return (
     <div className="flex h-screen bg-app-bg text-app-fg overflow-hidden">
-      <Tutorial isOpen={showTutorial} onClose={() => { setShowTutorial(false); setHasSeenTutorial(true); }} />
+      <Tutorial isOpen={showTutorial} onClose={() => { setShouldShowTutorial(false); setHasSeenTutorial(true); }} />
       <LevelUpModal 
         isOpen={showLevelUp !== null} 
         level={showLevelUp || 0} 

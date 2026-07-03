@@ -1,3 +1,4 @@
+import { useEffect, useState } from 'react';
 import { motion } from 'framer-motion';
 import { ShoppingBag, Heart, Shield, Zap, Sparkles, Gem } from 'lucide-react';
 import { useUserStore } from '@/store/userStore';
@@ -7,6 +8,17 @@ import { clsx } from 'clsx';
 export default function Shop() {
   const { gems, hearts, refillHearts, buyStreakShield, streakShield, buyXPBoost, xpBoostUntil } = useUserStore();
   const { language } = useSettingsStore();
+
+  // Tick every second so the boost countdown updates without re-deriving from
+  // Date.now() inside the render body (which would violate react-hooks/purity).
+  const [now, setNow] = useState(() => Date.now());
+  useEffect(() => {
+    const id = window.setInterval(() => setNow(Date.now()), 30_000);
+    return () => window.clearInterval(id);
+  }, []);
+
+  const isBoosted = now < xpBoostUntil;
+  const boostTimeLeft = Math.max(0, Math.ceil((xpBoostUntil - now) / 1000 / 60));
 
   const shopItems = [
     {
@@ -43,9 +55,6 @@ export default function Shop() {
       disabled: gems < 600
     }
   ];
-
-  const isBoosted = Date.now() < xpBoostUntil;
-  const boostTimeLeft = Math.max(0, Math.ceil((xpBoostUntil - Date.now()) / 1000 / 60));
 
   return (
     <div className="max-w-4xl mx-auto px-4 py-8 space-y-10">

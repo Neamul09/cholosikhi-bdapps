@@ -1,7 +1,7 @@
 import { motion, AnimatePresence } from 'framer-motion';
 import { Zap, BookOpen, Clock, Target, Flame, Shield, Trophy, Gem, Crown, Circle, BarChart3, X, Edit2, Share2, Check } from 'lucide-react';
 import { clsx } from 'clsx';
-import { useUserStore, getLevelProgress } from '@/store/userStore';
+import { useUserStore, getLevelProgress, type LeaderboardUser } from '@/store/userStore';
 import { useSettingsStore } from '@/store/settingsStore';
 import IconAvatar, { AVATAR_ICONS } from '@/components/common/IconAvatar';
 import { ResponsiveContainer, BarChart, Bar, XAxis, Tooltip, Cell } from 'recharts';
@@ -20,7 +20,7 @@ export default function ProfileView() {
   
   const [isEditingAvatar, setIsEditingAvatar] = useState(false);
   const [showShareToast, setShowShareToast] = useState(false);
-  const [friends, setFriends] = useState<any[]>([]);
+  const [friends, setFriends] = useState<LeaderboardUser[]>([]);
 
   useEffect(() => {
     loadFriendsLeaderboard().then(setFriends);
@@ -231,7 +231,7 @@ export default function ProfileView() {
 
           <div className="space-y-2">
             {friends.map((f, i) => (
-              <div key={i} className={clsx('flex items-center gap-4 p-3 rounded-2xl', f.me ? 'bg-brand-500/10 border border-brand-500/20' : 'hover:bg-white/5')}>
+              <div key={i} className={clsx('flex items-center gap-4 p-3 rounded-2xl', f.isMe ? 'bg-brand-500/10 border border-brand-500/20' : 'hover:bg-white/5')}>
                 <div className={clsx('w-8 h-8 flex items-center justify-center font-bold text-sm rounded-full bg-white/5',
                   i === 0 && 'text-amber-400 bg-amber-400/10',
                   i === 1 && 'text-gray-300 bg-gray-300/10',

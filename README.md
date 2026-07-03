@@ -1,73 +1,95 @@
-# React + TypeScript + Vite
+# py.cholosikhi
 
-This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.
+Interactive, gamified lessons for **Python** and **C++**, delivered as a
+single-page React app with a Supabase backend. Live at
+[py.cholosikhi.com](https://py.cholosikhi.com).
 
-Currently, two official plugins are available:
+> Sister site & marketing: [cholosikhi.com](https://cholosikhi.com)
+> (the [`cholosikhi`](../cholosikhi) repo).
 
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Oxc](https://oxc.rs)
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react-swc) uses [SWC](https://swc.rs/)
+## Features
 
-## React Compiler
+- **Two full curricula** — Python (bangla-first) and C++, organized into
+  gamified sections, lessons, and exercises.
+- **Five exercise types** — MCQ, fill-in-the-blank, output prediction, bug
+  hunt, and code-arrange, plus a mini-challenge playground.
+- **DSA visualizer** — live sorting (bubble / selection / insertion) and
+  BST visualizations powered by framer-motion.
+- **Auth + progress sync** via Supabase (email/Google). All progress
+  survives logout/login.
+- **Bilingual** — full bangla (বাংলা) translations for every lesson and
+  exercise.
+- **Streak / XP / league / shop** loop with gems, hearts, streak shields,
+  XP boost, and an achievements panel.
+- **Strict security** — CSP, HSTS, frame-ancestors, no exposed secrets,
+  RLS-guarded DB.
 
-The React Compiler is not enabled on this template because of its impact on dev & build performances. To add it, see [this documentation](https://react.dev/learn/react-compiler/installation).
+## Tech
 
-## Expanding the ESLint configuration
+- **React 18** + **TypeScript (strict)** + **Vite 5**
+- **Tailwind CSS 3** + **framer-motion**
+- **Zustand** for client state (`auth`, `progress`, `user`, `quest`, `settings`)
+- **Supabase** (Postgres + Auth) — RLS-guarded, anon JWT only
+- **lucide-react** icons
 
-If you are developing a production application, we recommend updating the configuration to enable type-aware lint rules:
+## Quick start
 
-```js
-export default defineConfig([
-  globalIgnores(['dist']),
-  {
-    files: ['**/*.{ts,tsx}'],
-    extends: [
-      // Other configs...
-
-      // Remove tseslint.configs.recommended and replace with this
-      tseslint.configs.recommendedTypeChecked,
-      // Alternatively, use this for stricter rules
-      tseslint.configs.strictTypeChecked,
-      // Optionally, add this for stylistic rules
-      tseslint.configs.stylisticTypeChecked,
-
-      // Other configs...
-    ],
-    languageOptions: {
-      parserOptions: {
-        project: ['./tsconfig.node.json', './tsconfig.app.json'],
-        tsconfigRootDir: import.meta.dirname,
-      },
-      // other options...
-    },
-  },
-])
+```bash
+git clone https://github.com/Neamul09/py.cholosikhi.git
+cd py.cholosikhi
+cp .env.example .env.local      # fill in VITE_SUPABASE_* values
+npm install
+npm run dev                     # http://localhost:5173
 ```
 
-You can also install [eslint-plugin-react-x](https://github.com/Rel1cx/eslint-react/tree/main/packages/plugins/eslint-plugin-react-x) and [eslint-plugin-react-dom](https://github.com/Rel1cx/eslint-react/tree/main/packages/plugins/eslint-plugin-react-dom) for React-specific lint rules:
+A fresh Supabase project is required. Run the SQL from `supabase/schema.sql`
+in your Supabase SQL editor to create the tables, RLS policies, and triggers
+(see the comments at the top of that file for setup order).
 
-```js
-// eslint.config.js
-import reactX from 'eslint-plugin-react-x'
-import reactDom from 'eslint-plugin-react-dom'
+## Scripts
 
-export default defineConfig([
-  globalIgnores(['dist']),
-  {
-    files: ['**/*.{ts,tsx}'],
-    extends: [
-      // Other configs...
-      // Enable lint rules for React
-      reactX.configs['recommended-typescript'],
-      // Enable lint rules for React DOM
-      reactDom.configs.recommended,
-    ],
-    languageOptions: {
-      parserOptions: {
-        project: ['./tsconfig.node.json', './tsconfig.app.json'],
-        tsconfigRootDir: import.meta.dirname,
-      },
-      // other options...
-    },
-  },
-])
+```bash
+npm run dev          # Vite dev server with HMR
+npm run lint         # ESLint (strict react-hooks + react-refresh)
+npm run typecheck    # tsc --noEmit
+npm run build        # type-check + production bundle into dist/
+npm run preview      # serve the production build
+npm run test         # Vitest unit tests  (when added)
+npm run test:e2e     # Playwright e2e  (when added)
 ```
+
+## Project layout
+
+```
+py.cholosikhi/
+├── index.html              # CSP + OG meta
+├── vercel.json             # security headers (HSTS, frame-options, …)
+├── src/
+│   ├── components/         # UI shells, exercises, visualizers, modals
+│   ├── content/            # hand-authored lessons + curriculum schema
+│   │   ├── schema.ts       # LocalizedString, Exercise, Lesson, Course
+│   │   ├── python/         # python lessons + metadata
+│   │   └── cpp/            # cpp lessons + metadata
+│   ├── lib/supabase.ts     # single client + isSupabaseConfigured guard
+│   ├── pages/              # route components
+│   ├── store/              # Zustand stores
+│   ├── utils/              # helpers (confetti, etc.)
+│   ├── App.tsx
+│   └── main.tsx
+├── eslint.config.js        # strict: react-hooks + react-refresh
+├── tailwind.config.ts
+├── tsconfig.json           # strict TS
+├── LICENSE                 # MIT
+└── SECURITY.md             # private disclosure policy
+```
+
+## Security
+
+- Never commit `.env.local`. Use `.env.example` only as a template.
+- All secrets come from `VITE_*` env vars; the anon JWT is the only one
+  that ships to the client. Service role keys are server-side only.
+- See [SECURITY.md](./SECURITY.md) for how to report vulnerabilities.
+
+## License
+
+[MIT](./LICENSE) © 2025–2026 Neamul09.

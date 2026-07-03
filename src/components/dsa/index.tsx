@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { motion } from 'framer-motion';
 import { Play, Pause, RotateCcw, SkipForward } from 'lucide-react';
 import { clsx } from 'clsx';
@@ -50,36 +50,35 @@ function generateSortSteps(arr: number[], algo: string): SortStep[] {
   return steps;
 }
 
+// Build an array of `size` pseudo-random integers in [10, 99].
+const randomArray = (size: number): number[] =>
+  Array.from({ length: size }, () => Math.floor(Math.random() * 90) + 10);
+
 export function SortingVisualizer() {
   const [algo, setAlgo] = useState('bubble');
   const [size, setSize] = useState(15);
-  const [arr, setArr] = useState(() => Array.from({ length: 15 }, () => Math.floor(Math.random() * 90) + 10));
-  const [currentArr, setCurrentArr] = useState([...arr]);
-  const [steps, setSteps] = useState<SortStep[]>([]);
+  const [arr, setArr] = useState<number[]>(() => randomArray(15));
   const [step, setStep] = useState(0);
   const [playing, setPlaying] = useState(false);
   const [speed, setSpeed] = useState(300);
   const intervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
+  // Derive steps from arr + algo so changing either rebuilds the trace
+  // without an effect → no cascading renders.
+  const steps = useMemo(() => generateSortSteps(arr, algo), [arr, algo]);
+
+  // Clamp `step` to the trace length during render (cheap; no cascading setState).
+  const safeStep = Math.min(step, Math.max(steps.length - 1, 0));
+
+  // The displayed array comes from the current step's snapshot.
+  const currentArr = steps[safeStep]?.array ?? arr;
+
   const generateNewArray = (newSize = size) => {
-    const newArr = Array.from({ length: newSize }, () => Math.floor(Math.random() * 90) + 10);
+    const newArr = randomArray(newSize);
     setArr(newArr);
-    setCurrentArr(newArr);
-    const s = generateSortSteps([...newArr], algo);
-    setSteps(s);
     setStep(0);
     setPlaying(false);
   };
-
-  useEffect(() => {
-    generateNewArray(size);
-  }, [algo, size]);
-
-  useEffect(() => {
-    if (step < steps.length) {
-      setCurrentArr(steps[step].array);
-    }
-  }, [step, steps]);
 
   useEffect(() => {
     if (playing) {
@@ -93,13 +92,12 @@ export function SortingVisualizer() {
     return () => { if (intervalRef.current) clearInterval(intervalRef.current); };
   }, [playing, steps.length, speed]);
 
-  const current = steps[step] || { array: currentArr, comparing: [], sorted: [] };
+  const current = steps[safeStep] || { array: currentArr, comparing: [], sorted: [] };
   const maxVal = Math.max(...currentArr, 1);
 
   const reset = () => {
     setStep(0);
     setPlaying(false);
-    setCurrentArr([...arr]);
   };
 
   return (
@@ -243,7 +241,12 @@ function layoutTree(node: TreeNode | null, x: number, y: number, dx: number, res
 }
 
 export function TreeVisualizer() {
-  const [root, setRoot] = useState<TreeNode | null>(null);
+  // Lazy-initialize the BST with the seed values so we don't need an effect.
+  const [root, setRoot] = useState<TreeNode | null>(() => {
+    let r: TreeNode | null = null;
+    [50, 30, 70, 20, 40].forEach(v => { r = insertBST(r, v); });
+    return r;
+  });
   const [highlighted, setHighlighted] = useState<number[]>([]);
   const [inputVal, setInputVal] = useState('');
   const [traversalMode, setTraversalMode] = useState<'inorder' | 'preorder' | 'postorder'>('inorder');
@@ -261,12 +264,6 @@ export function TreeVisualizer() {
     const v = Math.floor(Math.random() * 90) + 10;
     setRoot(prev => insertBST(prev, v));
   };
-
-  useEffect(() => {
-    let r: TreeNode | null = null;
-    [50, 30, 70, 20, 40].forEach(v => r = insertBST(r, v));
-    setRoot(r);
-  }, []);
 
   const layout = { nodes: [] as TreeNodePos[], edges: [] as TreeEdge[] };
   if (root) layoutTree(root, 200, 30, 100, layout);

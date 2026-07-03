@@ -86,11 +86,11 @@ export default function Auth() {
           navigate('/'); 
         }
       }
-    } catch (err: any) {
+    } catch (err: unknown) {
       // `TypeError: Failed to fetch` is what the browser throws when the
       // network request can't reach the host (DNS, offline, blocked). Surface
       // a friendly message instead of the raw error.
-      const raw = err?.message ?? '';
+      const raw = err instanceof Error ? err.message : '';
       const friendly =
         /failed to fetch|networkerror|load failed/i.test(raw)
           ? (language === 'bn'
@@ -100,7 +100,6 @@ export default function Auth() {
               ? 'একটি ত্রুটি ঘটেছে।'
               : 'An error occurred during authentication.'));
       setError(friendly);
-      // eslint-disable-next-line no-console
       console.error('[auth] signIn/signUp failed:', err);
     } finally {
       setLoading(false);

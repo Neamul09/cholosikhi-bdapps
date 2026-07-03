@@ -10,6 +10,34 @@ import type {
   CodeArrangeExercise as ArrangeType,
 } from '@/content/schema';
 
+// Deterministic Fisher–Yates shuffle using a hash of the seed string.
+// React calls useMemo bodies during render, so we can't use Math.random().
+// Hashing a stable seed keeps the order stable across renders for the
+// same input while still permuting different inputs differently.
+const seededShuffle = <T,>(items: readonly T[], seed: string): T[] => {
+  const hash = (s: string): number => {
+    let h = 2166136261;
+    for (let i = 0; i < s.length; i++) {
+      h ^= s.charCodeAt(i);
+      h = Math.imul(h, 16777619);
+    }
+    return h >>> 0;
+  };
+  let state = hash(seed) || 1;
+  const rand = () => {
+    state ^= state << 13;
+    state ^= state >>> 17;
+    state ^= state << 5;
+    return ((state >>> 0) / 0xffffffff);
+  };
+  const out = [...items];
+  for (let i = out.length - 1; i > 0; i--) {
+    const j = Math.floor(rand() * (i + 1));
+    [out[i], out[j]] = [out[j], out[i]];
+  }
+  return out;
+};
+
 // ── Shared colour tokens ───────────────────────────────────────
 const C = {
   correct:   'bg-cyan-500/10  border-cyan-400  text-cyan-300',
@@ -29,8 +57,11 @@ export function MCQExercise({
   const { language } = useSettingsStore();
 
   const shuffledOptions = useMemo(() => {
-    return exercise.options.map((opt, originalIndex) => ({ opt, originalIndex })).sort(() => Math.random() - 0.5);
-  }, [exercise.id]);
+    return seededShuffle(
+      exercise.options.map((opt, originalIndex) => ({ opt, originalIndex })),
+      `mcq:${exercise.id}:${exercise.correctIndex}`,
+    );
+  }, [exercise.id, exercise.options, exercise.correctIndex]);
 
   const handleSelect = (originalIndex: number) => {
     if (answered) return;
@@ -159,8 +190,11 @@ export function OutputPredictExercise({
   const { language } = useSettingsStore();
 
   const shuffledOptions = useMemo(() => {
-    return exercise.options.map((opt, originalIndex) => ({ opt, originalIndex })).sort(() => Math.random() - 0.5);
-  }, [exercise.id]);
+    return seededShuffle(
+      exercise.options.map((opt, originalIndex) => ({ opt, originalIndex })),
+      `output:${exercise.id}:${exercise.correctIndex}`,
+    );
+  }, [exercise.id, exercise.options, exercise.correctIndex]);
 
   const handleSelect = (originalIndex: number) => {
     if (answered) return;
@@ -260,28 +294,30 @@ export function BugHuntExercise({
 }
 
 // ── Code Arrange ──────────────────────────────────────────────
+const initialArrangeOrder = (exercise: ArrangeType): number[] => {
+  const arr = seededShuffle(
+    exercise.blocks.map((_, i) => i),
+    `arrange:${exercise.id}`,
+  );
+  if (arr.length > 1 && arr.every((v, i) => v === exercise.correctOrder[i])) {
+    [arr[0], arr[1]] = [arr[1], arr[0]];
+  }
+  return arr;
+};
+
 export function CodeArrangeExercise({
   exercise, onAnswer,
 }: { exercise: ArrangeType; onAnswer: (correct: boolean) => void }) {
-  const [order, setOrder] = useState<number[]>(() => {
-    let arr = exercise.blocks.map((_, i) => i).sort(() => Math.random() - 0.5);
-    if (arr.length > 1 && arr.every((v, i) => v === exercise.correctOrder[i])) {
-      [arr[0], arr[1]] = [arr[1], arr[0]];
-    }
-    return arr;
-  });
+  const [order, setOrder] = useState<number[]>(() => initialArrangeOrder(exercise));
   const [submitted, setSubmitted] = useState(false);
   const { language } = useSettingsStore();
 
+  // Reset when a different exercise is shown. Depend only on the stable
+  // id so the user's drag order isn't blown away by a fresh exercise
+  // object reference from the parent.
   useEffect(() => {
-    let arr = exercise.blocks.map((_, i) => i).sort(() => Math.random() - 0.5);
-    if (arr.length > 1 && arr.every((v, i) => v === exercise.correctOrder[i])) {
-      [arr[0], arr[1]] = [arr[1], arr[0]];
-    }
-    setOrder(arr);
+    setOrder(initialArrangeOrder(exercise));
     setSubmitted(false);
-    // Depend on a stable identifier so the user's drag order isn't reset
-    // when the parent re-renders with a fresh exercise object reference.
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [exercise.id]);
 

@@ -682,7 +682,7 @@ my_name = "Name"`,
         id: 'p1x-e13',
         question: { en: 'Mismatched quotes:', bn: 'অমিল উদ্ধৃতি:' },
         code: `name = "cholosikhi"
-msg = "Hello\'`,
+msg = "Hello'`,
         buggyLine: 2,
         explanation: { en: 'Must use same type of quotes to open and close.', bn: 'খুলতে এবং বন্ধ করতে অবশ্যই একই ধরণের কোট ব্যবহার করতে হবে।' },
         xpReward: 30
