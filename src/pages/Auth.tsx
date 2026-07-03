@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Mail, Lock, User as UserIcon, Zap, Loader2, ArrowRight, AlertCircle } from 'lucide-react';
 import { useSettingsStore } from '@/store/settingsStore';
-import { supabase } from '@/lib/supabase';
+import { supabase, isSupabaseConfigured } from '@/lib/supabase';
 import { useNavigate } from 'react-router-dom';
 
 export default function Auth() {
@@ -32,6 +32,19 @@ export default function Auth() {
     e.preventDefault();
     setLoading(true);
     setError('');
+
+    // Fail fast with a clear, actionable message if the Supabase env vars
+    // are missing — otherwise we'd hit `TypeError: Failed to fetch` against
+    // the placeholder host, which is confusing for users.
+    if (!isSupabaseConfigured) {
+      setLoading(false);
+      setError(
+        language === 'bn'
+          ? 'সার্ভার সেটআপ অসম্পূর্ণ। অ্যাডমিনকে জানান।'
+          : 'Server is not configured yet. Please contact the admin.',
+      );
+      return;
+    }
 
     try {
       if (isLogin) {
@@ -74,7 +87,21 @@ export default function Auth() {
         }
       }
     } catch (err: any) {
-      setError(err.message || 'An error occurred during authentication.');
+      // `TypeError: Failed to fetch` is what the browser throws when the
+      // network request can't reach the host (DNS, offline, blocked). Surface
+      // a friendly message instead of the raw error.
+      const raw = err?.message ?? '';
+      const friendly =
+        /failed to fetch|networkerror|load failed/i.test(raw)
+          ? (language === 'bn'
+              ? 'নেটওয়ার্ক ত্রুটি। আপনার ইন্টারনেট সংযোগ পরীক্ষা করুন।'
+              : 'Network error. Please check your internet connection.')
+          : (raw || (language === 'bn'
+              ? 'একটি ত্রুটি ঘটেছে।'
+              : 'An error occurred during authentication.'));
+      setError(friendly);
+      // eslint-disable-next-line no-console
+      console.error('[auth] signIn/signUp failed:', err);
     } finally {
       setLoading(false);
     }

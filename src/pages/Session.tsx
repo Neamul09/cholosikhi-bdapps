@@ -51,7 +51,7 @@ export default function SessionView() {
     setTotalItems(newQueue.length);
   }, [lesson]);
 
-  if (!lesson) return <div className="p-8 text-center text-app-fg font-bold">{language === 'bn' ? 'পাঠটি খুঁজে পাওয়া যায়নি' : 'Lesson not found'}</div>;
+  if (!lesson) return <div className="p-8 text-center text-app-fg font-bold">{language === 'bn' ? 'পাঠটি খুঁজে পাওয়া যায়নি' : 'Lesson not found'}</div>;
 
   const currentItem = queue[currentIndex];
 
@@ -66,7 +66,7 @@ export default function SessionView() {
     } else {
       setSessionState('checking_wrong');
       loseHeart();
-      setWrongExplanation(explText || (language === 'bn' ? 'ভুল উত্তর, দয়া করে আবার চেষ্টা করুন।' : 'Wrong answer, please try again.'));
+      setWrongExplanation(explText || (language === 'bn' ? 'ভুল উত্তর, দয়া করে আবার চেষ্টা করুন।' : 'Wrong answer, please try again.'));
       
       // Push string copy of exercise to back of queue
       setQueue(prev => [...prev, { ...currentItem, id: currentItem.id + "_retry" }]);
@@ -220,42 +220,29 @@ export default function SessionView() {
         <AnimatePresence>
           {sessionState === 'playing' && currentItem?.type === 'theory' && (
             <motion.div
+              key="footer-theory"
                initial={{ y: 200 }} animate={{ y: 0 }} exit={{ y: 200 }}
                className="bg-app-bg border-t-2 border-border-subtle p-4 md:p-8 flex justify-center"
             >
               <div className="max-w-3xl w-full flex justify-end">
                 <button onClick={handleContinue} className="btn-duo btn-duo-green w-full md:w-48 py-4 text-xl">
-                  {language === 'bn' ? 'এগিয়ে যান' : 'Continue'}
+                  {language === 'bn' ? 'এগিয়ে যান' : 'Continue'}
                 </button>
               </div>
             </motion.div>
           )}
-
-      {/* Overlays / Footer */}
-      <AnimatePresence>
-        {sessionState === 'checking_correct' && (
-          <CorrectOverlay explanation={correctExplanation} onContinue={handleContinue} />
-        )}
-        {sessionState === 'checking_wrong' && (
-          <WrongOverlay explanation={wrongExplanation} onContinue={handleContinue} />
-        )}
-      </AnimatePresence>
-
-          {sessionState === 'done' && !showLevelUp && (
-            <motion.div
-               initial={{ y: 200 }} animate={{ y: 0 }} exit={{ y: 200 }}
-               className="bg-app-bg border-t-2 border-border-subtle p-4 md:p-8 flex justify-center"
-            >
-              <div className="max-w-3xl w-full flex justify-stretch">
-                <button onClick={() => navigate('/')} className="btn-duo btn-duo-green w-full py-4 text-xl">
-                  {language === 'bn' ? 'এগিয়ে যান' : 'Continue'}
-                </button>
-              </div>
-            </motion.div>
-          )}
-
         </AnimatePresence>
       </div>
+
+      {/* Overlays / Footer — sibling of the footer above, NOT nested */}
+      <AnimatePresence>
+        {sessionState === 'checking_correct' && (
+          <CorrectOverlay key="overlay-correct" explanation={correctExplanation} onContinue={handleContinue} />
+        )}
+        {sessionState === 'checking_wrong' && (
+          <WrongOverlay key="overlay-wrong" explanation={wrongExplanation} onContinue={handleContinue} />
+        )}
+      </AnimatePresence>
 
     </div>
   );

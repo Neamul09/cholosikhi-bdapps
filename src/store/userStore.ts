@@ -50,7 +50,7 @@ export interface UserState {
   addGems: (amount: number) => void;
   loseHeart: () => boolean;
   checkAndUpdateStreak: () => void;
-  unlockAchievement: (id: string) => void;
+  unlockAchievement: (id: string) => Promise<void>;
   hasAchievement: (id: string) => boolean;
   setName: (name: string) => void;
   setAvatar: (avatar: string) => void;
@@ -79,23 +79,39 @@ export interface UserState {
 
 const XP_PER_LEVEL = (level: number) => 100 * Math.pow(level, 2);
 
-const today = () => new Date().toISOString().split('T')[0];
+// Build a YYYY-MM-DD string from local date components (NOT toISOString),
+// so week boundaries stay consistent regardless of the user's timezone.
+// toISOString() returns UTC, which can shift the date by ±1 day for users
+// east/west of UTC, causing the leaderboard to roll over at the wrong moment.
+const localDateString = (d: Date = new Date()) => {
+  const y = d.getFullYear();
+  const m = String(d.getMonth() + 1).padStart(2, '0');
+  const day = String(d.getDate()).padStart(2, '0');
+  return `${y}-${m}-${day}`;
+};
+
+const today = () => localDateString();
 
 const getWeekStart = () => {
   const d = new Date();
   const day = d.getDay();
+  // Roll back to Monday (day 1). If today is Sunday (day 0), go back 6 days.
   const diff = d.getDate() - day + (day === 0 ? -6 : 1);
-  return new Date(d.setDate(diff)).toISOString().split('T')[0];
+  d.setDate(diff);
+  d.setHours(0, 0, 0, 0);
+  return localDateString(d);
 };
 
 const LEAGUE_THRESHOLDS: Record<League, number> = {
   wood: 0, bronze: 100, iron: 500, gold: 1500, diamond: 5000, legendary: 15000,
 };
 
-function computeLeague(totalXp: number): League {
+function computeLeague(weeklyXp: number): League {
+  // Leagues are determined by THIS WEEK'S XP (Duolingo-style), so every
+  // Monday everyone starts at zero and climbs back through the tiers.
   const leagues: League[] = ['legendary', 'diamond', 'gold', 'iron', 'bronze', 'wood'];
   for (const league of leagues) {
-    if (totalXp >= LEAGUE_THRESHOLDS[league]) return league;
+    if (weeklyXp >= LEAGUE_THRESHOLDS[league]) return league;
   }
   return 'wood';
 }
@@ -151,7 +167,7 @@ export const useUserStore = create<UserState>()(
       xpBoostUntil: 0,
       league: 'wood',
       weeklyXp: 0,
-      weekStart: new Date().toISOString().split('T')[0],
+      weekStart: getWeekStart(),
       achievements: [],
       lessonsCompleted: 0,
       testsCompleted: 0,
@@ -180,13 +196,17 @@ export const useUserStore = create<UserState>()(
           const newTotalXp = state.totalXp + actualAmount;
           const newLevel = computeLevel(newTotalXp);
           const sameWeek = state.weekStart === getWeekStart();
-          
+          const newWeeklyXp = sameWeek ? state.weeklyXp + actualAmount : actualAmount;
+          const newLeague = computeLeague(newWeeklyXp);
+
           return {
             totalXp: newTotalXp,
             xp: newTotalXp,
             level: newLevel,
-            // League is NOT updated here anymore - only weekly
-            weeklyXp: sameWeek ? state.weeklyXp + actualAmount : actualAmount,
+            // Recompute league live so promotion happens as soon as the
+            // weekly-XP threshold is crossed, not only on the weekly reset.
+            league: newLeague,
+            weeklyXp: newWeeklyXp,
             weekStart: getWeekStart(),
             xpHistory: {
               ...state.xpHistory,
@@ -224,7 +244,7 @@ export const useUserStore = create<UserState>()(
 
         const yesterday = new Date();
         yesterday.setDate(yesterday.getDate() - 1);
-        const yesterdayStr = yesterday.toISOString().split('T')[0];
+        const yesterdayStr = localDateString(yesterday);
 
         let newStreak = state.streak;
         if (lastActive === yesterdayStr) {
@@ -545,15 +565,16 @@ export const useUserStore = create<UserState>()(
             lastStreakCelebration: profile.last_streak_celebration || null
           });
 
-          // Check if a new week has started to update league
+          // Check if a new week has started. If so, reset weekly XP and
+          // demote league back to wood — every player starts fresh on Monday,
+          // and climbs back through the tiers as they earn XP this week.
           const currentWeekStart = get().weekStart;
           const actualWeekStart = getWeekStart();
           if (currentWeekStart !== actualWeekStart) {
-            const newLeague = computeLeague(get().totalXp);
-            set({ 
-              league: newLeague, 
+            set({
+              league: 'wood',
               weekStart: actualWeekStart,
-              weeklyXp: 0 
+              weeklyXp: 0
             });
             get().syncToSupabase();
           }

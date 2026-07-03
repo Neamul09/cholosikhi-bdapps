@@ -157,21 +157,21 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
           {/* Stats & Theme Toggle */}
           <div className="flex items-center gap-1 md:gap-4 font-bold text-sm">
             {/* Streak */}
-            <motion.div key={streak} initial={{ scale: 1.3 }} animate={{ scale: 1 }}
+            <motion.div key="streak" initial={{ scale: 1.3 }} animate={{ scale: 1 }}
               className="flex items-center gap-1 px-1.5 md:px-2.5 py-1.5 rounded-xl hover:bg-amber-500/10 cursor-pointer transition">
               <Flame size={16} className="fill-amber-500 text-amber-500 md:w-[18px]" />
               <span className="text-amber-500">{streak}</span>
             </motion.div>
 
             {/* Gems */}
-            <motion.div key={gems} initial={{ scale: 1.3 }} animate={{ scale: 1 }}
+            <motion.div key="gems" initial={{ scale: 1.3 }} animate={{ scale: 1 }}
               className="flex items-center gap-1 px-1.5 md:px-2.5 py-1.5 rounded-xl hover:bg-blue-500/10 cursor-pointer transition">
               <Gem size={16} className="fill-blue-400 text-blue-400 md:w-[18px]" />
               <span className="text-blue-400">{gems}</span>
             </motion.div>
 
             {/* Hearts */}
-            <motion.div key={hearts} initial={{ scale: 1.3 }} animate={{ scale: 1 }}
+            <motion.div key="hearts" initial={{ scale: 1.3 }} animate={{ scale: 1 }}
               className="flex items-center gap-1 px-1.5 md:px-2.5 py-1.5 rounded-xl hover:bg-pink-500/10 cursor-pointer transition">
               <Heart size={16} className="fill-pink-400 text-pink-400 md:w-[18px]" />
               <span className="text-pink-400 font-black">{hearts}</span>

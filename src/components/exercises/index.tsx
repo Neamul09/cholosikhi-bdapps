@@ -101,39 +101,44 @@ export function FillBlankExercise({
   };
 
   const parts = exercise.codeTemplate.split('___');
-  let inputIdx = 0;
+    let inputIdx = 0;
 
-  return (
-    <div className="space-y-6">
-      <div className="code-block p-6 rounded-2xl text-lg leading-loose">
-        <pre className="mono whitespace-pre-wrap flex flex-wrap items-center gap-2">
-          {parts.map((part, i) => (
-            <React.Fragment key={i}>
-              <span dangerouslySetInnerHTML={{ __html: part.replace(/\n/g, '<br/>') }} />
-              {i < parts.length - 1 && (() => {
-                const ci = inputIdx++;
-                const isRight = submitted && values[ci].trim().toLowerCase() === exercise.blanks[ci].toLowerCase();
-                const isWrong = submitted && !isRight;
-                return (
-                  <input
-                    value={values[ci]}
-                    onChange={(e) => {
-                      const nv = [...values]; nv[ci] = e.target.value; setValues(nv);
-                    }}
-                    disabled={submitted}
-                    className={clsx(
-                      'w-28 px-3 py-1 rounded-xl border-b-4 mono text-center outline-none bg-transparent transition-all font-bold text-base',
-                      !submitted && 'border-[var(--border-subtle)] focus:border-blue-400 text-blue-300',
-                      isRight    && 'border-cyan-400 text-cyan-300',
-                      isWrong    && 'border-pink-400 text-pink-300',
-                    )}
-                  />
-                );
-              })()}
-            </React.Fragment>
-          ))}
-        </pre>
-      </div>
+    return (
+      <div className="space-y-6">
+        <div className="code-block p-6 rounded-2xl text-lg leading-loose">
+          <pre className="mono whitespace-pre-wrap flex flex-wrap items-center gap-2">
+            {parts.map((part, i) => (
+              <React.Fragment key={i}>
+                {/* Render code fragments as plain text — JSX escapes automatically,
+                    eliminating any HTML/script injection sink. Newlines are
+                    preserved naturally by `whitespace-pre-wrap` on the <pre>. */}
+                <span>{part}</span>
+                {i < parts.length - 1 && (() => {
+                  const ci = inputIdx++;
+                  const isRight = submitted && values[ci].trim().toLowerCase() === exercise.blanks[ci].toLowerCase();
+                  const isWrong = submitted && !isRight;
+                  return (
+                    <input
+                      value={values[ci]}
+                      onChange={(e) => {
+                        const nv = [...values]; nv[ci] = e.target.value; setValues(nv);
+                      }}
+                      disabled={submitted}
+                      autoComplete="off"
+                      spellCheck={false}
+                      className={clsx(
+                        'w-28 px-3 py-1 rounded-xl border-b-4 mono text-center outline-none bg-transparent transition-all font-bold text-base',
+                        !submitted && 'border-[var(--border-subtle)] focus:border-blue-400 text-blue-300',
+                        isRight    && 'border-cyan-400 text-cyan-300',
+                        isWrong    && 'border-pink-400 text-pink-300',
+                      )}
+                    />
+                  );
+                })()}
+              </React.Fragment>
+            ))}
+          </pre>
+        </div>
       <button
         onClick={handleSubmit}
         disabled={submitted || values.some(v => !v.trim())}
@@ -275,7 +280,10 @@ export function CodeArrangeExercise({
     }
     setOrder(arr);
     setSubmitted(false);
-  }, [exercise]);
+    // Depend on a stable identifier so the user's drag order isn't reset
+    // when the parent re-renders with a fresh exercise object reference.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [exercise.id]);
 
   const handleSubmit = () => {
     if (submitted) return;
