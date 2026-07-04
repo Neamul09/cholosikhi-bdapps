@@ -128,12 +128,12 @@ export default function SettingsView() {
                  onClick={() => setCourse('python')}
                  className="px-4 py-1.5 rounded-lg text-sm font-bold transition-all flex items-center gap-2 bg-duo-green text-white shadow-lg"
                >
-                 <img src="https://cdn.jsdelivr.net/gh/devicons/devicon/icons/python/python-original.svg" className="w-4 h-4" />
+                 <img src="/icons/python-original.svg" alt="" className="w-4 h-4" />
                  Python
                </button>
              </div>
              <div className="flex items-center gap-2 px-3 py-1.5 rounded-xl bg-white/5 border border-white/10 opacity-50 cursor-not-allowed">
-               <img src="https://cdn.jsdelivr.net/gh/devicons/devicon/icons/cplusplus/cplusplus-original.svg" className="w-4 h-4" />
+               <img src="/icons/cplusplus-original.svg" alt="" className="w-4 h-4" />
                <span className="text-xs font-bold text-gray-400">C++</span>
                <span className="text-[10px] font-black text-amber-400 uppercase tracking-widest bg-amber-400/10 px-1.5 py-0.5 rounded-md">Soon</span>
              </div>
