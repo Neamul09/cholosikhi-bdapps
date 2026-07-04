@@ -11,6 +11,7 @@ import { useUserStore } from '@/store/userStore';
 import { XPToast, CorrectOverlay, WrongOverlay } from '@/components/modals';
 import { MCQExercise, FillBlankExercise, OutputPredictExercise, BugHuntExercise, CodeArrangeExercise } from '@/components/exercises';
 import { fireSuccessConfetti } from '@/utils/confetti';
+import { play } from '@/lib/audio';
 
 export default function PracticeView() {
   const { lessonId } = useParams();
@@ -55,15 +56,18 @@ export default function PracticeView() {
       setShowXpToast(true);
       setTimeout(() => setShowXpToast(false), 2000);
       setCorrectExplanation(explText);
+      play('correct');
     } else {
       setStatus('wrong');
       loseHeart();
       setWrongExplanation(explText || (language === 'bn' ? 'ভুল উত্তর।' : 'Incorrect answer.'));
+      play('incorrect');
     }
   };
 
   const handleContinue = () => {
     if (status === 'wrong' && hearts <= 0) {
+      play('incorrect');
       navigate(`/`);
       return;
     }
@@ -71,10 +75,12 @@ export default function PracticeView() {
     if (step < lesson.exercises.length - 1) {
       setStep(s => s + 1);
       setStatus('playing');
+      play('tap');
     } else {
       setStatus('done');
       fireSuccessConfetti();
       setLessonComplete(lesson.id, 100, 5, currentCourse);
+      play('lessonComplete');
     }
   };
 

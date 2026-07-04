@@ -8,14 +8,59 @@ import { useUserStore } from '@/store/userStore';
 import Tutorial from '@/components/modals/Tutorial';
 import LevelUpModal from '@/components/modals/LevelUpModal';
 import StreakModal from '@/components/modals/StreakModal';
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
+import { play, unlockAudio } from '@/lib/audio';
 
 export default function AppShell({ children }: { children: React.ReactNode }) {
   const { streak, hearts, gems } = useUserStore();
   const location = useLocation();
   const { language, theme, toggleTheme, currentCourse } = useSettingsStore();
-  const { showLevelUp, setShowLevelUp, showStreak, setShowStreak, hasSeenTutorial, setHasSeenTutorial } = useUserStore();
+  const { showLevelUp, setShowLevelUp, showStreak, setShowStreak, hasSeenTutorial, setHasSeenTutorial, achievements, level } = useUserStore();
   const [shouldShowTutorial, setShouldShowTutorial] = useState(false);
+
+  // Unlock the AudioContext on the user's first interaction (browser autoplay policy).
+  // The handler attaches once, fires `unlockAudio()` once, then self-destructs.
+  useEffect(() => {
+    const unlock = () => {
+      unlockAudio();
+      window.removeEventListener('pointerdown', unlock);
+      window.removeEventListener('keydown', unlock);
+    };
+    window.addEventListener('pointerdown', unlock, { once: true, passive: true });
+    window.addEventListener('keydown', unlock, { once: true });
+    return () => {
+      window.removeEventListener('pointerdown', unlock);
+      window.removeEventListener('keydown', unlock);
+    };
+  }, []);
+
+  // Achievement unlock sound — fires once when the achievements list grows.
+  // Uses `useRef` to compare lengths without re-running the effect.
+  const lastAchievementCount = useRef(achievements.length);
+  useEffect(() => {
+    if (achievements.length > lastAchievementCount.current) {
+      play('achievement');
+    }
+    lastAchievementCount.current = achievements.length;
+  }, [achievements.length]);
+
+  // Level-up sound — fires once when the level crosses upward.
+  const lastLevel = useRef(level);
+  useEffect(() => {
+    if (level > lastLevel.current) {
+      play('levelUp');
+    }
+    lastLevel.current = level;
+  }, [level]);
+
+  // Streak bonus sound — fires when the user lands on a brand-new streak day.
+  const lastStreak = useRef(streak);
+  useEffect(() => {
+    if (streak > lastStreak.current && streak > 0) {
+      play('streak');
+    }
+    lastStreak.current = streak;
+  }, [streak]);
 
   // Schedule the tutorial popup the first time the user lands here.
   // `showTutorial` is a pure derivation: visible while deferred AND not yet seen.
@@ -91,6 +136,7 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
               >
                 <NavLink
                   to={item.id}
+                  onClick={() => play('tap')}
                   className={clsx(
                     'flex items-center gap-3 px-3 py-2.5 rounded-xl font-bold transition-all',
                     'flex-1 md:flex-none justify-center md:justify-start',
@@ -116,7 +162,7 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
         {/* Desktop bottom: theme toggle */}
         <div className="hidden md:flex flex-col gap-3 mt-auto pt-6 border-t border-[var(--border-subtle)]">
           <button
-            onClick={toggleTheme}
+            onClick={() => { toggleTheme(); play('toggle'); }}
             className="flex items-center gap-3 px-3 py-2.5 rounded-xl font-bold transition-all text-[var(--app-fg-muted)] border-2 border-transparent hover:bg-blue-500/5 hover:text-blue-400"
           >
             {theme === 'dark'
@@ -179,7 +225,7 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
 
             {/* Mobile theme toggle (Moved here) */}
             <div className="md:hidden border-l border-[var(--border-subtle)] ml-1 pl-2">
-              <button onClick={toggleTheme} className="p-1.5 rounded-xl hover:bg-blue-500/10 transition text-[var(--app-fg-muted)]">
+              <button onClick={() => { toggleTheme(); play('toggle'); }} className="p-1.5 rounded-xl hover:bg-blue-500/10 transition text-[var(--app-fg-muted)]">
                 {theme === 'dark' ? <Sun size={18} className="text-amber-400" /> : <Moon size={18} />}
               </button>
             </div>

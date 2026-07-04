@@ -4,6 +4,7 @@ import { clsx } from 'clsx';
 import { useUserStore } from '@/store/userStore';
 import { useSettingsStore } from '@/store/settingsStore';
 import { useAuthStore } from '@/store/authStore';
+import { play } from '@/lib/audio';
 
 export default function SettingsView() {
   const { name, setName, resetAccount } = useUserStore();
@@ -48,18 +49,18 @@ export default function SettingsView() {
              <div className="text-sm text-app-fg/50 font-medium">{language === 'bn' ? 'লাইট বা ডার্ক মোড বেছে নিন' : 'Choose between Light and Dark'}</div>
            </div>
            <div className="flex bg-app-bg p-1 rounded-2xl border-2 border-border-subtle">
-             <button 
-               onClick={() => theme !== 'light' && toggleTheme()}
-               className={clsx("px-5 py-2 rounded-xl text-sm font-black transition-all", theme === 'light' ? "bg-duo-blue text-white shadow-lg" : "text-app-fg/40")}
-             >
-               LIGHT
-             </button>
-             <button 
-               onClick={() => theme !== 'dark' && toggleTheme()}
-               className={clsx("px-5 py-2 rounded-xl text-sm font-black transition-all", theme === 'dark' ? "bg-duo-blue text-white shadow-lg" : "text-app-fg/40")}
-             >
-               DARK
-             </button>
+             <button
+              onClick={() => { if (theme !== 'light') { toggleTheme(); play('toggle'); } }}
+              className={clsx("px-5 py-2 rounded-xl text-sm font-black transition-all", theme === 'light' ? "bg-duo-blue text-white shadow-lg" : "text-app-fg/40")}
+            >
+              LIGHT
+            </button>
+            <button
+              onClick={() => { if (theme !== 'dark') { toggleTheme(); play('toggle'); } }}
+              className={clsx("px-5 py-2 rounded-xl text-sm font-black transition-all", theme === 'dark' ? "bg-duo-blue text-white shadow-lg" : "text-app-fg/40")}
+            >
+              DARK
+            </button>
            </div>
         </div>
 
@@ -70,17 +71,47 @@ export default function SettingsView() {
              <div className="text-sm text-app-fg/50 font-medium">{language === 'bn' ? 'অ্যাপের ভাষা পরিবর্তন করুন' : 'Change app language'}</div>
            </div>
            <div className="flex bg-app-bg p-1 rounded-2xl border-2 border-border-subtle">
-             <button 
-               onClick={() => setLanguage('bn')}
+             <button
+               onClick={() => { setLanguage('bn'); play('tap'); }}
                className={clsx("px-5 py-2 rounded-xl text-sm font-black transition-all", language === 'bn' ? "bg-duo-blue text-white shadow-lg" : "text-app-fg/40")}
              >
                বাংলা
              </button>
-             <button 
-               onClick={() => setLanguage('en')}
+             <button
+               onClick={() => { setLanguage('en'); play('tap'); }}
                className={clsx("px-5 py-2 rounded-xl text-sm font-black transition-all", language === 'en' ? "bg-duo-blue text-white shadow-lg" : "text-app-fg/40")}
              >
                ENGLISH
+             </button>
+           </div>
+        </div>
+
+        {/* Sound Effects — locked OFF until better sounds land */}
+        <div className="flex items-center justify-between py-2 border-t-2 border-border-subtle pt-6">
+           <div>
+             <div className="font-bold text-lg">{language === 'bn' ? 'সাউন্ড ইফেক্ট' : 'Sound Effects'}</div>
+             <div className="text-sm text-app-fg/50 font-medium">
+               {language === 'bn'
+                 ? 'নতুন সাউন্ড শীঘ্রই আসছে — আপাতত বন্ধ আছে'
+                 : 'New sounds coming soon — temporarily disabled'}
+             </div>
+           </div>
+           <div className="flex bg-app-bg p-1 rounded-2xl border-2 border-border-subtle opacity-60">
+             <button
+               onClick={() => { /* locked until better sounds land */ }}
+               disabled
+               aria-pressed={false}
+               aria-label={language === 'bn' ? 'সাউন্ড চালু (শীঘ্রই)' : 'Sound on (coming soon)'}
+               className="px-5 py-2 rounded-xl text-sm font-black transition-all text-app-fg/30 cursor-not-allowed"
+             >
+               {language === 'bn' ? 'চালু' : 'ON'}
+             </button>
+             <button
+               aria-pressed={true}
+               aria-label={language === 'bn' ? 'সাউন্ড বন্ধ' : 'Sound off'}
+               className="px-5 py-2 rounded-xl text-sm font-black transition-all bg-duo-blue text-white shadow-lg"
+             >
+               {language === 'bn' ? 'বন্ধ' : 'OFF'}
              </button>
            </div>
         </div>

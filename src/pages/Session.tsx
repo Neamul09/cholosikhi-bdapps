@@ -11,6 +11,7 @@ import { useProgressStore } from '@/store/progressStore';
 import { useUserStore } from '@/store/userStore';
 import { LevelUpModal, CorrectOverlay, WrongOverlay } from '@/components/modals';
 import { MCQExercise, FillBlankExercise, OutputPredictExercise, BugHuntExercise, CodeArrangeExercise } from '@/components/exercises';
+import { play } from '@/lib/audio';
 
 // A single item in the session queue
 type TheoryBlock = Lesson['theory'][number];
@@ -66,19 +67,22 @@ export default function SessionView() {
       setSessionState('checking_correct');
       addXp(currentItem.type === 'exercise' ? currentItem.content.xpReward : 0);
       setCorrectExplanation(explText);
+      play('correct');
     } else {
       setSessionState('checking_wrong');
       loseHeart();
       setWrongExplanation(explText || (language === 'bn' ? 'ভুল উত্তর, দয়া করে আবার চেষ্টা করুন।' : 'Wrong answer, please try again.'));
-      
+
       // Push string copy of exercise to back of queue
       setQueue(prev => [...prev, { ...currentItem, id: currentItem.id + "_retry" }]);
+      play('incorrect');
     }
   };
 
   const handleContinue = () => {
     if (sessionState === 'checking_wrong' && hearts <= 0) {
       // Out of hearts
+      play('incorrect');
       navigate('/');
       return;
     }
@@ -86,11 +90,17 @@ export default function SessionView() {
     if (currentIndex < queue.length - 1) {
       setCurrentIndex(c => c + 1);
       setSessionState('playing');
+      play('tap');
     } else {
       // Finished all items
       setSessionState('done');
       setLessonComplete(lesson.id, 100, 5, currentCourse);
-      if (level > startLevel) setShowLevelUp(true);
+      if (level > startLevel) {
+        setShowLevelUp(true);
+        play('levelUp');
+      } else {
+        play('lessonComplete');
+      }
     }
   };
 

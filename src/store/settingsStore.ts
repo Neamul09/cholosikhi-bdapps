@@ -26,7 +26,7 @@ export interface SettingsState {
 export const useSettingsStore = create<SettingsState>()(
   persist(
     (set, get) => ({
-      soundEnabled: true,
+      soundEnabled: false,
       animationsEnabled: true,
       dailyGoalXp: 50,
       language: 'bn',
@@ -96,7 +96,7 @@ export const useSettingsStore = create<SettingsState>()(
             currentCourse: (profile.current_course as 'python' | 'cpp') || 'python',
             theme: (profile.theme as 'light' | 'dark') || 'light',
             dailyGoalXp: profile.daily_goal_xp || 50,
-            soundEnabled: profile.sound_enabled ?? true,
+            soundEnabled: profile.sound_enabled ?? false,
             animationsEnabled: profile.animations_enabled ?? true,
             hasSeenTutorial: profile.has_seen_tutorial ?? false,
           });
