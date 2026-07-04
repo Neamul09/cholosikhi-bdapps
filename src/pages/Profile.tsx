@@ -235,7 +235,7 @@ export default function ProfileView() {
                 <div className={clsx('w-8 h-8 flex items-center justify-center font-bold text-sm rounded-full bg-white/5',
                   i === 0 && 'text-amber-400 bg-amber-400/10',
                   i === 1 && 'text-gray-300 bg-gray-300/10',
-                  i === 2 && 'text-amber-700 bg-amber-700/10'
+                  i === 2 && 'text-[#cd7f32] bg-[#cd7f32]/10'
                 )}>{i + 1}</div>
                 <div className="w-10 h-10 rounded-full bg-blue-500/10 flex items-center justify-center text-blue-400">
                   <IconAvatar name={f.avatar} size={20} />

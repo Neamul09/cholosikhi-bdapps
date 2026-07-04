@@ -21,30 +21,39 @@ export default function LeaderboardView() {
   const [searching, setSearching] = useState(false);
 
   useEffect(() => {
+    // Cancellation flag — if filter/league change mid-fetch (e.g. user toggles
+    // GLOBAL↔FRIENDS faster than the network responds), discard stale writes
+    // instead of overwriting the new state with old data.
+    let cancelled = false;
     const fetchLeaderboard = async () => {
       setLoading(true);
       const data = filter === 'global' ? await loadLeaderboard() : await loadFriendsLeaderboard();
+      if (cancelled) return;
       const { data: { session } } = await supabase.auth.getSession();
       const userId = session?.user?.id;
 
       // Fetch following status for all users in view
       if (userId) {
         const { data: follows } = await supabase.from('follows').select('following_id').eq('follower_id', userId);
-        setFollowingIds(new Set(follows?.map(f => f.following_id) || []));
+        if (!cancelled) setFollowingIds(new Set(follows?.map(f => f.following_id) || []));
       }
-      
+
       const mapped = data.map((u) => ({
         ...u,
         isMe: u.id === userId
       }));
-      
-      setUsers(mapped);
-      setLoading(false);
+
+      if (!cancelled) {
+        setUsers(mapped);
+        setLoading(false);
+      }
     };
     fetchLeaderboard();
+    return () => { cancelled = true; };
   }, [loadLeaderboard, loadFriendsLeaderboard, filter, league]);
 
   useEffect(() => {
+    let cancelled = false;
     const handleSearch = async () => {
       if (searchQuery.length < 2) {
         setSearchResults([]);
@@ -52,12 +61,13 @@ export default function LeaderboardView() {
       }
       setSearching(true);
       const results = await searchUsers(searchQuery);
+      if (cancelled) return;
       setSearchResults(results);
       setSearching(false);
     };
 
     const timer = setTimeout(handleSearch, 500);
-    return () => clearTimeout(timer);
+    return () => { cancelled = true; clearTimeout(timer); };
   }, [searchQuery, searchUsers]);
 
   const handleToggleFollow = async (targetId: string) => {
@@ -103,7 +113,11 @@ export default function LeaderboardView() {
         <div className="flex flex-col md:flex-row items-center justify-center gap-4 mt-6">
           <div className="bg-panel border-2 border-border-subtle p-1 rounded-2xl flex gap-1 items-center">
             <button
-              onClick={() => setFilter('global')}
+              onClick={() => {
+                setFilter('global');
+                setSearchQuery('');
+                setSearchResults([]);
+              }}
               className={clsx(
                 "px-6 py-2 rounded-xl font-black text-xs transition-all uppercase tracking-widest",
                 filter === 'global' ? "bg-blue-500 text-white shadow-lg" : "text-app-fg/40 hover:text-app-fg"
@@ -112,7 +126,11 @@ export default function LeaderboardView() {
               {language === 'bn' ? 'গ্লোবাল' : 'GLOBAL'}
             </button>
             <button
-              onClick={() => setFilter('friends')}
+              onClick={() => {
+                setFilter('friends');
+                setSearchQuery('');
+                setSearchResults([]);
+              }}
               className={clsx(
                 "px-6 py-2 rounded-xl font-black text-xs transition-all uppercase tracking-widest",
                 filter === 'friends' ? "bg-blue-500 text-white shadow-lg" : "text-app-fg/40 hover:text-app-fg"
@@ -201,7 +219,7 @@ export default function LeaderboardView() {
               if (!user) return null;
               
               const height = idx === 0 ? 'h-48' : idx === 1 ? 'h-36' : 'h-28';
-              const color = idx === 0 ? 'text-amber-400 bg-amber-400/20' : idx === 1 ? 'text-gray-300 bg-gray-300/20' : 'text-amber-700 bg-amber-700/20';
+              const color = idx === 0 ? 'text-amber-400 bg-amber-400/20' : idx === 1 ? 'text-gray-300 bg-gray-300/20' : 'text-[#cd7f32] bg-[#cd7f32]/20';
               const delay = idx === 0 ? 0.3 : idx === 1 ? 0.4 : 0.5;
 
               return (
@@ -256,7 +274,7 @@ export default function LeaderboardView() {
             >
               <div className={clsx(
                 'w-8 text-center font-bold text-lg',
-                i === 0 ? 'text-amber-400' : i === 1 ? 'text-gray-300' : i === 2 ? 'text-amber-700' : 'text-gray-500'
+                i === 0 ? 'text-amber-400' : i === 1 ? 'text-gray-300' : i === 2 ? 'text-[#cd7f32]' : 'text-gray-500'
               )}>
                 {i + 1}
               </div>

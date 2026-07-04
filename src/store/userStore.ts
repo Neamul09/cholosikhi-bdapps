@@ -318,10 +318,6 @@ export const useUserStore = create<UserState>()(
           .order('total_xp', { ascending: false })
           .limit(30);
 
-        if (data) {
-          console.log(`🏆 Leaderboard: Fetched ${data.length} users for league "${state.league}"`);
-        }
-
         if (error) {
           console.error('Error loading leaderboard:', error);
           return [];
