@@ -43,8 +43,8 @@ export const useSettingsStore = create<SettingsState>()(
         get().syncSettings();
       },
       toggleSound: () => {
-        set((s) => ({ soundEnabled: !s.soundEnabled }));
-        get().syncSettings();
+        // Locked off until better sounds ship. Re-enabling is intentionally a no-op.
+        return;
       },
       toggleTheme: () => {
         const newTheme = get().theme === 'light' ? 'dark' : 'light';
@@ -96,13 +96,26 @@ export const useSettingsStore = create<SettingsState>()(
             currentCourse: (profile.current_course as 'python' | 'cpp') || 'python',
             theme: (profile.theme as 'light' | 'dark') || 'light',
             dailyGoalXp: profile.daily_goal_xp || 50,
-            soundEnabled: profile.sound_enabled ?? false,
+            soundEnabled: false, // sound locked off until better audio ships; ignore server value
             animationsEnabled: profile.animations_enabled ?? true,
             hasSeenTutorial: profile.has_seen_tutorial ?? false,
           });
         }
       }
     }),
-    { name: 'py-cholosikhi-settings' }
+    {
+      name: 'py-cholosikhi-settings',
+      // Bump when adding fields or migrating stored values.
+      version: 2,
+      migrate: (persistedState) => {
+        // v2: force soundEnabled to false — sounds are locked off until
+        // better audio ships. This overrides any previously-persisted `true`.
+        const s = persistedState as { soundEnabled?: boolean } | null;
+        if (s && typeof s === 'object') {
+          return { ...s, soundEnabled: false };
+        }
+        return persistedState as never;
+      },
+    }
   )
 );
