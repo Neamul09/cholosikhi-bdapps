@@ -1,7 +1,7 @@
 import React from 'react';
 import { NavLink, useLocation } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Home, Trophy, User, BookOpen, Settings, Flame, Heart, Gem, Moon, Sun, Zap, ShoppingBag, Code } from 'lucide-react';
+import { Home, Trophy, User, BookOpen, Settings, Flame, Heart, Gem, Moon, Sun, ShoppingBag, Code } from 'lucide-react';
 import { clsx } from 'clsx';
 import { useSettingsStore } from '@/store/settingsStore';
 import { useUserStore } from '@/store/userStore';
@@ -66,15 +66,13 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
 
         {/* Logo */}
         <div className="hidden md:flex items-center gap-3 mb-10 px-2">
-          <div className="w-10 h-10 rounded-2xl bg-gradient-to-br from-blue-500 to-cyan-400 flex items-center justify-center shadow-lg shadow-blue-500/30">
-            <Zap size={22} className="text-white" strokeWidth={2.5} />
-          </div>
-          <div className="font-black text-2xl tracking-tight">
-            <span className="bg-clip-text text-transparent bg-gradient-to-r from-cyan-400 to-blue-500">
-              {isPython ? 'py.' : 'cpp.'}
-            </span>
-            <span className="text-app-fg">cholosikhi</span>
-          </div>
+          <img
+            src="/py-wordmark.png"
+            alt={isPython ? 'py.cholosikhi' : 'cpp.cholosikhi'}
+            className="h-10 w-auto drop-shadow"
+            width={160}
+            height={40}
+          />
         </div>
 
         {/* Nav Links */}
@@ -145,12 +143,13 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
         )}>
           {/* Mobile logo only (toggle moved to right) */}
           <div className="flex items-center md:hidden">
-            <span className="font-black text-lg">
-              <span className="bg-clip-text text-transparent bg-gradient-to-r from-cyan-400 to-blue-500">
-                {isPython ? 'py.' : 'cpp.'}
-              </span>
-              <span className="text-app-fg">cholosikhi</span>
-            </span>
+            <img
+              src="/py-wordmark.png"
+              alt={isPython ? 'py.cholosikhi' : 'cpp.cholosikhi'}
+              className="h-8 w-auto drop-shadow"
+              width={128}
+              height={32}
+            />
           </div>
           <div className="hidden md:block" />
 

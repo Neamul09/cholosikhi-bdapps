@@ -3,10 +3,14 @@ import { useNavigate } from 'react-router-dom';
 import { ArrowRight, Globe, Sparkles, Code, Terminal, Home, Moon, Sun } from 'lucide-react';
 import { useSettingsStore } from '@/store/settingsStore';
 
-const CSLogo = ({ className = "w-10 h-10" }) => (
-  <div className={`rounded-xl bg-gradient-to-br from-blue-500 to-cyan-400 flex items-center justify-center shadow-lg shadow-blue-500/30 overflow-hidden font-black text-white ${className}`}>
-    <span className="translate-y-[1px]">CS</span>
-  </div>
+const CSLogo = ({ className = "h-10 w-auto" }) => (
+  <img
+    src="/wordmark.png"
+    alt="py.cholosikhi"
+    className={`drop-shadow-lg ${className}`}
+    width={160}
+    height={40}
+  />
 );
 
 export default function Welcome() {
@@ -18,10 +22,7 @@ export default function Welcome() {
       {/* Navbar */}
       <nav className="max-w-7xl mx-auto px-6 py-8 flex justify-between items-center relative z-10">
         <div className="flex items-center gap-3">
-          <CSLogo className="w-12 h-12 text-lg" />
-          <span className="text-2xl font-black tracking-tight text-app-fg">
-            <span className="text-blue-500">py.</span>cholosikhi
-          </span>
+          <CSLogo className="h-12 w-auto" />
         </div>
         
         <div className="flex items-center gap-2 sm:gap-6">
