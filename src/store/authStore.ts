@@ -13,41 +13,54 @@ interface AuthState {
   signOut: () => Promise<void>;
 }
 
-export const useAuthStore = create<AuthState>((set) => ({
+export const useAuthStore = create<AuthState>((set, get) => ({
   session: null,
   user: null,
   loading: true,
   initialized: false,
   isEmailVerified: false,
 
-  setSession: (session) => set({ 
-    session, 
+  setSession: (session) => set({
+    session,
     user: session?.user ?? null,
     isEmailVerified: !!session?.user?.email_confirmed_at
   }),
 
   initialize: async () => {
     const { data: { session } } = await supabase.auth.getSession();
-    set({ 
-      session, 
-      user: session?.user ?? null, 
-      loading: false, 
+    set({
+      session,
+      user: session?.user ?? null,
+      loading: false,
       initialized: true,
       isEmailVerified: !!session?.user?.email_confirmed_at
     });
 
     supabase.auth.onAuthStateChange((event, session) => {
-      // On SIGNED_IN, check if this came from an email confirmation link
-      // If the event is EMAIL_CONFIRM or similar confirmation events, we block auto-login
-      // We detect this by checking if it's a SIGNED_IN with a fresh confirmation
-      const isEmailConfirmEvent = (event as string) === 'EMAIL_CONFIRM' || (event as string) === 'USER_UPDATED';
-      if (isEmailConfirmEvent) {
-        // Don't auto-login; send user to auth page to log in manually
+      const eventName = event as string;
+
+      if (eventName === 'SIGNED_OUT' || session === null) {
         set({ session: null, user: null, isEmailVerified: false });
         return;
       }
-      set({ 
-        session, 
+
+      const previousUser = get().user;
+      const wasUnconfirmed =
+        !!previousUser && !previousUser.email_confirmed_at;
+      const isNowConfirmed = !!session?.user?.email_confirmed_at;
+
+      if (
+        (eventName === 'USER_UPDATED' || eventName === 'EMAIL_CONFIRM') &&
+        wasUnconfirmed &&
+        isNowConfirmed
+      ) {
+        set({ session: null, user: null, isEmailVerified: false });
+        supabase.auth.signOut().catch(() => {});
+        return;
+      }
+
+      set({
+        session,
         user: session?.user ?? null,
         isEmailVerified: !!session?.user?.email_confirmed_at
       });

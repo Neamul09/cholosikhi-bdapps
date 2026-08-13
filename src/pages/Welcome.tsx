@@ -1,6 +1,9 @@
 import { motion } from 'framer-motion';
 import { useNavigate } from 'react-router-dom';
-import { ArrowRight, Globe, Sparkles, Code, Terminal, Home, Moon, Sun } from 'lucide-react';
+import {
+  ArrowRight, Globe, Sparkles, Code, Terminal, Home, Moon, Sun,
+  CheckCircle2, Heart, Trophy
+} from 'lucide-react';
 import { useSettingsStore } from '@/store/settingsStore';
 
 const CSLogo = ({ className = "h-10 w-auto" }) => (
@@ -24,9 +27,9 @@ export default function Welcome() {
         <div className="flex items-center gap-3">
           <CSLogo className="h-12 w-auto" />
         </div>
-        
+
         <div className="flex items-center gap-2 sm:gap-6">
-          <a 
+          <a
             href="https://cholosikhi.com"
             className="flex items-center gap-2 text-app-fg-muted font-black uppercase text-xs tracking-widest hover:text-blue-500 transition-colors hidden md:flex"
           >
@@ -37,12 +40,14 @@ export default function Welcome() {
           <div className="flex items-center gap-2">
             <button
               onClick={() => setTheme(theme === 'dark' ? 'light' : 'dark')}
+              aria-label={theme === 'dark' ? 'Switch to light theme' : 'Switch to dark theme'}
               className="p-2 rounded-xl bg-panel border border-border-subtle text-app-fg-muted hover:text-blue-400 transition-colors"
             >
               {theme === 'dark' ? <Sun size={18} /> : <Moon size={18} />}
             </button>
             <button
               onClick={() => setLanguage(language === 'bn' ? 'en' : 'bn')}
+              aria-label="Switch language"
               className="flex items-center gap-2 text-app-fg-muted hover:text-blue-400 transition-colors px-3 py-1.5 rounded-xl bg-panel border border-border-subtle"
             >
               <Globe size={16} />
@@ -50,7 +55,7 @@ export default function Welcome() {
             </button>
           </div>
 
-          <button 
+          <button
             onClick={() => navigate('/auth')}
             className="px-6 py-2.5 rounded-xl bg-blue-500 hover:bg-blue-600 text-white font-black text-sm shadow-lg shadow-blue-500/20 transition-all active:scale-95 hidden sm:block"
           >
@@ -61,8 +66,8 @@ export default function Welcome() {
 
       <main className="max-w-7xl mx-auto px-6 pt-12 pb-24 grid grid-cols-1 lg:grid-cols-2 gap-12 items-center relative">
         {/* Decorative elements */}
-        <div className="absolute top-1/4 -left-20 w-64 h-64 bg-blue-500/10 rounded-full blur-[100px] pointer-events-none" />
-        <div className="absolute bottom-1/4 -right-20 w-80 h-80 bg-cyan-400/10 rounded-full blur-[100px] pointer-events-none" />
+        <div className="absolute top-1/4 -left-20 w-64 h-64 bg-blue-500/10 rounded-full blur-[100px] pointer-events-none" aria-hidden="true" />
+        <div className="absolute bottom-1/4 -right-20 w-80 h-80 bg-cyan-400/10 rounded-full blur-[100px] pointer-events-none" aria-hidden="true" />
 
         {/* Hero Content */}
         <motion.div
@@ -73,21 +78,21 @@ export default function Welcome() {
         >
           <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-blue-500/10 border border-blue-500/20 text-blue-400 font-black text-xs uppercase tracking-widest">
             <Sparkles size={14} />
-            {language === 'bn' ? 'সবার জন্য সহজ কোডিং' : 'Coding made simple for everyone'}
+            {language === 'bn' ? 'বাংলায় কোডিং — মজা করে' : 'Bangla-first coding'}
           </div>
-          
+
           <h1 className="text-6xl sm:text-7xl font-black leading-tight tracking-tight text-app-fg">
             {language === 'bn' ? (
-              <>পাইথন শিখুন <span className="text-blue-500">মজা</span> করে</>
+              <>পাইথন শেখা <span className="text-blue-500">মজার</span> হোক</>
             ) : (
-              <>The <span className="text-blue-500">fun</span> way to learn Python</>
+              <>Python that <span className="text-blue-500">actually sticks</span></>
             )}
           </h1>
-          
+
           <p className="text-xl text-app-fg-muted font-bold leading-relaxed max-w-lg">
-            {language === 'bn' 
-              ? 'গেম খেলার মতো করে পাইথন শিখুন। ছোট ছোট পাঠ, মজার চ্যালেঞ্জ এবং হাতে-কলমে প্র্যাকটিস।' 
-              : 'Master Python through game-like lessons. Interactive challenges, visual playgrounds, and hands-on practice.'}
+            {language === 'bn'
+              ? 'গেম খেলার মতো করে পাইথন শিখুন — ছোট ছোট পাঠ, চ্যালেঞ্জ আর সরাসরি ব্রাউজারে কোড চালানো। বাংলায় ব্যাখ্যা, ইংরেজিতে কোড।'
+              : 'Lessons that feel like a game. Challenges that take minutes, not hours. Write real Python in your browser — explained in Bangla when you need it.'}
           </p>
 
           <div className="flex flex-col sm:flex-row gap-4 pt-4">
@@ -95,24 +100,31 @@ export default function Welcome() {
               onClick={() => navigate('/auth')}
               className="px-10 py-5 rounded-2xl bg-blue-500 hover:bg-blue-600 text-white font-black text-xl shadow-[0_8px_0_rgb(29,78,216)] active:shadow-none active:translate-y-2 transition-all flex items-center justify-center gap-3 group"
             >
-              {language === 'bn' ? 'শুরু করুন' : 'GET STARTED'}
+              {language === 'bn' ? 'ফ্রি-তে শুরু করুন' : 'Start learning free'}
               <ArrowRight className="group-hover:translate-x-1 transition-transform" />
             </button>
             <button
               onClick={() => navigate('/auth')}
               className="px-10 py-5 rounded-2xl bg-panel border-2 border-border-subtle text-app-fg font-black text-xl shadow-[0_6px_0_var(--border-subtle)] active:shadow-none active:translate-y-1.5 transition-all"
             >
-              {language === 'bn' ? 'আমার অ্যাকাউন্ট আছে' : 'I ALREADY HAVE AN ACCOUNT'}
+              {language === 'bn' ? 'আগেই অ্যাকাউন্ট আছে' : 'I already have an account'}
             </button>
           </div>
 
-          <div className="pt-6">
-            <a 
+          {/* Trust strip — answers "too generic" complaint */}
+          <div className="flex flex-wrap items-center gap-x-6 gap-y-2 pt-2 text-sm font-bold text-app-fg-muted">
+            <span className="inline-flex items-center gap-1.5"><CheckCircle2 size={14} className="text-emerald-400" />{language === 'bn' ? 'চিরকাল ফ্রি' : 'Always free'}</span>
+            <span className="inline-flex items-center gap-1.5"><Heart size={14} className="text-pink-400" />{language === 'bn' ? 'কার্ড লাগে না' : 'No card needed'}</span>
+            <span className="inline-flex items-center gap-1.5"><Trophy size={14} className="text-amber-400" />{language === 'bn' ? '১০০+ পাঠ' : '100+ lessons'}</span>
+          </div>
+
+          <div className="pt-2">
+            <a
               href="https://cholosikhi.com"
               className="inline-flex items-center gap-2 text-blue-400 font-black uppercase text-xs tracking-[0.2em] hover:gap-4 transition-all"
             >
               <ArrowRight className="rotate-180" size={16} />
-              {language === 'bn' ? 'চলোশিখি মূল পাতায় ফিরে যান' : 'BACK TO CHOLOSIKHI MAIN HUB'}
+              {language === 'bn' ? 'CholoSikhi মূল পাতায় ফিরে যান' : 'Back to CholoSikhi main hub'}
             </a>
           </div>
         </motion.div>
@@ -158,7 +170,9 @@ export default function Welcome() {
               <div className="glass p-8 rounded-[2.5rem] border-2 border-blue-500/30 shadow-2xl bg-blue-500/5 backdrop-blur-3xl">
                 <div className="flex items-center gap-3 mb-6">
                   <div className="w-10 h-10 rounded-xl bg-blue-500 flex items-center justify-center text-white font-black">2</div>
-                  <div className="font-black text-app-fg tracking-tight">Level Reached</div>
+                  <div className="font-black text-app-fg tracking-tight">
+                    {language === 'bn' ? 'লেভেল আপডেট' : 'Level Reached'}
+                  </div>
                 </div>
                 <div className="space-y-3">
                   <div className="h-3 w-full bg-app-fg/10 rounded-full overflow-hidden">
@@ -178,11 +192,13 @@ export default function Welcome() {
             animate={{ y: [0, -20, 0] }}
             transition={{ duration: 4, repeat: Infinity, ease: "easeInOut" }}
             className="absolute -top-10 -right-10 w-24 h-24 bg-blue-500/20 rounded-3xl blur-2xl"
+            aria-hidden="true"
           />
           <motion.div
             animate={{ y: [0, 20, 0] }}
             transition={{ duration: 5, repeat: Infinity, ease: "easeInOut" }}
             className="absolute -bottom-10 left-10 w-32 h-32 bg-cyan-400/20 rounded-full blur-2xl"
+            aria-hidden="true"
           />
         </motion.div>
       </main>
@@ -193,23 +209,32 @@ export default function Welcome() {
           <div>
             <div className="text-4xl font-black text-app-fg">100+</div>
             <div className="text-app-fg-muted font-bold uppercase tracking-widest text-xs mt-2">
-              {language === 'bn' ? 'কোডিং লেসনস' : 'Coding Lessons'}
+              {language === 'bn' ? 'কোডিং পাঠ' : 'Coding lessons'}
             </div>
           </div>
           <div>
-            <div className="text-4xl font-black text-app-fg">5+</div>
+            <div className="text-4xl font-black text-app-fg">5</div>
             <div className="text-app-fg-muted font-bold uppercase tracking-widest text-xs mt-2">
-              {language === 'bn' ? 'গল্পের মতো ইউনিট' : 'Story-driven Units'}
+              {language === 'bn' ? 'গল্পের মতো ইউনিট' : 'Story-driven units'}
             </div>
           </div>
           <div>
             <div className="text-4xl font-black text-app-fg">∞</div>
             <div className="text-app-fg-muted font-bold uppercase tracking-widest text-xs mt-2">
-              {language === 'bn' ? 'আনলিমিটেড প্র্যাকটিস' : 'Unlimited Practice'}
+              {language === 'bn' ? 'যত খুশি চালিয়ে যান' : 'Practice as much as you want'}
             </div>
           </div>
         </div>
       </section>
+
+      {/* Footer trust line */}
+      <footer className="max-w-7xl mx-auto px-6 py-10 text-center">
+        <p className="text-xs font-bold text-app-fg-muted">
+          {language === 'bn'
+            ? 'বাংলাদেশে তৈরি ❤️  ·  বিশ্বের জন্য'
+            : 'Made with ❤️ in Bangladesh  ·  Built for the world'}
+        </p>
+      </footer>
     </div>
   );
 }

@@ -1,7 +1,7 @@
 import React from 'react';
 import { NavLink, useLocation } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Home, Trophy, User, BookOpen, Settings, Flame, Heart, Gem, Moon, Sun, ShoppingBag, Code } from 'lucide-react';
+import { Home, Trophy, User, BookOpen, Settings, Flame, Heart, Gem, Moon, Sun, ShoppingBag, Code, Users } from 'lucide-react';
 import { clsx } from 'clsx';
 import { useSettingsStore } from '@/store/settingsStore';
 import { useUserStore } from '@/store/userStore';
@@ -73,13 +73,14 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
   const showTutorial = shouldShowTutorial && !hasSeenTutorial;
 
   const navItems = [
-    { id: '/',            icon: Home,     label: language === 'bn' ? 'শিখুন'       : 'LEARN'       },
-    { id: '/playground',  icon: Code,     label: language === 'bn' ? 'কোড প্লেগ্রাউন্ড' : 'PLAYGROUND'  },
-    { id: '/dsa',         icon: BookOpen,  label: language === 'bn' ? 'ভিজ্যুয়ালাইজার' : 'VISUALIZER'    },
-    { id: '/leaderboard', icon: Trophy,    label: language === 'bn' ? 'লিডারবোর্ড'  : 'LEADERBOARD' },
-    { id: '/shop',        icon: ShoppingBag, label: language === 'bn' ? 'শপ'        : 'SHOP'        },
-    { id: '/profile',     icon: User,      label: language === 'bn' ? 'প্রোফাইল'    : 'PROFILE'     },
-    { id: '/settings',    icon: Settings,  label: language === 'bn' ? 'সেটিংস'      : 'SETTINGS'    },
+    { id: '/',            icon: Home,     label: language === 'bn' ? 'শিখুন'         : 'Learn'        },
+    { id: '/playground',  icon: Code,     label: language === 'bn' ? 'কোড প্লে'      : 'Playground'   },
+    { id: '/dsa',         icon: BookOpen, label: language === 'bn' ? 'ভিজ্যুয়ালাইজার' : 'Visualizer' },
+    { id: '/leaderboard', icon: Trophy,   label: language === 'bn' ? 'সেরা শিক্ষার্থী'  : 'Leaderboard'  },
+    { id: '/community',   icon: Users,    label: language === 'bn' ? 'কমিউনিটি'        : 'Community'    },
+    { id: '/shop',        icon: ShoppingBag, label: language === 'bn' ? 'দোকান'       : 'Shop'         },
+    { id: '/profile',     icon: User,     label: language === 'bn' ? 'প্রোফাইল'       : 'Profile'      },
+    { id: '/settings',    icon: Settings, label: language === 'bn' ? 'সেটিংস'         : 'Settings'     },
   ];
 
   const isPython = currentCourse === 'python';
@@ -168,10 +169,10 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
             {theme === 'dark'
               ? <Sun size={22} className="text-amber-400" />
               : <Moon size={22} />}
-            <span className="uppercase tracking-wider text-xs">
+            <span className="text-xs">
               {theme === 'dark'
-                ? (language === 'bn' ? 'লাইট' : 'LIGHT')
-                : (language === 'bn' ? 'ডার্ক' : 'DARK')}
+                ? (language === 'bn' ? 'লাইট মোড' : 'Light mode')
+                : (language === 'bn' ? 'ডার্ক মোড' : 'Dark mode')}
             </span>
           </button>
         </div>

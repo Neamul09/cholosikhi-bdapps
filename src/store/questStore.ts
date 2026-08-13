@@ -1,6 +1,7 @@
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
 import { supabase } from '@/lib/supabase';
+import { useUserStore } from './userStore';
 
 export interface Quest {
   id: string;
@@ -71,7 +72,6 @@ export const useQuestStore = create<QuestState>()(
         
         if (quest && quest.completed && !quest.claimed) {
           // Add gems to userStore
-          const { useUserStore } = await import('./userStore');
           useUserStore.getState().addGems(quest.reward);
 
           const updatedQuests = quests.map(q => 

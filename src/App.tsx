@@ -1,4 +1,4 @@
-import { useEffect } from 'react';
+import { useEffect, Suspense, lazy } from 'react';
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import { useSettingsStore } from './store/settingsStore';
 import AppShell from './components/layout/AppShell';
@@ -9,18 +9,21 @@ import { useProgressStore } from './store/progressStore';
 import { useQuestStore } from './store/questStore';
 import ProtectedRoute from './components/layout/ProtectedRoute';
 
-// Pages
+// Eager-loaded core pages
 import Home from './pages/Home';
-import Session from './pages/Session';
-import DSAPlayground from './pages/DSAPlayground';
 import Profile from './pages/Profile';
-import Leaderboard from './pages/Leaderboard';
-import Achievements from './pages/Achievements';
 import Settings from './pages/Settings';
 import Shop from './pages/Shop';
 import Auth from './pages/Auth';
 import Welcome from './pages/Welcome';
-import CodePlayground from './pages/CodePlayground';
+
+// Lazy-loaded heavy pages (code-split)
+const Session = lazy(() => import('./pages/Session'));
+const DSAPlayground = lazy(() => import('./pages/DSAPlayground'));
+const Leaderboard = lazy(() => import('./pages/Leaderboard'));
+const Achievements = lazy(() => import('./pages/Achievements'));
+const CodePlayground = lazy(() => import('./pages/CodePlayground'));
+const CommunityHub = lazy(() => import('./pages/CommunityHub'));
 
 export default function App() {
   const { theme, loadSettings } = useSettingsStore();
@@ -61,17 +64,25 @@ export default function App() {
 
         <Route element={<ProtectedRoute />}>
           {/* Full screen Immersive Session Route */}
-          <Route path="/session/:lessonId" element={<Session />} />
+          <Route path="/session/:lessonId" element={<Suspense fallback={null}><Session /></Suspense>} />
 
           {/* Dashboard Routes wrapped in AppShell structure */}
-          <Route path="/" element={<AppShell><Home /></AppShell>} />
-          <Route path="/dsa" element={<AppShell><DSAPlayground /></AppShell>} />
-          <Route path="/leaderboard" element={<AppShell><Leaderboard /></AppShell>} />
+          <Route
+            path="/"
+            element={
+              <Suspense fallback={null}>
+                <AppShell><Home /></AppShell>
+              </Suspense>
+            }
+          />
+          <Route path="/dsa" element={<Suspense fallback={null}><AppShell><DSAPlayground /></AppShell></Suspense>} />
+          <Route path="/leaderboard" element={<Suspense fallback={null}><AppShell><Leaderboard /></AppShell></Suspense>} />
           <Route path="/profile" element={<AppShell><Profile /></AppShell>} />
           <Route path="/shop" element={<AppShell><Shop /></AppShell>} />
-          <Route path="/playground" element={<AppShell><CodePlayground /></AppShell>} />
-          <Route path="/achievements" element={<AppShell><Achievements /></AppShell>} />
+          <Route path="/playground" element={<Suspense fallback={null}><AppShell><CodePlayground /></AppShell></Suspense>} />
+          <Route path="/achievements" element={<Suspense fallback={null}><AppShell><Achievements /></AppShell></Suspense>} />
           <Route path="/settings" element={<AppShell><Settings /></AppShell>} />
+          <Route path="/community" element={<Suspense fallback={null}><AppShell><CommunityHub /></AppShell></Suspense>} />
         </Route>
 
         {/* Redirect based on session */}

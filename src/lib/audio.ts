@@ -13,7 +13,8 @@
  * This module is **store-agnostic** — it owns its own `enabled` flag and
  * exposes `setSoundEnabled(v)` so callers (Zustand stores, React state,
  * or any other source of truth) can push their preference in. Default is
- * `true` so users hear UI feedback immediately.
+ * `false` — sound is intentionally locked off until better sounds ship;
+ * callers push `true` via `setSoundEnabled` once the feature is re-enabled.
  *
  * Browser autoplay policy is respected: `unlockAudio()` must be called
  * from the first user gesture (e.g. a `pointerdown`/`keydown` listener)

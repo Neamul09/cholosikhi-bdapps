@@ -46,10 +46,10 @@ export default function Home() {
           <div className="flex items-center justify-between">
              <h2 className="text-xl font-black flex items-center gap-2">
                <Target className="text-blue-400" size={24} />
-               {language === 'bn' ? 'প্রতিদিনের মিশন' : 'DAILY QUESTS'}
+               {language === 'bn' ? 'আজকের মিশন' : "Today's quests"}
              </h2>
              <span className="text-xs font-bold text-app-fg/40 uppercase tracking-widest">
-               {language === 'bn' ? '২৪ ঘণ্টা পর রিসেট হবে' : 'RESETS IN 24H'}
+               {language === 'bn' ? '২৪ ঘণ্টা পর নতুন আসবে' : 'New quests in 24h'}
              </span>
           </div>
 
@@ -88,7 +88,7 @@ export default function Home() {
                         onClick={() => claimReward(quest.id)}
                         className="px-3 py-1 bg-blue-500 hover:bg-blue-600 text-white text-[10px] font-black rounded-lg shadow-lg shadow-blue-500/30 transition-all active:scale-90"
                       >
-                        {language === 'bn' ? 'সংগ্রহ করুন' : 'CLAIM'}
+                        {language === 'bn' ? 'নিন' : 'Claim'}
                       </button>
                     ) : null}
                   </div>
@@ -103,8 +103,8 @@ export default function Home() {
                     </div>
                     <div className="flex items-center gap-1 text-amber-500 font-black text-[10px] uppercase tracking-wider">
                       <Gem size={10} className="fill-amber-500" />
-                      +{quest.reward} {language === 'bn' ? 'রত্ন' : 'GEMS'}
-                      {quest.claimed && <span className="ml-1 text-green-500 opacity-80">({language === 'bn' ? 'সংগৃহীত' : 'CLAIMED'})</span>}
+                      +{quest.reward} {language === 'bn' ? 'রত্ন' : 'gems'}
+                      {quest.claimed && <span className="ml-1 text-green-500 opacity-80">({language === 'bn' ? 'নেওয়া হয়েছে' : 'Claimed'})</span>}
                     </div>
                   </div>
                 </motion.div>
@@ -161,7 +161,7 @@ export default function Home() {
 
                 <div className="flex-1 text-center md:text-left">
                   <div className="text-[10px] uppercase tracking-[0.4em] mb-2 opacity-80 font-black">
-                    {language === 'bn' ? 'ইউনিট' : 'UNIT'} {sIdx + 1}
+                    {language === 'bn' ? 'ইউনিট ' : 'Unit '} {sIdx + 1}
                   </div>
                   <h2 className="text-2xl md:text-3xl leading-tight drop-shadow-md mb-2">
                     {typeof section.title === 'string' ? section.title : section.title[language]}
@@ -222,7 +222,7 @@ export default function Home() {
                               animate={{ opacity: 1, y: -65, scale: 1 }}
                               className="absolute left-1/2 -translate-x-1/2 bg-panel text-app-fg font-black px-5 py-2.5 rounded-2xl text-[10px] whitespace-nowrap shadow-2xl z-20 border-2 border-border-subtle"
                             >
-                              {isExamNode ? (language === 'bn' ? 'চ্যালেঞ্জ!' : 'CHALLENGE!') : (language === 'bn' ? 'শুরু করুন' : 'START')}
+                              {isExamNode ? (language === 'bn' ? 'চ্যালেঞ্জ!' : 'Challenge!') : (language === 'bn' ? 'শুরু' : 'Start')}
                               <div className="absolute -bottom-2 left-1/2 -translate-x-1/2 border-[8px] border-transparent border-t-panel" />
                             </motion.div>
                           )}
@@ -253,7 +253,7 @@ export default function Home() {
                              "text-[10px] font-black uppercase tracking-[0.2em] block leading-tight",
                              lessonLocked ? "text-app-fg/20" : "text-app-fg/40"
                            )}>
-                             {isExamNode ? (language === 'bn' ? 'ইউনিটভিত্তিঙ্ক পরীক্ষা' : 'UNIT EXAM') : (language === 'bn' ? `পাঠ ${lIdx + 1}` : `LESSON ${lIdx + 1}`)}
+                             {isExamNode ? (language === 'bn' ? 'ইউনিট পরীক্ষা' : 'Unit exam') : (language === 'bn' ? `পাঠ ${lIdx + 1}` : `Lesson ${lIdx + 1}`)}
                            </span>
                         </div>
                       </div>
