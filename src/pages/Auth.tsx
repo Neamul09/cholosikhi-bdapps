@@ -43,6 +43,7 @@ const t = {
     errRateLimit: 'Too many tries — wait a moment, then try again.',
     errVerifyNeeded: 'Verify your email first — check the inbox for the link.',
     errNetwork: 'No connection. Check your Wi-Fi and retry.',
+    errBackend: "Can't reach our servers right now. Try again in a moment.",
     errServer: 'Something on our end broke. Try again shortly.',
     errMisconfig: "Server isn't set up yet. Tell the admin if this keeps showing.",
     errGeneric: 'Something went sideways. Try again?',
@@ -80,6 +81,7 @@ const t = {
     errRateLimit: 'অনেক চেষ্টা হয়ে গেছে — একটু পর আবার ট্রাই করুন।',
     errVerifyNeeded: 'আগে ইমেইল ভেরিফাই করুন — ইনবক্সে লিঙ্ক পাঠিয়েছি।',
     errNetwork: 'ইন্টারনেট নেই মনে হচ্ছে। Wi-Fi চেক করে আবার চেষ্টা করুন।',
+    errBackend: 'আমাদের সার্ভারে এখন যাওয়া যাচ্ছে না। একটু পর আবার ট্রাই করুন।',
     errServer: 'আমাদের দিকে কিছু একটা ভেঙেছে। একটু পর আবার ট্রাই করুন।',
     errMisconfig: 'সার্ভার এখনো রেডি না। বারবার আসলে অ্যাডমিনকে জানান।',
     errGeneric: 'কিছু একটা হলো। আবার চেষ্টা করবেন?',
@@ -100,9 +102,13 @@ function mapAuthError(err: SupabaseErrorShape | null | undefined, isLogin: boole
   const status = err.status || 0;
   const msg = (err.message || '').toLowerCase();
 
-  // Network failures first — same in both flows
-  if (/failed to fetch|networkerror|load failed|fetch failed/i.test(msg)) {
-    return tr.errNetwork;
+  // Network failures — split user-offline from backend-unreachable so we
+  // don't tell someone to check their Wi-Fi when our Supabase project is paused.
+  if (/failed to fetch|networkerror|load failed|fetch failed|err_name_not_resolved|net::err_/i.test(msg)) {
+    if (typeof navigator !== 'undefined' && navigator.onLine === false) {
+      return tr.errNetwork; // genuinely offline
+    }
+    return tr.errBackend; // online, but our backend is unreachable
   }
 
   // Sign-up specific codes
