@@ -52,7 +52,7 @@ export default function Discover() {
         const users = await searchUsers(query.trim());
         setResults(users);
       } catch (err) {
-        console.error('[Discover] search failed:', err);
+        if (import.meta.env.DEV) console.error('[Discover] search failed:', err);
         setError(t.errorPrefix);
       } finally {
         setLoading(false);

@@ -8,6 +8,7 @@ import { useUserStore } from './store/userStore';
 import { useProgressStore } from './store/progressStore';
 import { useQuestStore } from './store/questStore';
 import ProtectedRoute from './components/layout/ProtectedRoute';
+import Toaster from './components/common/Toaster';
 
 // Eager-loaded core pages
 import Home from './pages/Home';
@@ -55,6 +56,7 @@ export default function App() {
 
   return (
     <BrowserRouter>
+      <Toaster />
       <Routes>
         <Route path="/auth" element={<Auth />} />
         <Route path="/welcome" element={<Welcome />} />

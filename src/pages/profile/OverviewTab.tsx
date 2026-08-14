@@ -66,7 +66,8 @@ export default function OverviewTab() {
         setTimeout(() => setShowShareToast(false), 2000);
       }
     } catch (err) {
-      console.log('Error sharing:', err);
+      if (import.meta.env.DEV) console.log('Error sharing:', err);
+      // Share was canceled or unsupported — silent fallback to clipboard.
     }
   }, [level, totalXp]);
 

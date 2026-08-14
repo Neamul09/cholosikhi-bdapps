@@ -113,7 +113,7 @@ export default function Welcome() {
 
           {/* Trust strip — answers "too generic" complaint */}
           <div className="flex flex-wrap items-center gap-x-6 gap-y-2 pt-2 text-sm font-bold text-app-fg-muted">
-            <span className="inline-flex items-center gap-1.5"><CheckCircle2 size={14} className="text-emerald-400" />{language === 'bn' ? 'চিরকাল ফ্রি' : 'Always free'}</span>
+            <span className="inline-flex items-center gap-1.5"><CheckCircle2 size={14} className="text-emerald-400" />{language === 'bn' ? 'ফ্রি, সবসময়' : 'Always free'}</span>
             <span className="inline-flex items-center gap-1.5"><Heart size={14} className="text-pink-400" />{language === 'bn' ? 'কার্ড লাগে না' : 'No card needed'}</span>
             <span className="inline-flex items-center gap-1.5"><Trophy size={14} className="text-amber-400" />{language === 'bn' ? '১০০+ পাঠ' : '100+ lessons'}</span>
           </div>

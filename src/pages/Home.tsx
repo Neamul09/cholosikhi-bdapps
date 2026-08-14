@@ -103,7 +103,7 @@ export default function Home() {
                     </div>
                     <div className="flex items-center gap-1 text-amber-500 font-black text-[10px] uppercase tracking-wider">
                       <Gem size={10} className="fill-amber-500" />
-                      +{quest.reward} {language === 'bn' ? 'রত্ন' : 'gems'}
+                      +{quest.reward} {language === 'bn' ? 'জেমস' : 'gems'}
                       {quest.claimed && <span className="ml-1 text-green-500 opacity-80">({language === 'bn' ? 'নেওয়া হয়েছে' : 'Claimed'})</span>}
                     </div>
                   </div>

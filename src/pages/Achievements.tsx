@@ -32,7 +32,7 @@ export default function AchievementsView() {
           <Trophy size={32} strokeWidth={2.5} />
         </div>
         <div>
-          <h1 className="text-3xl font-black">{language === 'bn' ? 'এচিভমেন্টস' : 'ACHIEVEMENTS'}</h1>
+          <h1 className="text-3xl font-black">{language === 'bn' ? 'আচিভমেন্ট' : 'ACHIEVEMENTS'}</h1>
           <p className="text-gray-400">
             {unlockedIds.size} / {ACHIEVEMENTS.length} {language === 'bn' ? 'আনলক হয়েছে' : 'UNLOCKED'}
           </p>

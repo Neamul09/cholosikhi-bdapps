@@ -26,8 +26,8 @@ single-page React app with a Supabase backend. Live at
 
 ## Tech
 
-- **React 18** + **TypeScript (strict)** + **Vite 5**
-- **Tailwind CSS 3** + **framer-motion**
+- **React 19** + **TypeScript (strict)** + **Vite 8**
+- **Tailwind CSS 4** + **framer-motion**
 - **Zustand** for client state (`auth`, `progress`, `user`, `quest`, `settings`)
 - **Supabase** (Postgres + Auth) — RLS-guarded, anon JWT only
 - **lucide-react** icons
@@ -42,9 +42,9 @@ npm install
 npm run dev                     # http://localhost:5173
 ```
 
-A fresh Supabase project is required. Run the SQL from `supabase/schema.sql`
-in your Supabase SQL editor to create the tables, RLS policies, and triggers
-(see the comments at the top of that file for setup order).
+A fresh Supabase project is required. Run the SQL from `sql/avatars_bucket.sql`
+in your Supabase SQL editor to provision the avatar storage bucket + RLS
+policies (additional schema migrations live alongside it in `sql/`).
 
 ## Scripts
 
@@ -77,7 +77,7 @@ py.cholosikhi/
 │   ├── App.tsx
 │   └── main.tsx
 ├── eslint.config.js        # strict: react-hooks + react-refresh
-├── tailwind.config.ts
+├── postcss.config.js       # Tailwind 4 plugin
 ├── tsconfig.json           # strict TS
 ├── LICENSE                 # MIT
 └── SECURITY.md             # private disclosure policy

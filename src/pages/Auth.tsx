@@ -204,7 +204,7 @@ export default function Auth() {
         isLogin,
         language,
       ));
-      console.error('[auth] unhandled:', err);
+      if (import.meta.env.DEV) console.error('[auth] unhandled:', err);
     } finally {
       setLoading(false);
     }

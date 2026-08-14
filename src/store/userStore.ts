@@ -3,6 +3,7 @@ import { persist } from 'zustand/middleware';
 import { supabase, isSupabaseConfigured } from '@/lib/supabase';
 import { useQuestStore } from './questStore';
 import { clearAllPersistedState } from './persistKeys';
+import { toast } from './toastStore';
 
 export type Language = 'en' | 'bn' | 'both';
 export type Theme = 'dark' | 'light';
@@ -326,20 +327,24 @@ export const useUserStore = create<UserState>()(
 
       uploadAvatar: async (file) => {
         if (!isSupabaseConfigured) {
-          console.warn('[userStore] uploadAvatar: Supabase not configured.');
+          if (import.meta.env.DEV) console.warn('[userStore] uploadAvatar: Supabase not configured.');
+          toast.warn('Avatar upload is unavailable in this build.');
           return null;
         }
         const { data: { session } } = await supabase.auth.getSession();
-        if (!session?.user) return null;
+        if (!session?.user) {
+          toast.error('Sign in to upload an avatar.');
+          return null;
+        }
 
         // Sanity-check the file before hitting the network.
         const MAX_BYTES = 2 * 1024 * 1024; // 2 MB
         if (file.size > MAX_BYTES) {
-          console.error('[userStore] uploadAvatar: file exceeds 2 MB limit.');
+          toast.error('Image is too large. Max 2 MB.');
           return null;
         }
         if (!file.type.startsWith('image/')) {
-          console.error('[userStore] uploadAvatar: file is not an image.');
+          toast.error('That file is not an image.');
           return null;
         }
 
@@ -352,7 +357,8 @@ export const useUserStore = create<UserState>()(
           .upload(path, file, { upsert: true, contentType: file.type });
 
         if (uploadErr) {
-          console.error('[userStore] uploadAvatar: storage upload failed:', uploadErr);
+          if (import.meta.env.DEV) console.error('[userStore] uploadAvatar: storage upload failed:', uploadErr);
+          toast.error('Upload failed. Please try again.');
           return null;
         }
 
@@ -366,11 +372,13 @@ export const useUserStore = create<UserState>()(
           .eq('id', session.user.id);
 
         if (updateErr) {
-          console.error('[userStore] uploadAvatar: profile update failed:', updateErr);
+          if (import.meta.env.DEV) console.error('[userStore] uploadAvatar: profile update failed:', updateErr);
+          toast.error('Could not save your avatar.');
           return null;
         }
 
         set({ avatarUrl: publicUrl });
+        toast.success('Avatar updated!');
         return publicUrl;
       },
 
@@ -385,7 +393,8 @@ export const useUserStore = create<UserState>()(
           .limit(30);
 
         if (error) {
-          console.error('Error loading leaderboard:', error);
+          if (import.meta.env.DEV) console.error('Error loading leaderboard:', error);
+          toast.error('Could not load the leaderboard.');
           return [];
         }
 
@@ -425,7 +434,8 @@ export const useUserStore = create<UserState>()(
           .order('weekly_xp', { ascending: false });
 
         if (error) {
-          console.error('Error loading friends leaderboard:', error);
+          if (import.meta.env.DEV) console.error('Error loading friends leaderboard:', error);
+          toast.warn('Could not load your friends.');
           return [];
         }
 
@@ -523,7 +533,8 @@ export const useUserStore = create<UserState>()(
         const { error } = await supabase.from('profiles').update(profileData).eq('id', session.user.id);
 
         if (error) {
-          console.error('Supabase Sync Error:', error);
+          if (import.meta.env.DEV) console.error('Supabase Sync Error:', error);
+          // Toast only on user-visible writes (initial sync); silent retries are fine.
         }
       },
 
@@ -571,7 +582,8 @@ export const useUserStore = create<UserState>()(
         let profile = initialProfile;
 
         if (loadError && loadError.code !== 'PGRST116') {
-          console.error('Supabase Load Error:', loadError);
+          if (import.meta.env.DEV) console.error('Supabase Load Error:', loadError);
+          toast.error('Could not load your profile.');
         }
 
         if (!profile) {
@@ -598,7 +610,8 @@ export const useUserStore = create<UserState>()(
             .single();
 
           if (createError) {
-            console.error('Supabase Create Profile Error:', createError);
+            if (import.meta.env.DEV) console.error('Supabase Create Profile Error:', createError);
+            toast.error('Could not create your profile. Try signing in again.');
           }
 
           if (!createError) profile = newProfile;
@@ -665,7 +678,7 @@ export const useUserStore = create<UserState>()(
             get().syncToSupabase();
           }
 
-          console.log('✅ py.cholosikhi: Database connected and profile loaded successfully.');
+          if (import.meta.env.DEV) console.log('✅ py.cholosikhi: Database connected and profile loaded successfully.');
 
           // Load follower/following counts
           const { count: followers } = await supabase.from('follows').select('*', { count: 'exact', head: true }).eq('following_id', session.user.id);
