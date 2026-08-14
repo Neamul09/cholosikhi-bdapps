@@ -1,6 +1,6 @@
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
-import { supabase } from '@/lib/supabase';
+import { supabase, isSupabaseConfigured } from '@/lib/supabase';
 import { useQuestStore } from './questStore';
 import { clearAllPersistedState } from './persistKeys';
 
@@ -23,11 +23,17 @@ export interface LeaderboardUser {
   /** UI-friendly alias for `total_xp`; populated at the map boundary. */
   xp?: number;
   isMe?: boolean;
+  /** Optional uploaded avatar URL (Supabase Storage). When present, render <img> instead of the lucide icon. */
+  avatarUrl?: string | null;
+  /** Populated by `loadFriendsLeaderboard` and `searchUsers`; not set in the global weekly leaderboard. */
+  isFollowing?: boolean;
 }
 
 export interface UserState {
   name: string;
   avatar: string;
+  /** Optional uploaded avatar URL (Supabase Storage). Shown in place of the lucide icon when present. */
+  avatarUrl: string;
   xp: number;
   totalXp: number;
   level: number;
@@ -67,6 +73,9 @@ export interface UserState {
   hasAchievement: (id: string) => boolean;
   setName: (name: string) => void;
   setAvatar: (avatar: string) => void;
+  setAvatarUrl: (url: string) => void;
+  /** Uploads the file to Supabase Storage `avatars/{userId}/...` and persists the public URL. */
+  uploadAvatar: (file: File) => Promise<string | null>;
   completeLesson: () => void;
   completeTest: (perfect: boolean) => void;
 
@@ -166,6 +175,7 @@ export const useUserStore = create<UserState>()(
     (set, get) => ({
       name: '',
       avatar: 'user',
+      avatarUrl: '',
       xp: 0,
       totalXp: 0,
       level: 1,
@@ -309,11 +319,66 @@ export const useUserStore = create<UserState>()(
         get().syncToSupabase();
       },
 
+      setAvatarUrl: (url) => {
+        set({ avatarUrl: url });
+        get().syncToSupabase();
+      },
+
+      uploadAvatar: async (file) => {
+        if (!isSupabaseConfigured) {
+          console.warn('[userStore] uploadAvatar: Supabase not configured.');
+          return null;
+        }
+        const { data: { session } } = await supabase.auth.getSession();
+        if (!session?.user) return null;
+
+        // Sanity-check the file before hitting the network.
+        const MAX_BYTES = 2 * 1024 * 1024; // 2 MB
+        if (file.size > MAX_BYTES) {
+          console.error('[userStore] uploadAvatar: file exceeds 2 MB limit.');
+          return null;
+        }
+        if (!file.type.startsWith('image/')) {
+          console.error('[userStore] uploadAvatar: file is not an image.');
+          return null;
+        }
+
+        // Build a path under the user's own folder so RLS "owner can write to own folder" works.
+        const ext = file.name.split('.').pop()?.toLowerCase().replace(/[^a-z0-9]/g, '') || 'png';
+        const path = `${session.user.id}/${Date.now()}.${ext}`;
+
+        const { error: uploadErr } = await supabase.storage
+          .from('avatars')
+          .upload(path, file, { upsert: true, contentType: file.type });
+
+        if (uploadErr) {
+          console.error('[userStore] uploadAvatar: storage upload failed:', uploadErr);
+          return null;
+        }
+
+        const { data: pub } = supabase.storage.from('avatars').getPublicUrl(path);
+        const publicUrl = pub.publicUrl;
+
+        // Persist the URL on the profile row so it survives reloads.
+        const { error: updateErr } = await supabase
+          .from('profiles')
+          .update({ avatar_url: publicUrl })
+          .eq('id', session.user.id);
+
+        if (updateErr) {
+          console.error('[userStore] uploadAvatar: profile update failed:', updateErr);
+          return null;
+        }
+
+        set({ avatarUrl: publicUrl });
+        return publicUrl;
+      },
+
       loadLeaderboard: async () => {
         const state = get();
         const { data, error } = await supabase
           .from('profiles')
-          .select('id, name, avatar, weekly_xp, total_xp, league, streak')
+          .select('id, name, avatar, avatar_url, weekly_xp, total_xp, league, streak')
           .eq('league', state.league)
           .order('weekly_xp', { ascending: false, nullsFirst: false })
           .order('total_xp', { ascending: false })
@@ -329,6 +394,7 @@ export const useUserStore = create<UserState>()(
           id: p.id,
           name: p.name || (p.id.substring(0, 4) === 'bot_' ? 'CholoSikhi Bot' : 'Sikhi Student'),
           avatar: p.avatar || 'code',
+          avatarUrl: p.avatar_url ?? null,
           total_xp: p.total_xp ?? 0,
           xp: (p.weekly_xp != null ? p.weekly_xp : p.total_xp) ?? 0,
           league: p.league ?? 'wood',
@@ -348,12 +414,13 @@ export const useUserStore = create<UserState>()(
           .eq('follower_id', session.user.id);
 
         const followingIds = following?.map(f => f.following_id) || [];
+        const followedSet = new Set(followingIds);
         followingIds.push(session.user.id); // Include myself
 
         // 2. Get profiles
         const { data: profiles, error } = await supabase
           .from('profiles')
-          .select('id, name, avatar, weekly_xp')
+          .select('id, name, avatar, avatar_url, weekly_xp')
           .in('id', followingIds)
           .order('weekly_xp', { ascending: false });
 
@@ -366,11 +433,13 @@ export const useUserStore = create<UserState>()(
           id: p.id,
           name: p.name || 'Anonymous',
           avatar: p.avatar || 'user',
+          avatarUrl: p.avatar_url ?? null,
           total_xp: p.weekly_xp ?? 0,
           xp: p.weekly_xp ?? 0,
           league: 'wood',
           streak: 0,
           isMe: p.id === session.user.id,
+          isFollowing: followedSet.has(p.id),
         }));
       },
 
@@ -425,6 +494,7 @@ export const useUserStore = create<UserState>()(
         const profileData = {
           name: state.name,
           avatar: state.avatar,
+          avatar_url: state.avatarUrl,
           xp: state.xp,
           total_xp: state.totalXp,
           level: state.level,
@@ -554,6 +624,7 @@ export const useUserStore = create<UserState>()(
           set({
             name: profile.name || session.user.user_metadata?.full_name || '',
             avatar: profile.avatar || 'code',
+            avatarUrl: profile.avatar_url || '',
             xp: profile.xp || 0,
             totalXp: profile.total_xp || 0,
             level: profile.level || 1,
@@ -661,19 +732,36 @@ export const useUserStore = create<UserState>()(
         if (!query || query.length < 2) return [];
         const { data, error } = await supabase
           .from('profiles')
-          .select('id, name, avatar, total_xp, league, streak')
+          .select('id, name, avatar, avatar_url, total_xp, league, streak')
           .ilike('name', `%${query}%`)
           .limit(10);
 
         if (error) return [];
+
+        const { data: { session } } = await supabase.auth.getSession();
+        const me = session?.user?.id;
+        const ids = data.map(p => p.id);
+        const followedSet = new Set<string>();
+        if (me && ids.length) {
+          const { data: followRows } = await supabase
+            .from('follows')
+            .select('following_id')
+            .eq('follower_id', me)
+            .in('following_id', ids);
+          (followRows || []).forEach(r => followedSet.add(r.following_id));
+        }
+
         return data.map((p): LeaderboardUser => ({
           id: p.id,
           name: p.name || 'Sikhi Student',
           avatar: p.avatar || 'user',
+          avatarUrl: p.avatar_url ?? null,
           total_xp: p.total_xp ?? 0,
           xp: p.total_xp ?? 0,
           league: p.league ?? 'wood',
           streak: p.streak ?? 0,
+          isMe: p.id === me,
+          isFollowing: followedSet.has(p.id),
         }));
       },
 

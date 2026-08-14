@@ -12,18 +12,14 @@ import ProtectedRoute from './components/layout/ProtectedRoute';
 // Eager-loaded core pages
 import Home from './pages/Home';
 import Profile from './pages/Profile';
-import Settings from './pages/Settings';
-import Shop from './pages/Shop';
 import Auth from './pages/Auth';
 import Welcome from './pages/Welcome';
 
 // Lazy-loaded heavy pages (code-split)
 const Session = lazy(() => import('./pages/Session'));
-const DSAPlayground = lazy(() => import('./pages/DSAPlayground'));
 const Leaderboard = lazy(() => import('./pages/Leaderboard'));
 const Achievements = lazy(() => import('./pages/Achievements'));
 const CodePlayground = lazy(() => import('./pages/CodePlayground'));
-const CommunityHub = lazy(() => import('./pages/CommunityHub'));
 const Discover = lazy(() => import('./pages/Discover'));
 
 export default function App() {
@@ -76,14 +72,11 @@ export default function App() {
               </Suspense>
             }
           />
-          <Route path="/dsa" element={<Suspense fallback={null}><AppShell><DSAPlayground /></AppShell></Suspense>} />
-          <Route path="/leaderboard" element={<Suspense fallback={null}><AppShell><Leaderboard /></AppShell></Suspense>} />
-          <Route path="/profile" element={<AppShell><Profile /></AppShell>} />
-          <Route path="/shop" element={<AppShell><Shop /></AppShell>} />
           <Route path="/playground" element={<Suspense fallback={null}><AppShell><CodePlayground /></AppShell></Suspense>} />
+          <Route path="/leaderboard" element={<Suspense fallback={null}><AppShell><Leaderboard /></AppShell></Suspense>} />
           <Route path="/achievements" element={<Suspense fallback={null}><AppShell><Achievements /></AppShell></Suspense>} />
-          <Route path="/settings" element={<AppShell><Settings /></AppShell>} />
-          <Route path="/community" element={<Suspense fallback={null}><AppShell><CommunityHub /></AppShell></Suspense>} />
+          <Route path="/profile" element={<AppShell><Profile /></AppShell>} />
+          {/* /discover kept for backward compat — no nav link */}
           <Route path="/discover" element={<Suspense fallback={null}><AppShell><Discover /></AppShell></Suspense>} />
         </Route>
 

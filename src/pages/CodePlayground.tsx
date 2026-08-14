@@ -1,9 +1,16 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
 import { useLocation } from 'react-router-dom';
-import { Play, RotateCcw, Copy, Code, Terminal, Sparkles, ChevronDown, AlertTriangle } from 'lucide-react';
+import { Play, RotateCcw, Copy, Code, Terminal, Sparkles, ChevronDown, AlertTriangle, Network, AlignLeft, Boxes, Layers, Type } from 'lucide-react';
 import { clsx } from 'clsx';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useSettingsStore } from '@/store/settingsStore';
+import {
+  SortingVisualizer,
+  TreeVisualizer,
+  StackQueueVisualizer,
+  GraphVisualizer,
+  ArrayVisualizer,
+} from '@/components/dsa';
 
 // C++ hidden for beta release — entry kept so beta gate stays explicit
 const LANGUAGES = [
@@ -24,6 +31,13 @@ const t = {
     title: 'Code Playground',
     subtitle: 'Sketch an idea. Run it in the cloud.',
     editor: 'EDITOR',
+    codeTab: 'CODE',
+    visualizerTab: 'VISUALIZER',
+    sorting: 'Sorting',
+    tree: 'Tree / BST',
+    graph: 'Graphs',
+    stackQueue: 'Stack/Queue',
+    array: 'Arrays & Pointers',
     console: 'CONSOLE',
     run: 'RUN',
     running: 'Running…',
@@ -45,9 +59,16 @@ const t = {
     copied: 'Copied!',
   },
   bn: {
-    title: 'কোড প্লেগ্রাউন্ড',
+    title: 'কোড প্লে�্রাউন্ড',
     subtitle: 'ভাবনাটা লিখুন, ক্লাউডে চালান।',
     editor: 'এডিটর',
+    codeTab: 'কোড',
+    visualizerTab: 'ভিজ্যুয়ালাইজার',
+    sorting: 'সর্টিং',
+    tree: 'ট্রি / BST',
+    graph: 'গ্রাফ',
+    stackQueue: 'স্ট্যাক/কিউ',
+    array: 'অ্যারে ও পয়েন্টার',
     console: 'কনসোল',
     run: 'রান',
     running: 'চলছে…',
@@ -154,6 +175,11 @@ export default function CodePlayground() {
   const initialCode = useRef<string | null>(
     (location.state as { code?: string } | null)?.code ?? null
   );
+  // `?tab=visualizer` deep-link from AppShell — defaults to 'code' so a
+  // hard refresh of /playground still lands in the editor.
+  const initialTab = useRef<'code' | 'visualizer'>(
+    new URLSearchParams(location.search).get('tab') === 'visualizer' ? 'visualizer' : 'code'
+  );
 
   const dropdownRef = useRef<HTMLDivElement>(null);
 
@@ -165,6 +191,8 @@ export default function CodePlayground() {
     }
     return LANGUAGES[0];
   });
+  const [activeTab, setActiveTab] = useState<'code' | 'visualizer'>(initialTab.current);
+  const [visualizerTab, setVisualizerTab] = useState<'sorting' | 'tree' | 'graph' | 'stack_queue' | 'array'>('sorting');
   const [code, setCode] = useState(() => initialCode.current ?? selectedLang.starter);
   const [dropdownOpen, setDropdownOpen] = useState(false);
   const [output, setOutput] = useState('');
@@ -309,64 +337,96 @@ export default function CodePlayground() {
           </p>
         </div>
 
-        <div className="flex items-center gap-3">
-          {/* State-based dropdown — works on mobile tap */}
-          <div className="relative" ref={dropdownRef}>
+        {activeTab === 'code' ? (
+          <div className="flex items-center gap-3">
+            {/* State-based dropdown — works on mobile tap */}
+            <div className="relative" ref={dropdownRef}>
+              <button
+                onClick={() => setDropdownOpen((prev) => !prev)}
+                aria-haspopup="listbox"
+                aria-expanded={dropdownOpen}
+                aria-label={tr.selectLang}
+                className="flex items-center gap-3 px-4 py-2 bg-panel border-2 border-border-subtle rounded-xl font-bold hover:border-blue-500/50 transition-all min-w-[140px]"
+              >
+                <span className="w-8 h-8 rounded-lg bg-blue-500/10 flex items-center justify-center text-blue-400 text-xs font-black">
+                  {selectedLang.icon}
+                </span>
+                {selectedLang.name}
+                <ChevronDown size={16} className={clsx('ml-auto opacity-40 transition-transform', dropdownOpen && 'rotate-180')} />
+              </button>
+
+              {dropdownOpen && (
+                <div role="listbox" className="absolute top-full left-0 right-0 mt-2 bg-panel border-2 border-border-subtle rounded-2xl shadow-2xl overflow-hidden z-50">
+                  {LANGUAGES.map((lang) => (
+                    <button
+                      key={lang.id}
+                      role="option"
+                      aria-selected={selectedLang.id === lang.id}
+                      onClick={() => switchLang(lang.id)}
+                      className={clsx(
+                        "w-full px-4 py-3 text-left font-bold flex items-center gap-3 hover:bg-blue-500/10 transition-colors",
+                        selectedLang.id === lang.id ? "text-blue-400 bg-blue-500/5" : "text-app-fg/60"
+                      )}
+                    >
+                      <span className="w-6 h-6 rounded-md bg-app-bg flex items-center justify-center text-[10px] font-black">
+                        {lang.icon}
+                      </span>
+                      {lang.name}
+                    </button>
+                  ))}
+                </div>
+              )}
+            </div>
+
             <button
-              onClick={() => setDropdownOpen((prev) => !prev)}
-              aria-haspopup="listbox"
-              aria-expanded={dropdownOpen}
-              aria-label={tr.selectLang}
-              className="flex items-center gap-3 px-4 py-2 bg-panel border-2 border-border-subtle rounded-xl font-bold hover:border-blue-500/50 transition-all min-w-[140px]"
+              onClick={runCode}
+              disabled={isRunning}
+              aria-label={tr.run}
+              className="flex items-center gap-2 px-6 py-2 bg-blue-500 text-white rounded-xl font-black shadow-lg shadow-blue-500/30 hover:scale-105 active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed transition-all"
             >
-              <span className="w-8 h-8 rounded-lg bg-blue-500/10 flex items-center justify-center text-blue-400 text-xs font-black">
-                {selectedLang.icon}
-              </span>
-              {selectedLang.name}
-              <ChevronDown size={16} className={clsx('ml-auto opacity-40 transition-transform', dropdownOpen && 'rotate-180')} />
+              {isRunning ? (
+                <div className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+              ) : (
+                <Play size={20} fill="currentColor" />
+              )}
+              {tr.run}
             </button>
-
-            {dropdownOpen && (
-              <div role="listbox" className="absolute top-full left-0 right-0 mt-2 bg-panel border-2 border-border-subtle rounded-2xl shadow-2xl overflow-hidden z-50">
-                {LANGUAGES.map((lang) => (
-                  <button
-                    key={lang.id}
-                    role="option"
-                    aria-selected={selectedLang.id === lang.id}
-                    onClick={() => switchLang(lang.id)}
-                    className={clsx(
-                      "w-full px-4 py-3 text-left font-bold flex items-center gap-3 hover:bg-blue-500/10 transition-colors",
-                      selectedLang.id === lang.id ? "text-blue-400 bg-blue-500/5" : "text-app-fg/60"
-                    )}
-                  >
-                    <span className="w-6 h-6 rounded-md bg-app-bg flex items-center justify-center text-[10px] font-black">
-                      {lang.icon}
-                    </span>
-                    {lang.name}
-                  </button>
-                ))}
-              </div>
-            )}
           </div>
-
-          <button
-            onClick={runCode}
-            disabled={isRunning}
-            aria-label={tr.run}
-            className="flex items-center gap-2 px-6 py-2 bg-blue-500 text-white rounded-xl font-black shadow-lg shadow-blue-500/30 hover:scale-105 active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed transition-all"
-          >
-            {isRunning ? (
-              <div className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin" />
-            ) : (
-              <Play size={20} fill="currentColor" />
-            )}
-            {tr.run}
-          </button>
-        </div>
+        ) : (
+          /* Placeholder so the header layout doesn't collapse on the visualizer tab */
+          <div className="hidden md:block" />
+        )}
       </div>
 
-      {/* Editor & Console Grid */}
-      <div className="flex-1 grid grid-cols-1 lg:grid-cols-2 gap-6 min-h-0">
+      {/* Top-level tab switcher (Code vs Visualizer) */}
+      <div className="flex gap-2 border-b-2 border-border-subtle">
+        <button
+          onClick={() => setActiveTab('code')}
+          className={clsx(
+            'px-4 py-2 font-black text-sm uppercase tracking-widest border-b-4 transition-all',
+            activeTab === 'code'
+              ? 'border-blue-500 text-blue-400'
+              : 'border-transparent text-app-fg/40 hover:text-app-fg'
+          )}
+        >
+          {tr.codeTab}
+        </button>
+        <button
+          onClick={() => setActiveTab('visualizer')}
+          className={clsx(
+            'px-4 py-2 font-black text-sm uppercase tracking-widest border-b-4 transition-all flex items-center gap-2',
+            activeTab === 'visualizer'
+              ? 'border-blue-500 text-blue-400'
+              : 'border-transparent text-app-fg/40 hover:text-app-fg'
+          )}
+        >
+          {tr.visualizerTab}
+        </button>
+      </div>
+
+      {/* Body */}
+      {activeTab === 'code' ? (
+        <div className="flex-1 grid grid-cols-1 lg:grid-cols-2 gap-6 min-h-0">
         {/* Editor Area */}
         <div className="flex flex-col bg-panel border-2 border-border-subtle rounded-3xl overflow-hidden shadow-xl">
           <div className="px-6 py-3 bg-app-bg/20 border-b-2 border-border-subtle flex items-center justify-between">
@@ -427,7 +487,55 @@ export default function CodePlayground() {
             )}
           </div>
         </div>
-      </div>
+        </div>
+      ) : (
+        <div className="flex-1 flex flex-col gap-4 min-h-0">
+          {/* Visualizer sub-tabs (former DSA Playground contents) */}
+          <div className="flex overflow-x-auto gap-2 pb-2 shrink-0 hide-scrollbar">
+            {(
+              [
+                { id: 'sorting', icon: AlignLeft, label: tr.sorting },
+                { id: 'tree', icon: Network, label: tr.tree },
+                { id: 'graph', icon: Boxes, label: tr.graph },
+                { id: 'stack_queue', icon: Layers, label: tr.stackQueue },
+                { id: 'array', icon: Type, label: tr.array },
+              ] as const
+            ).map((tab) => (
+              <button
+                key={tab.id}
+                onClick={() => setVisualizerTab(tab.id)}
+                className={clsx(
+                  'px-4 py-3 rounded-xl flex items-center gap-2 font-semibold whitespace-nowrap transition-all',
+                  visualizerTab === tab.id
+                    ? 'gradient-brand text-white shadow-lg shadow-brand-500/20'
+                    : 'glass text-app-fg-muted hover:text-app-fg hover:bg-app-fg/5'
+                )}
+              >
+                <tab.icon size={18} />
+                {tab.label}
+              </button>
+            ))}
+          </div>
+          <div className="flex-1 glass rounded-3xl p-6 relative overflow-hidden flex flex-col border border-brand-500/20 shadow-[0_8px_32px_rgba(108,61,232,0.1)]">
+            <AnimatePresence mode="wait">
+              <motion.div
+                key={visualizerTab}
+                initial={{ opacity: 0, y: 10 }}
+                animate={{ opacity: 1, y: 0 }}
+                exit={{ opacity: 0, y: -10 }}
+                transition={{ duration: 0.2 }}
+                className="flex-1 h-full"
+              >
+                {visualizerTab === 'sorting' && <SortingVisualizer />}
+                {visualizerTab === 'tree' && <TreeVisualizer />}
+                {visualizerTab === 'graph' && <GraphVisualizer />}
+                {visualizerTab === 'stack_queue' && <StackQueueVisualizer />}
+                {visualizerTab === 'array' && <ArrayVisualizer />}
+              </motion.div>
+            </AnimatePresence>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

@@ -1,7 +1,7 @@
 import React from 'react';
 import { NavLink, useLocation } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Home, Trophy, User, BookOpen, Settings, Flame, Heart, Gem, Moon, Sun, ShoppingBag, Code, Users, Search } from 'lucide-react';
+import { Home, Trophy, User, Flame, Heart, Gem, Moon, Sun, Code, Award } from 'lucide-react';
 import { clsx } from 'clsx';
 import { useSettingsStore } from '@/store/settingsStore';
 import { useUserStore } from '@/store/userStore';
@@ -73,15 +73,11 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
   const showTutorial = shouldShowTutorial && !hasSeenTutorial;
 
   const navItems = [
-    { id: '/',            icon: Home,     label: language === 'bn' ? 'শিখুন'         : 'Learn'        },
-    { id: '/playground',  icon: Code,     label: language === 'bn' ? 'কোড প্লে'      : 'Playground'   },
-    { id: '/dsa',         icon: BookOpen, label: language === 'bn' ? 'ভিজ্যুয়ালাইজার' : 'Visualizer' },
-    { id: '/leaderboard', icon: Trophy,   label: language === 'bn' ? 'সেরা শিক্ষার্থী'  : 'Leaderboard'  },
-    { id: '/community',   icon: Users,    label: language === 'bn' ? 'কমিউনিটি'        : 'Community'    },
-    { id: '/discover',    icon: Search,   label: language === 'bn' ? 'খুঁজুন'           : 'Discover'     },
-    { id: '/shop',        icon: ShoppingBag, label: language === 'bn' ? 'দোকান'       : 'Shop'         },
-    { id: '/profile',     icon: User,     label: language === 'bn' ? 'প্রোফাইল'       : 'Profile'      },
-    { id: '/settings',    icon: Settings, label: language === 'bn' ? 'সেটিংস'         : 'Settings'     },
+    { id: '/',            icon: Home,     label: language === 'bn' ? 'শিখুন'     : 'Learn'        },
+    { id: '/playground',  icon: Code,     label: language === 'bn' ? 'প্লেগ্রাউন্ড' : 'Playground' },
+    { id: '/leaderboard', icon: Trophy,   label: language === 'bn' ? 'সেরা শিক্ষার্থী' : 'Leaderboard' },
+    { id: '/achievements', icon: Award,   label: language === 'bn' ? 'অর্জন'      : 'Achievements' },
+    { id: '/profile',     icon: User,     label: language === 'bn' ? 'প্রোফাইল'  : 'Profile'      },
   ];
 
   const isPython = currentCourse === 'python';
