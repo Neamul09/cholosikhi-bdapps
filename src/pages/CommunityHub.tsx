@@ -1,108 +1,25 @@
 import { motion } from 'framer-motion';
 import {
   Users,
-  Trophy,
   Calendar,
   MessageSquare,
   ArrowRight,
   Sparkles,
   Github,
+  Mail,
   Heart,
+  Code2,
+  Trophy,
+  Bell,
+  Clock,
 } from 'lucide-react';
 import { useSettingsStore } from '@/store/settingsStore';
-import { clsx } from 'clsx';
-
-interface Contributor {
-  name: string;
-  xp: number;
-  streak: number;
-  badge: string;
-}
-
-const TOP_CONTRIBUTORS: Contributor[] = [
-  { name: 'নাফিসা রহমান', xp: 4820, streak: 47, badge: '🥇' },
-  { name: 'Arif Mahmud', xp: 3950, streak: 31, badge: '🥈' },
-  { name: 'তানভীর হাসান', xp: 3210, streak: 28, badge: '🥉' },
-  { name: 'Sadia Karim', xp: 2880, streak: 22, badge: '⭐' },
-  { name: 'রাহুল দেব', xp: 2640, streak: 19, badge: '⭐' },
-];
-
-interface Activity {
-  who: string;
-  what: { en: string; bn: string };
-  when: { en: string; bn: string };
-  tone: 'gold' | 'green' | 'blue' | 'violet';
-}
-
-const RECENT_ACTIVITY: Activity[] = [
-  {
-    who: 'নাফিসা রহমান',
-    what: { en: 'hit a 45-day streak', bn: '৪৫ দিনের স্ট্রিকে পৌঁছেছে' },
-    when: { en: '2 minutes ago', bn: '২ মিনিট আগে' },
-    tone: 'gold',
-  },
-  {
-    who: 'Arif Mahmud',
-    what: { en: 'finished Unit 7 (Functions)', bn: 'ইউনিট ৭ (ফাংশন) শেষ করেছে' },
-    when: { en: '14 minutes ago', bn: '১৪ মিনিট আগে' },
-    tone: 'green',
-  },
-  {
-    who: 'তানভীর হাসান',
-    what: { en: 'joined a study group', bn: 'একটি স্টাডি গ্রুপে যোগ দিয়েছে' },
-    when: { en: '38 minutes ago', bn: '৩৮ মিনিট আগে' },
-    tone: 'blue',
-  },
-  {
-    who: 'Sadia Karim',
-    what: { en: 'earned the "Loop Master" badge', bn: '"লুপ মাস্টার" ব্যাজ অর্জন করেছে' },
-    when: { en: '1 hour ago', bn: '১ ঘণ্টা আগে' },
-    tone: 'violet',
-  },
-];
-
-interface Group {
-  title: { en: string; bn: string };
-  members: number;
-  tag: { en: string; bn: string };
-}
-
-const WORKING_GROUPS: Group[] = [
-  {
-    title: { en: 'Python for beginners', bn: 'শুরু করছি যারা — পাইথন' },
-    members: 1284,
-    tag: { en: 'Weekly', bn: 'সাপ্তাহিক' },
-  },
-  {
-    title: { en: 'C++ DSA grind', bn: 'C++ DSA প্র্যাকটিস' },
-    members: 612,
-    tag: { en: 'Daily', bn: 'প্রতিদিন' },
-  },
-  {
-    title: { en: 'Build with us', bn: 'একসাথে বানাই' },
-    members: 487,
-    tag: { en: 'Project', bn: 'প্রজেক্ট' },
-  },
-];
-
-interface Meetup {
-  city: string;
-  date: { en: string; bn: string };
-  topic: { en: string; bn: string };
-}
-
-const UPCOMING_MEETUPS: Meetup[] = [
-  {
-    city: 'Dhaka',
-    date: { en: 'Sat, Nov 23 · 4:00 PM', bn: 'শনি, ২৩ নভে · বিকাল ৪টা' },
-    topic: { en: 'Intro to algorithms', bn: 'অ্যালগরিদমের ভিত্তি' },
-  },
-  {
-    city: 'Chattogram',
-    date: { en: 'Sun, Nov 24 · 11:00 AM', bn: 'রবি, ২৪ নভে · সকাল ১১টা' },
-    topic: { en: 'Hackathon kickoff', bn: 'হ্যাকাথনের সূচনা' },
-  },
-];
+import {
+  DISCORD_URL,
+  GITHUB_REPO_URL,
+  isDiscordPlaceholder,
+  contactMailto,
+} from '@/lib/links';
 
 export default function CommunityHub() {
   const { language } = useSettingsStore();
@@ -114,15 +31,79 @@ export default function CommunityHub() {
     sub: isBn
       ? 'বাংলাদেশ ও বিশ্বজুড়ে শিক্ষার্থীদের একটি ছোট কিন্তু প্রাণবন্ত কমিউনিটি। পরস্পরকে সাহায্য করি, একসাথে প্রজেক্ট করি, একসাথে বড় হই।'
       : 'A small but lively community of learners from Bangladesh and beyond. We help each other, build projects, and grow together.',
+    comingTag: isBn ? 'শীঘ্রই আসছে' : 'COMING SOON',
+    comingTitle: isBn ? 'স্টাডি গ্রুপ, মিটআপ ও ফোরাম — সব এক জায়গায়' : 'Study groups, meetups & forums — all in one place',
+    comingDesc: isBn
+      ? 'আমরা এখন ডিসকর্ড, স্টাডি গ্রুপ এবং লাইভ মিটআপের জন্য একটি পূর্ণাঙ্গ কমিউনিটি হাব তৈরি করছি। এর মধ্যে আপনি পাবেন লিডারবোর্ড, ফলো/আনফলো, থ্রেডেড পোস্ট, ইভেন্ট RSVP এবং আরও অনেক কিছু।'
+      : 'We are building a full community hub with Discord integration, study groups, and live meetups. Until then, you can find top contributors on the leaderboard and follow learners from your profile.',
+    notifyTitle: isBn ? 'লঞ্চের খবর পান' : 'Get notified when it launches',
+    notifyDesc: isBn
+      ? 'ডিসকর্ডে যোগ দিন অথবা আমাদের ফলো করুন — লঞ্চের সাথে সাথে জানতে পারবেন।'
+      : 'Join our Discord or follow along on GitHub — you will be the first to know when it goes live.',
     ctaPrimary: isBn ? 'ডিসকর্ডে যোগ দিন' : 'Join the Discord',
-    ctaSecondary: isBn ? 'স্টাডি গ্রুপ দেখুন' : 'See study groups',
-    sectionLeaders: isBn ? 'শীর্ষ কন্ট্রিবিউটর' : 'Top contributors this week',
-    sectionActivity: isBn ? 'সাম্প্রতিক কার্যকলাপ' : 'Recent activity',
-    sectionGroups: isBn ? 'চলমান স্টাডি গ্রুপ' : 'Active study groups',
-    sectionMeetups: isBn ? 'আসন্ন মিটআপ' : 'Upcoming meetups',
-    members: isBn ? 'জন সদস্য' : 'members',
-    join: isBn ? 'যোগ দিন' : 'Join',
-    rsvp: isBn ? 'আমি যাব' : 'RSVP',
+    ctaSecondary: isBn ? 'লিডারবোর্ড দেখুন' : 'View the leaderboard',
+    ctaGithub: isBn ? 'গিটহাবে ফলো করুন' : 'Follow on GitHub',
+    ctaEmail: isBn ? 'যোগাযোগ' : 'Contact us',
+    sectionLeads: isBn ? 'আপাতত এখানে সক্রিয় থাকুন' : 'Where you can be active right now',
+    leadLeaderboard: {
+      title: isBn ? 'লিডারবোর্ড' : 'Leaderboard',
+      desc: isBn
+        ? 'প্রতি সপ্তাহে লীগে উঠুন, বন্ধুদের সাথে প্রতিদ্বন্দ্বিতা করুন।'
+        : 'Climb the leagues every week and compete with friends.',
+    },
+    leadProfile: {
+      title: isBn ? 'প্রোফাইল ও ফলো' : 'Profile & follow',
+      desc: isBn
+        ? 'অন্য শিক্ষার্থীদের ফলো করুন, তাদের অগ্রগতি দেখুন।'
+        : 'Follow other learners and watch their progress in real time.',
+    },
+    leadLessons: {
+      title: isBn ? 'লেসন ও স্ট্রিক' : 'Lessons & streaks',
+      desc: isBn
+        ? 'প্রতিদিন শিখুন, স্ট্রিক ধরে রাখুন, পাশের শিক্ষার্থীদের সাথে এগিয়ে যান।'
+        : 'Learn daily, keep your streak, and grow alongside other learners.',
+    },
+    footerTitle: isBn ? 'ওপেন সোর্স, সবার জন্য' : 'Open source, for everyone',
+    footerDesc: isBn
+      ? 'প্ল্যাটফর্মটি MIT লাইসেন্সে ওপেন সোর্স। কন্ট্রিবিউট করতে GitHub-এ আসুন।'
+      : 'The platform is MIT-licensed and open source. Drop by GitHub to contribute.',
+  };
+
+  const leads = [
+    {
+      icon: Trophy,
+      tone: 'amber',
+      title: t.leadLeaderboard.title,
+      desc: t.leadLeaderboard.desc,
+      href: '/leaderboard',
+    },
+    {
+      icon: Users,
+      tone: 'blue',
+      title: t.leadProfile.title,
+      desc: t.leadProfile.desc,
+      href: '/profile',
+    },
+    {
+      icon: Code2,
+      tone: 'emerald',
+      title: t.leadLessons.title,
+      desc: t.leadLessons.desc,
+      href: '/',
+    },
+  ];
+
+  const toneClass = (tone: string) => {
+    switch (tone) {
+      case 'amber':
+        return 'bg-amber-500/10 border-amber-500/20 text-amber-400';
+      case 'blue':
+        return 'bg-blue-500/10 border-blue-500/20 text-blue-400';
+      case 'emerald':
+        return 'bg-emerald-500/10 border-emerald-500/20 text-emerald-400';
+      default:
+        return 'bg-white/5 border-white/10 text-app-fg/60';
+    }
   };
 
   return (
@@ -140,18 +121,30 @@ export default function CommunityHub() {
           {t.sub}
         </p>
         <div className="flex flex-wrap justify-center gap-3 pt-2">
+          {isDiscordPlaceholder ? (
+            <button
+              type="button"
+              disabled
+              aria-disabled="true"
+              className="px-6 py-3 rounded-2xl bg-blue-500/40 text-white font-black inline-flex items-center gap-2 cursor-not-allowed"
+            >
+              <Clock size={18} />
+              {isBn ? 'শীঘ্রই আসছে' : 'Coming soon'}
+            </button>
+          ) : (
+            <a
+              href={DISCORD_URL}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="px-6 py-3 rounded-2xl bg-blue-500 text-white font-black inline-flex items-center gap-2 hover:bg-blue-600 transition-colors shadow-lg shadow-blue-500/20"
+            >
+              <MessageSquare size={18} />
+              {t.ctaPrimary}
+              <ArrowRight size={16} />
+            </a>
+          )}
           <a
-            href="https://discord.gg/cholosikhi"
-            target="_blank"
-            rel="noopener noreferrer"
-            className="px-6 py-3 rounded-2xl bg-blue-500 text-white font-black inline-flex items-center gap-2 hover:bg-blue-600 transition-colors shadow-lg shadow-blue-500/20"
-          >
-            <MessageSquare size={18} />
-            {t.ctaPrimary}
-            <ArrowRight size={16} />
-          </a>
-          <a
-            href="#groups"
+            href="/leaderboard"
             className="px-6 py-3 rounded-2xl bg-panel border-2 border-border-subtle font-black inline-flex items-center gap-2 hover:border-blue-500/40 transition-colors"
           >
             {t.ctaSecondary}
@@ -159,139 +152,133 @@ export default function CommunityHub() {
         </div>
       </section>
 
-      {/* Top contributors */}
+      {/* Placeholder banner — only shows when Discord URL is unset. */}
+      {isDiscordPlaceholder && (
+        <div
+          role="status"
+          className="flex items-center gap-3 px-4 py-3 rounded-2xl bg-amber-500/10 border border-amber-500/20 text-amber-400 text-sm font-bold"
+        >
+          <Clock size={16} />
+          <span>
+            {isBn
+              ? 'ডিসকর্ড সার্ভার শীঘ্রই চালু হবে। এই মুহূর্তে গিটহাবে ফলো করুন অথবা ইমেইল করুন।'
+              : 'Discord server launching soon. In the meantime, follow on GitHub or reach out via email.'}
+          </span>
+        </div>
+      )}
+
+      {/* Coming Soon card */}
+      <motion.section
+        initial={{ opacity: 0, y: 16 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.35 }}
+        className="relative overflow-hidden rounded-3xl border-2 border-border-subtle bg-gradient-to-br from-blue-500/10 via-violet-500/5 to-transparent p-8 md:p-12"
+      >
+        <div className="absolute -top-12 -right-12 w-48 h-48 bg-blue-500/20 blur-3xl rounded-full pointer-events-none" />
+        <div className="absolute -bottom-16 -left-16 w-56 h-56 bg-violet-500/15 blur-3xl rounded-full pointer-events-none" />
+
+        <div className="relative z-10 flex flex-col md:flex-row items-start gap-6">
+          <div className="shrink-0 w-16 h-16 rounded-2xl bg-blue-500/15 border-2 border-blue-500/30 flex items-center justify-center">
+            <Calendar className="text-blue-400" size={28} />
+          </div>
+
+          <div className="flex-1 space-y-3">
+            <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-amber-500/10 border border-amber-500/20 text-amber-400 font-black text-[10px] uppercase tracking-[0.25em]">
+              <Bell size={12} />
+              {t.comingTag}
+            </div>
+            <h2 className="text-2xl md:text-3xl font-black tracking-tight">
+              {t.comingTitle}
+            </h2>
+            <p className="text-app-fg/60 font-bold leading-relaxed max-w-2xl">
+              {t.comingDesc}
+            </p>
+          </div>
+        </div>
+      </motion.section>
+
+      {/* Where you can be active right now */}
       <section className="space-y-4">
         <div className="flex items-center gap-2">
-          <Trophy className="text-amber-400" size={22} />
-          <h2 className="text-2xl font-black">{t.sectionLeaders}</h2>
+          <Heart className="text-rose-400" size={22} />
+          <h2 className="text-2xl font-black">{t.sectionLeads}</h2>
         </div>
-        <div className="grid grid-cols-1 md:grid-cols-5 gap-3">
-          {TOP_CONTRIBUTORS.map((c, idx) => (
-            <motion.div
-              key={c.name}
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+          {leads.map((l, idx) => (
+            <motion.a
+              key={l.title}
+              href={l.href}
               initial={{ opacity: 0, y: 12 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ delay: idx * 0.05 }}
-              className="bg-panel border-2 border-border-subtle rounded-2xl p-4 text-center space-y-2"
-            >
-              <div className="text-3xl">{c.badge}</div>
-              <div className="font-black text-sm truncate">{c.name}</div>
-              <div className="text-xs text-app-fg/50 font-bold">
-                {c.xp.toLocaleString()} XP · 🔥 {c.streak}
-              </div>
-            </motion.div>
-          ))}
-        </div>
-      </section>
-
-      {/* Activity feed */}
-      <section className="space-y-4">
-        <div className="flex items-center gap-2">
-          <Users className="text-blue-400" size={22} />
-          <h2 className="text-2xl font-black">{t.sectionActivity}</h2>
-        </div>
-        <div className="space-y-2">
-          {RECENT_ACTIVITY.map((a, idx) => (
-            <motion.div
-              key={idx}
-              initial={{ opacity: 0, x: -8 }}
-              animate={{ opacity: 1, x: 0 }}
-              transition={{ delay: idx * 0.04 }}
-              className="bg-panel border-2 border-border-subtle rounded-2xl p-4 flex items-center gap-4"
+              className="group bg-panel border-2 border-border-subtle rounded-2xl p-5 space-y-3 hover:border-blue-500/40 transition-colors"
             >
               <div
-                className={clsx(
-                  'w-10 h-10 rounded-xl flex items-center justify-center shrink-0',
-                  a.tone === 'gold' && 'bg-amber-500/15 text-amber-400',
-                  a.tone === 'green' && 'bg-emerald-500/15 text-emerald-400',
-                  a.tone === 'blue' && 'bg-blue-500/15 text-blue-400',
-                  a.tone === 'violet' && 'bg-violet-500/15 text-violet-400',
-                )}
+                className={`w-12 h-12 rounded-xl border-2 flex items-center justify-center ${toneClass(l.tone)}`}
               >
-                {a.tone === 'gold' ? <Trophy size={18} /> : <Heart size={18} />}
+                <l.icon size={20} />
               </div>
-              <div className="flex-1 min-w-0">
-                <div className="font-bold text-sm">
-                  <span className="font-black">{a.who}</span>{' '}
-                  <span className="text-app-fg/70">{a.what[language]}</span>
-                </div>
-                <div className="text-xs text-app-fg/40 mt-0.5">{a.when[language]}</div>
+              <div className="font-black leading-tight">{l.title}</div>
+              <div className="text-xs text-app-fg/50 font-bold leading-relaxed">
+                {l.desc}
               </div>
-            </motion.div>
+              <div className="flex items-center gap-1.5 text-xs font-black text-blue-400 opacity-0 group-hover:opacity-100 transition-opacity">
+                {isBn ? 'যান' : 'Go'}
+                <ArrowRight size={14} />
+              </div>
+            </motion.a>
           ))}
         </div>
       </section>
 
-      {/* Study groups */}
-      <section id="groups" className="space-y-4">
-        <div className="flex items-center gap-2">
-          <Users className="text-emerald-400" size={22} />
-          <h2 className="text-2xl font-black">{t.sectionGroups}</h2>
+      {/* Notify footer */}
+      <section className="bg-panel/50 border border-border-subtle rounded-3xl p-8 text-center space-y-4">
+        <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 font-black text-[10px] uppercase tracking-[0.25em]">
+          <Bell size={12} />
+          {isBn ? 'নোটিফাই' : 'NOTIFY'}
         </div>
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
-          {WORKING_GROUPS.map((g) => (
-            <div
-              key={g.title.en}
-              className="bg-panel border-2 border-border-subtle rounded-2xl p-5 space-y-3"
+        <h3 className="text-2xl md:text-3xl font-black">{t.notifyTitle}</h3>
+        <p className="text-sm text-app-fg/50 max-w-md mx-auto leading-relaxed">
+          {t.notifyDesc}
+        </p>
+        <div className="flex flex-wrap justify-center gap-3 pt-2">
+          {!isDiscordPlaceholder && (
+            <a
+              href={DISCORD_URL}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="px-5 py-2.5 rounded-xl bg-blue-500 text-white font-black text-sm inline-flex items-center gap-2 hover:bg-blue-600 transition-colors"
             >
-              <div className="flex items-start justify-between gap-2">
-                <div className="font-black leading-tight">{g.title[language]}</div>
-                <span className="text-[10px] font-black uppercase tracking-widest px-2 py-0.5 rounded-md bg-blue-500/10 text-blue-400 border border-blue-500/20">
-                  {g.tag[language]}
-                </span>
-              </div>
-              <div className="text-xs text-app-fg/50 font-bold">
-                {g.members.toLocaleString()} {t.members}
-              </div>
-              <button className="w-full py-2 rounded-xl bg-blue-500/10 text-blue-400 font-black text-sm hover:bg-blue-500 hover:text-white transition-colors">
-                {t.join}
-              </button>
-            </div>
-          ))}
+              <MessageSquare size={16} />
+              {t.ctaPrimary}
+            </a>
+          )}
+          <a
+            href={GITHUB_REPO_URL}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="px-5 py-2.5 rounded-xl border border-border-subtle font-black text-sm inline-flex items-center gap-2 hover:bg-white/5 transition-colors"
+          >
+            <Github size={16} />
+            {t.ctaGithub}
+          </a>
+          <a
+            href={contactMailto('Community inquiry')}
+            className="px-5 py-2.5 rounded-xl border border-border-subtle font-black text-sm inline-flex items-center gap-2 hover:bg-white/5 transition-colors"
+          >
+            <Mail size={16} />
+            {t.ctaEmail}
+          </a>
         </div>
       </section>
 
-      {/* Meetups */}
-      <section className="space-y-4">
-        <div className="flex items-center gap-2">
-          <Calendar className="text-rose-400" size={22} />
-          <h2 className="text-2xl font-black">{t.sectionMeetups}</h2>
-        </div>
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-          {UPCOMING_MEETUPS.map((m) => (
-            <div
-              key={m.city}
-              className="bg-panel border-2 border-border-subtle rounded-2xl p-5 flex items-center gap-4"
-            >
-              <div className="w-12 h-12 rounded-xl bg-rose-500/10 text-rose-400 flex items-center justify-center font-black shrink-0">
-                {m.city.slice(0, 2).toUpperCase()}
-              </div>
-              <div className="flex-1">
-                <div className="font-black">{m.city}</div>
-                <div className="text-xs text-app-fg/50 font-bold">{m.date[language]}</div>
-                <div className="text-sm text-app-fg/70 mt-1">{m.topic[language]}</div>
-              </div>
-              <button className="px-4 py-2 rounded-xl bg-rose-500/10 text-rose-400 font-black text-sm hover:bg-rose-500 hover:text-white transition-colors">
-                {t.rsvp}
-              </button>
-            </div>
-          ))}
-        </div>
-      </section>
-
-      {/* GitHub / open source footer */}
+      {/* Open source footer */}
       <section className="bg-panel/50 border border-border-subtle rounded-3xl p-8 text-center space-y-3">
         <Github className="mx-auto text-app-fg/40" size={32} />
-        <div className="font-black text-lg">
-          {isBn ? 'ওপেন সোর্স, সবার জন্য' : 'Open source, for everyone'}
-        </div>
-        <p className="text-sm text-app-fg/50 max-w-md mx-auto">
-          {isBn
-            ? 'প্ল্যাটফর্মটি MIT লাইসেন্সে ওপেন সোর্স। কন্ট্রিবিউট করতে GitHub-এ আসুন।'
-            : 'The platform is MIT-licensed and open source. Drop by GitHub to contribute.'}
-        </p>
+        <div className="font-black text-lg">{t.footerTitle}</div>
+        <p className="text-sm text-app-fg/50 max-w-md mx-auto">{t.footerDesc}</p>
         <a
-          href="https://github.com/Neamul09/py.cholosikhi"
+          href={GITHUB_REPO_URL}
           target="_blank"
           rel="noopener noreferrer"
           className="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl border border-border-subtle font-black hover:bg-white/5 transition-colors"

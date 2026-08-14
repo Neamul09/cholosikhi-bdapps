@@ -53,7 +53,12 @@ export default function LessonView() {
 
       {/* Header cross-bar */}
       <div className="flex items-center gap-4 px-4 py-3 bg-white/5 border-b border-white/10 shrink-0">
-        <button onClick={() => navigate(`/learn/${lesson.sectionId}`)} className="p-2 hover:bg-white/10 rounded-full transition">
+        <button
+          type="button"
+          onClick={() => navigate(`/learn/${lesson.sectionId}`)}
+          aria-label="Go back to section"
+          className="p-2 hover:bg-white/10 rounded-full transition"
+        >
           <X size={20} className="text-gray-400" />
         </button>
         <div className="flex-1">

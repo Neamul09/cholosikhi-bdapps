@@ -1,7 +1,7 @@
 import React from 'react';
 import { NavLink, useLocation } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Home, Trophy, User, BookOpen, Settings, Flame, Heart, Gem, Moon, Sun, ShoppingBag, Code, Users } from 'lucide-react';
+import { Home, Trophy, User, BookOpen, Settings, Flame, Heart, Gem, Moon, Sun, ShoppingBag, Code, Users, Search } from 'lucide-react';
 import { clsx } from 'clsx';
 import { useSettingsStore } from '@/store/settingsStore';
 import { useUserStore } from '@/store/userStore';
@@ -78,6 +78,7 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
     { id: '/dsa',         icon: BookOpen, label: language === 'bn' ? 'ভিজ্যুয়ালাইজার' : 'Visualizer' },
     { id: '/leaderboard', icon: Trophy,   label: language === 'bn' ? 'সেরা শিক্ষার্থী'  : 'Leaderboard'  },
     { id: '/community',   icon: Users,    label: language === 'bn' ? 'কমিউনিটি'        : 'Community'    },
+    { id: '/discover',    icon: Search,   label: language === 'bn' ? 'খুঁজুন'           : 'Discover'     },
     { id: '/shop',        icon: ShoppingBag, label: language === 'bn' ? 'দোকান'       : 'Shop'         },
     { id: '/profile',     icon: User,     label: language === 'bn' ? 'প্রোফাইল'       : 'Profile'      },
     { id: '/settings',    icon: Settings, label: language === 'bn' ? 'সেটিংস'         : 'Settings'     },
@@ -163,7 +164,9 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
         {/* Desktop bottom: theme toggle */}
         <div className="hidden md:flex flex-col gap-3 mt-auto pt-6 border-t border-[var(--border-subtle)]">
           <button
+            type="button"
             onClick={() => { toggleTheme(); play('toggle'); }}
+aria-label={theme === 'dark' ? (language === 'bn' ? 'লাইট মোডে যান' : 'Switch to light mode') : (language === 'bn' ? 'ডার্ক মোডে যান' : 'Switch to dark mode')}
             className="flex items-center gap-3 px-3 py-2.5 rounded-xl font-bold transition-all text-[var(--app-fg-muted)] border-2 border-transparent hover:bg-blue-500/5 hover:text-blue-400"
           >
             {theme === 'dark'
@@ -226,7 +229,12 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
 
             {/* Mobile theme toggle (Moved here) */}
             <div className="md:hidden border-l border-[var(--border-subtle)] ml-1 pl-2">
-              <button onClick={() => { toggleTheme(); play('toggle'); }} className="p-1.5 rounded-xl hover:bg-blue-500/10 transition text-[var(--app-fg-muted)]">
+              <button
+                type="button"
+                onClick={() => { toggleTheme(); play('toggle'); }}
+                aria-label={theme === 'dark' ? (language === 'bn' ? 'লাইট মোডে যান' : 'Switch to light mode') : (language === 'bn' ? 'ডার্ক মোডে যান' : 'Switch to dark mode')}
+                className="p-1.5 rounded-xl hover:bg-blue-500/10 transition text-[var(--app-fg-muted)]"
+              >
                 {theme === 'dark' ? <Sun size={18} className="text-amber-400" /> : <Moon size={18} />}
               </button>
             </div>

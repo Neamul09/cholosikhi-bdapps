@@ -114,7 +114,12 @@ export default function SessionView() {
 
       {/* Progress Header */}
       <div className="flex items-center gap-4 px-4 py-6 shrink-0 z-40">
-        <button onClick={() => navigate(`/`)} className="p-2 text-gray-400 hover:text-gray-200 transition">
+        <button
+          type="button"
+          onClick={() => navigate(`/`)}
+          aria-label="Exit session"
+          className="p-2 text-gray-400 hover:text-gray-200 transition"
+        >
           <X size={24} strokeWidth={3} />
         </button>
         <div className="flex-1">

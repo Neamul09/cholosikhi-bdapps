@@ -26,7 +26,7 @@ export interface ProgressState {
   currentLesson: string;
 
   setLessonComplete: (lessonId: string, score: number, timeMinutes: number, courseId: string) => Promise<void>;
-  setTestResult: (testId: string, score: number, stars: number) => void;
+  setTestResult: (testId: string, score: number, stars: number) => Promise<void>;
   isLessonCompleted: (lessonId: string) => boolean;
   getLessonScore: (lessonId: string) => number;
   setCurrentLesson: (courseId: string, sectionId: string, lessonId: string) => void;

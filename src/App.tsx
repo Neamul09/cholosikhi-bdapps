@@ -24,6 +24,7 @@ const Leaderboard = lazy(() => import('./pages/Leaderboard'));
 const Achievements = lazy(() => import('./pages/Achievements'));
 const CodePlayground = lazy(() => import('./pages/CodePlayground'));
 const CommunityHub = lazy(() => import('./pages/CommunityHub'));
+const Discover = lazy(() => import('./pages/Discover'));
 
 export default function App() {
   const { theme, loadSettings } = useSettingsStore();
@@ -83,6 +84,7 @@ export default function App() {
           <Route path="/achievements" element={<Suspense fallback={null}><AppShell><Achievements /></AppShell></Suspense>} />
           <Route path="/settings" element={<AppShell><Settings /></AppShell>} />
           <Route path="/community" element={<Suspense fallback={null}><AppShell><CommunityHub /></AppShell></Suspense>} />
+          <Route path="/discover" element={<Suspense fallback={null}><AppShell><Discover /></AppShell></Suspense>} />
         </Route>
 
         {/* Redirect based on session */}

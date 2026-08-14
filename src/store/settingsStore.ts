@@ -1,6 +1,6 @@
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
-import { supabase } from '@/lib/supabase';
+import { supabase, isSupabaseConfigured } from '@/lib/supabase';
 
 export interface SettingsState {
   soundEnabled: boolean;
@@ -65,6 +65,7 @@ export const useSettingsStore = create<SettingsState>()(
       },
 
       syncSettings: async () => {
+        if (!isSupabaseConfigured) return;
         const { data: { session } } = await supabase.auth.getSession();
         if (!session?.user) return;
 
@@ -81,6 +82,7 @@ export const useSettingsStore = create<SettingsState>()(
       },
 
       loadSettings: async () => {
+        if (!isSupabaseConfigured) return;
         const { data: { session } } = await supabase.auth.getSession();
         if (!session?.user) return;
 

@@ -2,6 +2,7 @@ import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
 import { supabase } from '@/lib/supabase';
 import { useQuestStore } from './questStore';
+import { clearAllPersistedState } from './persistKeys';
 
 export type Language = 'en' | 'bn' | 'both';
 export type Theme = 'dark' | 'light';
@@ -703,7 +704,18 @@ export const useUserStore = create<UserState>()(
         await supabase.from('test_results').delete().eq('user_id', session.user.id);
         await supabase.from('achievements').delete().eq('user_id', session.user.id);
 
-        localStorage.clear();
+        // Wipe every persisted store via the central registry (see persistKeys.ts)
+        // so any future store added there is reset here too.
+        clearAllPersistedState();
+
+        // Also clear the Supabase auth session key explicitly.
+        try {
+          localStorage.removeItem('cholosikhi-auth');
+        } catch {
+          // localStorage may be unavailable; the site reload below will discard
+          // everything in-memory anyway.
+        }
+
         window.location.reload();
       }
     }),

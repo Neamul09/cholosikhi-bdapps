@@ -32,7 +32,12 @@ export default function LearnSection() {
     <div className="max-w-2xl mx-auto px-4 py-8 space-y-8">
       {/* Header */}
       <div className="flex items-center gap-4">
-        <button onClick={() => navigate('/')} className="p-2 glass rounded-xl hover-lift">
+        <button
+          type="button"
+          onClick={() => navigate('/')}
+          aria-label="Go back to home"
+          className="p-2 glass rounded-xl hover-lift"
+        >
           <ArrowLeft size={20} />
         </button>
         <div className="flex-1">

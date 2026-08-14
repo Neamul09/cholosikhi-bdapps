@@ -1,6 +1,6 @@
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
-import { supabase } from '@/lib/supabase';
+import { supabase, isSupabaseConfigured } from '@/lib/supabase';
 import { useUserStore } from './userStore';
 
 export interface Quest {
@@ -83,6 +83,7 @@ export const useQuestStore = create<QuestState>()(
       },
 
       syncQuests: async () => {
+        if (!isSupabaseConfigured) return;
         const { data: { session } } = await supabase.auth.getSession();
         if (!session?.user) return;
 
@@ -93,6 +94,7 @@ export const useQuestStore = create<QuestState>()(
       },
 
       loadQuests: async () => {
+        if (!isSupabaseConfigured) return;
         const { data: { session } } = await supabase.auth.getSession();
         if (!session?.user) return;
 
