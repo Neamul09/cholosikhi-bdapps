@@ -2,7 +2,7 @@ import { useState, useEffect, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
   Mail, Lock, User as UserIcon, Zap, Loader2, ArrowRight, AlertCircle,
-  CheckCircle2, Sparkles, BookOpen, Trophy
+  CheckCircle2, Sparkles, BookOpen, Trophy, Eye, EyeOff
 } from 'lucide-react';
 import { useSettingsStore } from '@/store/settingsStore';
 import { supabase, isSupabaseConfigured } from '@/lib/supabase';
@@ -29,9 +29,6 @@ const t = {
     haveAccount: 'Already learning with us?',
     signupLink: 'Sign up free',
     loginLink: 'Log in',
-    successTitle: 'Check your inbox!',
-    successBody: "We sent a verification link to {email}. Click it and you're in — takes ten seconds.",
-    successCta: 'Open Gmail / Outlook',
     trust: 'Free forever · No card needed · 100+ lessons in Bangla',
     socialProof: 'Learners coding in Bangla right now',
     // Error mapping (key → friendly message)
@@ -54,6 +51,23 @@ const t = {
     slowSubmit: 'Still working… hang tight.',
     // Field-level hints
     pwHint: '8+ characters, mix of letters and numbers works best.',
+    // Confirm password
+    confirmPwLabel: 'Confirm password',
+    confirmPwPh: 'Type it again',
+    errPwMismatch: "Passwords don't match.",
+    // Password strength
+    pwWeak: 'Weak',
+    pwFair: 'Fair',
+    pwGood: 'Good',
+    pwStrong: 'Strong',
+    pwStrengthHint: 'Mix in a number or symbol to make it stronger.',
+    // Email field hint
+    errEmailShape: 'That email looks off — double-check it?',
+    // Show / hide password
+    showPw: 'Show password',
+    hidePw: 'Hide password',
+    // Sign-in footer note (verification is off, but flag the auto-login behavior)
+    autoLoginNote: 'You\'ll be logged in right away — no email check needed.',
   },
   bn: {
     welcomeBack: 'আবার স্বাগতম',
@@ -73,9 +87,6 @@ const t = {
     haveAccount: 'আগে থেকেই শিখছেন?',
     signupLink: 'ফ্রি সাইন আপ',
     loginLink: 'লগইন',
-    successTitle: 'ইনবক্স দেখুন!',
-    successBody: '{email}-এ একটা ভেরিফাই লিঙ্ক পাঠিয়েছি — ক্লিক করলেই ঢুকে যাবেন। দশ সেকেন্ডের কাজ।',
-    successCta: 'Gmail / Outlook খুলুন',
     trust: 'চিরকাল ফ্রি · কার্ড লাগে না · ১০০+ বাংলা লেসন',
     socialProof: 'এই মুহূর্তে বাংলায় কোড করছেন',
     errOver: 'সাইন আপ এখন একটু বন্ধ — একটু পর আবার চেষ্টা করুন।',
@@ -95,6 +106,18 @@ const t = {
     errGeneric: 'কিছু একটা হলো। আবার চেষ্টা করবেন?',
     slowSubmit: 'একটু সময় লাগছে… অপেক্ষা করুন।',
     pwHint: '৮+ অক্ষর, অক্ষর আর সংখ্যা মিলিয়ে দিলেই সবচেয়ে ভালো।',
+    confirmPwLabel: 'পাসওয়ার্ড আবার লিখুন',
+    confirmPwPh: 'আগেরটার মতোই লিখুন',
+    errPwMismatch: 'পাসওয়ার্ড দুটো মিলছে না।',
+    pwWeak: 'দুর্বল',
+    pwFair: 'মোটামুটি',
+    pwGood: 'ভালো',
+    pwStrong: 'শক্তিশালী',
+    pwStrengthHint: 'একটা সংখ্যা বা সিম্বল মেশালে আরো ভালো হবে।',
+    errEmailShape: 'ইমেইলটা একটু অদ্ভুত লাগছে — আরেকবার দেখবেন?',
+    showPw: 'পাসওয়ার্ড দেখান',
+    hidePw: 'পাসওয়ার্ড লুকান',
+    autoLoginNote: 'এক্ষুনি লগইন হয়ে যাবে — ইমেইল চেক লাগবে না।',
   },
 };
 
@@ -199,14 +222,51 @@ function looksLikeExistingEmailSignup(user: { identities?: unknown[] } | null | 
   return Array.isArray(user.identities) && user.identities.length === 0;
 }
 
+// Lightweight email shape check. We let Supabase be the source of truth
+// for whether the address is real; we just want to catch the obvious typos
+// (missing @, spaces, no TLD) before we burn an API call.
+const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+function isEmailShaped(s: string): boolean {
+  return EMAIL_RE.test(s.trim());
+}
+
+/**
+ * Password strength — 0..4 scale. We deliberately keep this simple and
+ * explainable so people aren't confused why a 12-char dictionary word rates
+ * higher than a short random one. Buckets:
+ *   0 — empty / under 8 chars (invalid; we won't accept it anyway)
+ *   1 — meets length only          → "Weak"
+ *   2 — + a number OR symbol       → "Fair"
+ *   3 — + the other of those       → "Good"
+ *   4 — + uppercase + lowercase    → "Strong"
+ */
+function passwordStrength(pw: string): 0 | 1 | 2 | 3 | 4 {
+  if (!pw) return 0;
+  if (pw.length < 8) return 1;
+  let score = 1;
+  if (/[0-9]/.test(pw)) score++;
+  if (/[^A-Za-z0-9]/.test(pw)) score++;
+  if (/[a-z]/.test(pw) && /[A-Z]/.test(pw)) score++;
+  return Math.min(4, score) as 0 | 1 | 2 | 3 | 4;
+}
+
 export default function Auth() {
   const [isLogin, setIsLogin] = useState(true);
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
+  // Confirm-password field — only shown on signup. We split state instead
+  // of a single combined ref so retyping one doesn't flash the other.
+  const [confirmPassword, setConfirmPassword] = useState('');
   const [name, setName] = useState('');
   const [loading, setLoading] = useState(false);
-  const [showSuccess, setShowSuccess] = useState(false);
+  // Email verification is OFF (Supabase project config), so a successful
+  // signup returns a real session — we navigate straight to '/' and never
+  // show the old "check your inbox" panel.
+  const [showPw, setShowPw] = useState(false);
+  const [showConfirmPw, setShowConfirmPw] = useState(false);
   const [error, setError] = useState('');
+  // Touched states so we don't yell at the user on every keystroke.
+  const [touched, setTouched] = useState<{ email?: boolean; confirm?: boolean }>({});
   const { language } = useSettingsStore();
   const navigate = useNavigate();
 
@@ -215,6 +275,16 @@ export default function Auth() {
   // limits (or worse, creating duplicate accounts on a brief network blip).
   const lastSubmitAt = useRef<number>(0);
   const tr = t[language];
+
+  // Per-field validation derivations (cheap; on every render).
+  const emailLooksValid = isEmailShaped(email);
+  const strength = passwordStrength(password);
+  const pwIsLongEnough = password.length >= 8;
+  const confirmMatches = confirmPassword.length > 0 && confirmPassword === password;
+  // Field-level error strings — shown under each field rather than only in the banner.
+  const emailFieldError = touched.email && email.length > 0 && !emailLooksValid ? tr.errEmailShape : '';
+  const confirmFieldError =
+    touched.confirm && confirmPassword.length > 0 && !confirmMatches ? tr.errPwMismatch : '';
 
   useEffect(() => {
     // Pick up errors bounced back via email-confirmation link (e.g. expired links)
@@ -248,6 +318,26 @@ export default function Auth() {
     }
     lastSubmitAt.current = now;
 
+    // Mark all fields as touched so any latent field errors become visible.
+    setTouched({ email: true, confirm: true });
+
+    // Local validation — fail fast so we don't waste an API call on obvious
+    // typos. The server still validates everything; this is purely UX.
+    if (!emailLooksValid) {
+      setError(tr.errEmailShape);
+      return;
+    }
+    if (!isLogin) {
+      if (!pwIsLongEnough) {
+        setError(tr.errWeakPw);
+        return;
+      }
+      if (!confirmMatches) {
+        setError(tr.errPwMismatch);
+        return;
+      }
+    }
+
     setLoading(true);
     setError('');
 
@@ -278,18 +368,17 @@ export default function Auth() {
           setError(mapAuthError(signUpErr, false, language));
           return;
         }
-        // Supabase returns success-with-no-error for signups where the email
-        // already exists AND email confirmation is required (anti-enumeration).
-        // The giveaway is `user.identities.length === 0` for the existing-email
-        // case vs ≥1 for a real new user. Show a soft hint instead of the
-        // "check your inbox" panel so people with existing accounts don't sit
-        // there waiting for an email that was never sent.
+        // With email confirmation OFF, Supabase returns a real session immediately
+        // — OR a real error if the email is taken. We no longer need to handle
+        // the "fake success / empty identities" anti-enumeration case, but we
+        // keep the check as a defensive net in case the project setting gets
+        // toggled back on later.
         if (looksLikeExistingEmailSignup(data?.user)) {
           setError(tr.errMaybeExisting);
-          // Offer a one-click jump to login so they don't have to retype email.
           return;
         }
-        setShowSuccess(true);
+        // Email verification disabled → straight to home.
+        navigate('/');
       }
     } catch (err) {
       // Safety net for anything not shaped like a Supabase error.
@@ -317,201 +406,293 @@ export default function Auth() {
         animate={{ opacity: 1, y: 0 }}
         className="w-full max-w-md bg-panel rounded-[2.5rem] p-8 border-2 border-[var(--border-subtle)] shadow-2xl relative z-10"
       >
-        {showSuccess ? (
-          <div className="text-center py-4">
-            <div className="w-20 h-20 rounded-3xl bg-emerald-500/20 flex items-center justify-center text-emerald-400 mx-auto mb-6 shadow-lg shadow-emerald-500/20">
-              <Mail size={40} strokeWidth={2.5} />
-            </div>
-            <h2 className="text-2xl font-black mb-3">{tr.successTitle}</h2>
-            <p className="text-[var(--app-fg-muted)] font-bold mb-8 leading-relaxed">
-              {tr.successBody.split('{email}').map((part, i, arr) => (
-                <span key={i}>
-                  {part}
-                  {i < arr.length - 1 && (
-                    <strong className="text-app-fg break-all">{email}</strong>
-                  )}
-                </span>
-              ))}
-            </p>
-            <a
-              href={email.includes('@gmail') ? 'https://mail.google.com' : email.includes('@yahoo') ? 'https://mail.yahoo.com' : 'mailto:' + email}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="inline-flex items-center gap-2 px-6 py-3 rounded-2xl bg-blue-500 text-white font-black hover:bg-blue-600 transition-all active:scale-95 shadow-lg shadow-blue-500/20"
-            >
-              {tr.successCta}
-              <ArrowRight size={18} />
-            </a>
-            <button
-              onClick={() => { setShowSuccess(false); setIsLogin(true); }}
-              className="block mx-auto mt-4 text-sm font-bold text-[var(--app-fg-muted)] hover:text-app-fg transition-colors"
-            >
-              {tr.loginLink} →
-            </button>
+        <div className="flex flex-col items-center mb-8">
+          <div className="w-16 h-16 rounded-3xl bg-gradient-to-br from-blue-500 to-cyan-400 flex items-center justify-center shadow-lg shadow-blue-500/30 mb-4">
+            <Zap size={32} className="text-white" strokeWidth={2.5} />
           </div>
-        ) : (
-          <>
-            <div className="flex flex-col items-center mb-8">
-              <div className="w-16 h-16 rounded-3xl bg-gradient-to-br from-blue-500 to-cyan-400 flex items-center justify-center shadow-lg shadow-blue-500/30 mb-4">
-                <Zap size={32} className="text-white" strokeWidth={2.5} />
-              </div>
-              <h1 className="text-3xl font-black tracking-tight text-center">
-                {isLogin ? tr.welcomeBack : tr.createAccount}
-              </h1>
-              <p className="text-[var(--app-fg-muted)] font-bold text-center mt-2 max-w-xs">
-                {isLogin ? tr.welcomeBackSub : tr.createAccountSub}
-              </p>
+          <h1 className="text-3xl font-black tracking-tight text-center">
+            {isLogin ? tr.welcomeBack : tr.createAccount}
+          </h1>
+          <p className="text-[var(--app-fg-muted)] font-bold text-center mt-2 max-w-xs">
+            {isLogin ? tr.welcomeBackSub : tr.createAccountSub}
+          </p>
+        </div>
+
+        {/* Trust strip — addresses the "too generic" complaint */}
+        <div className="flex items-center justify-center gap-4 mb-6 px-2 text-[10px] font-black uppercase tracking-widest text-[var(--app-fg-muted)]">
+          <span className="inline-flex items-center gap-1"><CheckCircle2 size={12} className="text-emerald-400" />{language === 'bn' ? 'ফ্রি' : 'FREE'}</span>
+          <span className="opacity-30">·</span>
+          <span className="inline-flex items-center gap-1"><BookOpen size={12} className="text-blue-400" />{language === 'bn' ? 'বাংলা' : 'BN'}</span>
+          <span className="opacity-30">·</span>
+          <span className="inline-flex items-center gap-1"><Trophy size={12} className="text-amber-400" />{language === 'bn' ? 'গেমিফাইড' : 'GAMIFIED'}</span>
+        </div>
+
+        {error && (
+          <div
+            ref={errorRef}
+            tabIndex={-1}
+            role="alert"
+            className="mb-6 p-4 bg-pink-500/10 border-l-4 border-pink-500 text-pink-500 font-bold rounded-r-xl text-sm focus:outline-none focus:ring-2 focus:ring-pink-500/40"
+          >
+            <div className="flex items-start gap-3">
+              <AlertCircle size={18} className="shrink-0 mt-0.5" />
+              <span className="flex-1">{error}</span>
             </div>
-
-            {/* Trust strip — addresses the "too generic" complaint */}
-            <div className="flex items-center justify-center gap-4 mb-6 px-2 text-[10px] font-black uppercase tracking-widest text-[var(--app-fg-muted)]">
-              <span className="inline-flex items-center gap-1"><CheckCircle2 size={12} className="text-emerald-400" />{language === 'bn' ? 'ফ্রি' : 'FREE'}</span>
-              <span className="opacity-30">·</span>
-              <span className="inline-flex items-center gap-1"><BookOpen size={12} className="text-blue-400" />{language === 'bn' ? 'বাংলা' : 'BN'}</span>
-              <span className="opacity-30">·</span>
-              <span className="inline-flex items-center gap-1"><Trophy size={12} className="text-amber-400" />{language === 'bn' ? 'গেমিফাইড' : 'GAMIFIED'}</span>
-            </div>
-
-            {error && (
-              <div
-                ref={errorRef}
-                tabIndex={-1}
-                role="alert"
-                className="mb-6 p-4 bg-pink-500/10 border-l-4 border-pink-500 text-pink-500 font-bold rounded-r-xl text-sm focus:outline-none focus:ring-2 focus:ring-pink-500/40"
-              >
-                <div className="flex items-start gap-3">
-                  <AlertCircle size={18} className="shrink-0 mt-0.5" />
-                  <span className="flex-1">{error}</span>
-                </div>
-                {/* Inline CTA for the "this email may already be registered" case:
-                    gives the user a one-click escape to login instead of leaving
-                    them stuck staring at the form. */}
-                {!isLogin && error === tr.errMaybeExisting && (
-                  <button
-                    type="button"
-                    onClick={() => { setIsLogin(true); setError(''); }}
-                    className="mt-2 ml-7 text-xs font-black uppercase tracking-wider text-pink-500 hover:text-pink-400 underline underline-offset-2 transition-colors"
-                  >
-                    {tr.switchToLoginCta}
-                  </button>
-                )}
-              </div>
-            )}
-
-            <form onSubmit={handleAuth} className="space-y-4" noValidate>
-              <AnimatePresence mode="popLayout">
-                {!isLogin && (
-                  <motion.div
-                    initial={{ opacity: 0, height: 0 }}
-                    animate={{ opacity: 1, height: 'auto' }}
-                    exit={{ opacity: 0, height: 0 }}
-                    className="overflow-hidden"
-                  >
-                    <label htmlFor="auth-name" className="sr-only">{tr.nameLabel}</label>
-                    <div className="relative">
-                      <div className="absolute inset-y-0 left-4 flex items-center pointer-events-none text-[var(--app-fg-muted)]">
-                        <UserIcon size={20} aria-hidden="true" />
-                      </div>
-                      <input
-                        id="auth-name"
-                        type="text"
-                        autoComplete="name"
-                        required={!isLogin}
-                        value={name}
-                        onChange={(e) => setName(e.target.value)}
-                        placeholder={tr.namePh}
-                        className="w-full bg-[var(--app-bg)] border-2 border-[var(--border-subtle)] focus:border-blue-500 rounded-2xl py-3 pl-12 pr-4 font-bold outline-none transition-all placeholder:text-[var(--app-fg-muted)]/50"
-                      />
-                    </div>
-                  </motion.div>
-                )}
-              </AnimatePresence>
-
-              <div>
-                <label htmlFor="auth-email" className="sr-only">{tr.emailLabel}</label>
-                <div className="relative">
-                  <div className="absolute inset-y-0 left-4 flex items-center pointer-events-none text-[var(--app-fg-muted)]">
-                    <Mail size={20} aria-hidden="true" />
-                  </div>
-                  <input
-                    id="auth-email"
-                    type="email"
-                    autoComplete="email"
-                    required
-                    value={email}
-                    onChange={(e) => setEmail(e.target.value)}
-                    placeholder={tr.emailPh}
-                    className="w-full bg-[var(--app-bg)] border-2 border-[var(--border-subtle)] focus:border-blue-500 rounded-2xl py-3 pl-12 pr-4 font-bold outline-none transition-all placeholder:text-[var(--app-fg-muted)]/50"
-                  />
-                </div>
-              </div>
-
-              <div>
-                <label htmlFor="auth-password" className="sr-only">{tr.passwordLabel}</label>
-                <div className="relative">
-                  <div className="absolute inset-y-0 left-4 flex items-center pointer-events-none text-[var(--app-fg-muted)]">
-                    <Lock size={20} aria-hidden="true" />
-                  </div>
-                  <input
-                    id="auth-password"
-                    type="password"
-                    autoComplete={isLogin ? 'current-password' : 'new-password'}
-                    required
-                    minLength={8}
-                    value={password}
-                    onChange={(e) => setPassword(e.target.value)}
-                    placeholder={tr.passwordPh}
-                    aria-describedby="pw-hint"
-                    className="w-full bg-[var(--app-bg)] border-2 border-[var(--border-subtle)] focus:border-blue-500 rounded-2xl py-3 pl-12 pr-4 font-bold outline-none transition-all placeholder:text-[var(--app-fg-muted)]/50"
-                  />
-                </div>
-                {!isLogin && (
-                  <p
-                    id="pw-hint"
-                    className="mt-2 ml-2 text-xs text-[var(--app-fg-muted)] font-bold"
-                  >
-                    {tr.pwHint}
-                  </p>
-                )}
-              </div>
-
-              <button
-                type="submit"
-                disabled={loading}
-                className="w-full btn-duo btn-duo-blue py-3.5 mt-2 flex items-center justify-center gap-2"
-              >
-                {loading ? (
-                  <>
-                    <Loader2 size={20} className="animate-spin" />
-                    <span>{tr.switching}</span>
-                  </>
-                ) : (
-                  <>
-                    {isLogin ? tr.login : tr.signup}
-                    <ArrowRight size={20} />
-                  </>
-                )}
-              </button>
-            </form>
-
-            <p className="mt-6 text-center text-[var(--app-fg-muted)] font-bold">
-              {isLogin ? tr.noAccount : tr.haveAccount}{' '}
+            {/* Inline CTA for the "this email may already be registered" case:
+                gives the user a one-click escape to login instead of leaving
+                them stuck staring at the form. */}
+            {!isLogin && error === tr.errMaybeExisting && (
               <button
                 type="button"
-                onClick={() => { setIsLogin(!isLogin); setError(''); }}
-                className="text-blue-500 hover:text-blue-600 transition-colors cursor-pointer font-black"
+                onClick={() => {
+                  setIsLogin(true);
+                  setError('');
+                  setConfirmPassword('');
+                  setTouched({});
+                }}
+                className="mt-2 ml-7 text-xs font-black uppercase tracking-wider text-pink-500 hover:text-pink-400 underline underline-offset-2 transition-colors"
               >
-                {isLogin ? tr.signupLink : tr.loginLink}
+                {tr.switchToLoginCta}
               </button>
-            </p>
-
-            {/* Bottom trust line — separates from generic auth pages */}
-            <p className="mt-6 pt-6 border-t border-[var(--border-subtle)] text-center text-[10px] font-bold text-[var(--app-fg-muted)] uppercase tracking-widest">
-              <Sparkles size={10} className="inline mr-1 text-amber-400" />
-              {tr.trust}
-            </p>
-          </>
+            )}
+          </div>
         )}
+
+        <form onSubmit={handleAuth} className="space-y-4" noValidate>
+          <AnimatePresence mode="popLayout">
+            {!isLogin && (
+              <motion.div
+                initial={{ opacity: 0, height: 0 }}
+                animate={{ opacity: 1, height: 'auto' }}
+                exit={{ opacity: 0, height: 0 }}
+                className="overflow-hidden"
+              >
+                <label htmlFor="auth-name" className="sr-only">{tr.nameLabel}</label>
+                <div className="relative">
+                  <div className="absolute inset-y-0 left-4 flex items-center pointer-events-none text-[var(--app-fg-muted)]">
+                    <UserIcon size={20} aria-hidden="true" />
+                  </div>
+                  <input
+                    id="auth-name"
+                    type="text"
+                    autoComplete="name"
+                    required={!isLogin}
+                    value={name}
+                    onChange={(e) => setName(e.target.value)}
+                    placeholder={tr.namePh}
+                    className="w-full bg-[var(--app-bg)] border-2 border-[var(--border-subtle)] focus:border-blue-500 rounded-2xl py-3 pl-12 pr-4 font-bold outline-none transition-all placeholder:text-[var(--app-fg-muted)]/50"
+                  />
+                </div>
+              </motion.div>
+            )}
+          </AnimatePresence>
+
+          <div>
+            <label htmlFor="auth-email" className="sr-only">{tr.emailLabel}</label>
+            <div className="relative">
+              <div className="absolute inset-y-0 left-4 flex items-center pointer-events-none text-[var(--app-fg-muted)]">
+                <Mail size={20} aria-hidden="true" />
+              </div>
+              <input
+                id="auth-email"
+                type="email"
+                inputMode="email"
+                autoComplete="email"
+                required
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+                onBlur={() => setTouched((t) => ({ ...t, email: true }))}
+                placeholder={tr.emailPh}
+                aria-invalid={!!emailFieldError}
+                aria-describedby={emailFieldError ? 'auth-email-err' : undefined}
+                className={`w-full bg-[var(--app-bg)] border-2 rounded-2xl py-3 pl-12 pr-4 font-bold outline-none transition-all placeholder:text-[var(--app-fg-muted)]/50 ${
+                  emailFieldError
+                    ? 'border-pink-500 focus:border-pink-500'
+                    : 'border-[var(--border-subtle)] focus:border-blue-500'
+                }`}
+              />
+            </div>
+            {emailFieldError && (
+              <p id="auth-email-err" className="mt-2 ml-2 text-xs text-pink-500 font-bold flex items-center gap-1">
+                <AlertCircle size={12} /> {emailFieldError}
+              </p>
+            )}
+          </div>
+
+          <div>
+            <label htmlFor="auth-password" className="sr-only">{tr.passwordLabel}</label>
+            <div className="relative">
+              <div className="absolute inset-y-0 left-4 flex items-center pointer-events-none text-[var(--app-fg-muted)]">
+                <Lock size={20} aria-hidden="true" />
+              </div>
+              <input
+                id="auth-password"
+                type={showPw ? 'text' : 'password'}
+                autoComplete={isLogin ? 'current-password' : 'new-password'}
+                required
+                minLength={8}
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+                placeholder={tr.passwordPh}
+                aria-describedby={!isLogin ? 'pw-hint pw-strength-label' : undefined}
+                className="w-full bg-[var(--app-bg)] border-2 border-[var(--border-subtle)] focus:border-blue-500 rounded-2xl py-3 pl-12 pr-12 font-bold outline-none transition-all placeholder:text-[var(--app-fg-muted)]/50"
+              />
+              {/* Show/hide password — keyboard accessible, screen-reader friendly. */}
+              <button
+                type="button"
+                onClick={() => setShowPw((v) => !v)}
+                aria-label={showPw ? tr.hidePw : tr.showPw}
+                aria-pressed={showPw}
+                className="absolute inset-y-0 right-3 flex items-center px-2 text-[var(--app-fg-muted)] hover:text-app-fg transition-colors cursor-pointer"
+              >
+                {showPw ? <EyeOff size={18} /> : <Eye size={18} />}
+              </button>
+            </div>
+            {!isLogin && password.length > 0 && (
+              <div
+                id="pw-strength-label"
+                aria-live="polite"
+                className="mt-2 ml-2"
+              >
+                {/* Strength meter — 4 segments. Fill = current bucket. */}
+                <div className="flex gap-1 mb-1" role="presentation">
+                  {[1, 2, 3, 4].map((seg) => (
+                    <div
+                      key={seg}
+                      className={`h-1.5 flex-1 rounded-full transition-all ${
+                        strength >= seg
+                          ? strength <= 1 ? 'bg-pink-500'
+                            : strength === 2 ? 'bg-amber-500'
+                            : strength === 3 ? 'bg-blue-500'
+                            : 'bg-emerald-500'
+                          : 'bg-[var(--border-subtle)]'
+                      }`}
+                    />
+                  ))}
+                </div>
+                <p className="text-[10px] font-black uppercase tracking-wider text-[var(--app-fg-muted)]">
+                  {strength <= 1 ? tr.pwWeak
+                    : strength === 2 ? tr.pwFair
+                    : strength === 3 ? tr.pwGood
+                    : tr.pwStrong}
+                  {strength < 4 && pwIsLongEnough && (
+                    <span className="ml-2 opacity-70 normal-case tracking-normal">· {tr.pwStrengthHint}</span>
+                  )}
+                </p>
+              </div>
+            )}
+            {!isLogin && password.length === 0 && (
+              <p
+                id="pw-hint"
+                className="mt-2 ml-2 text-xs text-[var(--app-fg-muted)] font-bold"
+              >
+                {tr.pwHint}
+              </p>
+            )}
+          </div>
+
+          <AnimatePresence mode="popLayout">
+            {!isLogin && (
+              <motion.div
+                key="confirm-pw"
+                initial={{ opacity: 0, height: 0 }}
+                animate={{ opacity: 1, height: 'auto' }}
+                exit={{ opacity: 0, height: 0 }}
+                className="overflow-hidden"
+              >
+                <div>
+                  <label htmlFor="auth-confirm-password" className="sr-only">{tr.confirmPwLabel}</label>
+                  <div className="relative">
+                    <div className="absolute inset-y-0 left-4 flex items-center pointer-events-none text-[var(--app-fg-muted)]">
+                      <Lock size={20} aria-hidden="true" />
+                    </div>
+                    <input
+                      id="auth-confirm-password"
+                      type={showConfirmPw ? 'text' : 'password'}
+                      autoComplete="new-password"
+                      required={!isLogin}
+                      value={confirmPassword}
+                      onChange={(e) => setConfirmPassword(e.target.value)}
+                      onBlur={() => setTouched((t) => ({ ...t, confirm: true }))}
+                      placeholder={tr.confirmPwPh}
+                      aria-invalid={!!confirmFieldError}
+                      aria-describedby={confirmFieldError ? 'auth-confirm-pw-err' : undefined}
+                      className={`w-full bg-[var(--app-bg)] border-2 rounded-2xl py-3 pl-12 pr-12 font-bold outline-none transition-all placeholder:text-[var(--app-fg-muted)]/50 ${
+                        confirmFieldError
+                          ? 'border-pink-500 focus:border-pink-500'
+                          : confirmMatches
+                            ? 'border-emerald-500 focus:border-emerald-500'
+                            : 'border-[var(--border-subtle)] focus:border-blue-500'
+                      }`}
+                    />
+                    <button
+                      type="button"
+                      onClick={() => setShowConfirmPw((v) => !v)}
+                      aria-label={showConfirmPw ? tr.hidePw : tr.showPw}
+                      aria-pressed={showConfirmPw}
+                      className="absolute inset-y-0 right-3 flex items-center px-2 text-[var(--app-fg-muted)] hover:text-app-fg transition-colors cursor-pointer"
+                    >
+                      {showConfirmPw ? <EyeOff size={18} /> : <Eye size={18} />}
+                    </button>
+                  </div>
+                  {confirmFieldError && (
+                    <p id="auth-confirm-pw-err" className="mt-2 ml-2 text-xs text-pink-500 font-bold flex items-center gap-1">
+                      <AlertCircle size={12} /> {confirmFieldError}
+                    </p>
+                  )}
+                </div>
+              </motion.div>
+            )}
+          </AnimatePresence>
+
+          {!isLogin && (
+            <p className="text-[11px] text-[var(--app-fg-muted)] font-bold flex items-center gap-1.5 pt-1">
+              <Zap size={12} className="text-emerald-400" /> {tr.autoLoginNote}
+            </p>
+          )}
+
+          <button
+            type="submit"
+            disabled={loading}
+            className="w-full btn-duo btn-duo-blue py-3.5 mt-2 flex items-center justify-center gap-2"
+          >
+            {loading ? (
+              <>
+                <Loader2 size={20} className="animate-spin" />
+                <span>{tr.switching}</span>
+              </>
+            ) : (
+              <>
+                {isLogin ? tr.login : tr.signup}
+                <ArrowRight size={20} />
+              </>
+            )}
+          </button>
+        </form>
+
+        <p className="mt-6 text-center text-[var(--app-fg-muted)] font-bold">
+          {isLogin ? tr.noAccount : tr.haveAccount}{' '}
+          <button
+            type="button"
+            onClick={() => {
+              setIsLogin(!isLogin);
+              setError('');
+              setConfirmPassword('');
+              setTouched({});
+              setShowPw(false);
+              setShowConfirmPw(false);
+            }}
+            className="text-blue-500 hover:text-blue-600 transition-colors cursor-pointer font-black"
+          >
+            {isLogin ? tr.signupLink : tr.loginLink}
+          </button>
+        </p>
+
+        {/* Bottom trust line — separates from generic auth pages */}
+        <p className="mt-6 pt-6 border-t border-[var(--border-subtle)] text-center text-[10px] font-bold text-[var(--app-fg-muted)] uppercase tracking-widest">
+          <Sparkles size={10} className="inline mr-1 text-amber-400" />
+          {tr.trust}
+        </p>
       </motion.div>
     </div>
   );
