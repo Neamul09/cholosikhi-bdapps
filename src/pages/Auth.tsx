@@ -36,7 +36,10 @@ const t = {
     socialProof: 'Learners coding in Bangla right now',
     // Error mapping (key → friendly message)
     errOver: 'Sign-ups are paused for a sec — try again in a moment.',
+    errOverEmail: 'Too many sign-up emails sent. Wait a minute, then try again.',
     errExisting: 'That email is already registered. Try logging in instead.',
+    errMaybeExisting: 'If that email is new, check your inbox. If you already have an account, switch to login below.',
+    switchToLoginCta: 'Switch to login →',
     errInvalidCreds: "Email or password doesn't match. Give it another go.",
     errWeakPw: 'Password should be at least 8 characters.',
     errInvalidEmail: 'That email looks off. Double-check it?',
@@ -47,6 +50,8 @@ const t = {
     errServer: 'Something on our end broke. Try again shortly.',
     errMisconfig: "Server isn't set up yet. Tell the admin if this keeps showing.",
     errGeneric: 'Something went sideways. Try again?',
+    // Submit-state hints
+    slowSubmit: 'Still working… hang tight.',
     // Field-level hints
     pwHint: '8+ characters, mix of letters and numbers works best.',
   },
@@ -74,7 +79,10 @@ const t = {
     trust: 'চিরকাল ফ্রি · কার্ড লাগে না · ১০০+ বাংলা লেসন',
     socialProof: 'এই মুহূর্তে বাংলায় কোড করছেন',
     errOver: 'সাইন আপ এখন একটু বন্ধ — একটু পর আবার চেষ্টা করুন।',
+    errOverEmail: 'অনেক সাইন আপ ইমেইল পাঠানো হয়ে গেছে। এক মিনিট অপেক্ষা করে আবার চেষ্টা করুন।',
     errExisting: 'এই ইমেইল দিয়ে আগেই অ্যাকাউন্ট আছে। লগইন করে দেখুন।',
+    errMaybeExisting: 'ইমেইল নতুন হলে ইনবক্স দেখুন। আগে থেকে অ্যাকাউন্ট থাকলে নিচে লগইন-এ যান।',
+    switchToLoginCta: 'লগইনে যান →',
     errInvalidCreds: 'ইমেইল বা পাসওয়ার্ড মেলেনি। আবার চেষ্টা করুন।',
     errWeakPw: 'পাসওয়ার্ডে কমপক্ষে ৮ অক্ষর দিন।',
     errInvalidEmail: 'ইমেইলটা একটু অদ্ভুত লাগছে — আরেকবার দেখবেন?',
@@ -82,9 +90,10 @@ const t = {
     errVerifyNeeded: 'আগে ইমেইল ভেরিফাই করুন — ইনবক্সে লিঙ্ক পাঠিয়েছি।',
     errNetwork: 'ইন্টারনেট নেই মনে হচ্ছে। Wi-Fi চেক করে আবার চেষ্টা করুন।',
     errBackend: 'আমাদের সার্ভারে এখন যাওয়া যাচ্ছে না। একটু পর আবার ট্রাই করুন।',
-    errServer: 'আমাদের দিকে কিছু একটা ভেঙেছে। একটু পর আবার ট্রাই করুন।',
+    errServer: 'আমাদের দিকে কিছু একটা ভেঙেছে। একটু পর আবার চেষ্টা করুন।',
     errMisconfig: 'সার্ভার এখনো রেডি না। বারবার আসলে অ্যাডমিনকে জানান।',
     errGeneric: 'কিছু একটা হলো। আবার চেষ্টা করবেন?',
+    slowSubmit: 'একটু সময় লাগছে… অপেক্ষা করুন।',
     pwHint: '৮+ অক্ষর, অক্ষর আর সংখ্যা মিলিয়ে দিলেই সবচেয়ে ভালো।',
   },
 };
@@ -98,7 +107,7 @@ interface SupabaseErrorShape {
 function mapAuthError(err: SupabaseErrorShape | null | undefined, isLogin: boolean, lang: 'en' | 'bn'): string {
   const tr = t[lang];
   if (!err) return tr.errGeneric;
-  const code = err.code || '';
+  const code = (err.code || '').toLowerCase();
   const status = err.status || 0;
   const msg = (err.message || '').toLowerCase();
 
@@ -111,24 +120,83 @@ function mapAuthError(err: SupabaseErrorShape | null | undefined, isLogin: boole
     return tr.errBackend; // online, but our backend is unreachable
   }
 
+  // Existing-email check — runs FIRST so a 422 status that carries
+  // "user_already_exists" never gets bucketed as a generic 429 / 500.
+  // Supabase's auth API has returned this code on status 422, 429, and 400
+  // depending on project config and SDK version, so we don't filter by status.
+  if (
+    code === 'user_already_exists' ||
+    code === 'email_exists' ||
+    /already registered|already been registered|user already registered|email.*already.*use|account.*already/i.test(msg)
+  ) {
+    return tr.errExisting;
+  }
+
   // Sign-up specific codes
   if (!isLogin) {
-    if (code === 'user_already_exists' || /already registered|already been registered/i.test(msg)) return tr.errExisting;
-    if (code === 'over_email_send_rate_limit' || status === 429) return tr.errOver;
-    if (code === 'weak_password' || /password.*should be at least|password.*characters/i.test(msg)) return tr.errWeakPw;
-    if (code === 'email_address_invalid' || /invalid email/i.test(msg)) return tr.errInvalidEmail;
+    // Email-send rate limit is a specific, slower bucket — different copy.
+    if (
+      code === 'over_email_send_rate_limit' ||
+      code === 'email_rate_limit_exceeded' ||
+      /email.*rate.*limit|email.*send.*rate|too many.*emails|too many signup emails/i.test(msg)
+    ) {
+      return tr.errOverEmail;
+    }
+    if (
+      code === 'weak_password' ||
+      /password.*should be at least|password.*characters|password.*too short|password.*not strong enough/i.test(msg)
+    ) {
+      return tr.errWeakPw;
+    }
+    if (
+      code === 'email_address_invalid' ||
+      code === 'email_invalid' ||
+      /invalid email|email.*invalid|email format/i.test(msg)
+    ) {
+      return tr.errInvalidEmail;
+    }
   }
 
   // Sign-in specific
   if (isLogin) {
-    if (code === 'invalid_credentials' || /invalid login credentials|invalid grant/i.test(msg)) return tr.errInvalidCreds;
-    if (code === 'email_not_confirmed' || /email not confirmed/i.test(msg)) return tr.errVerifyNeeded;
-    if (status === 429) return tr.errRateLimit;
+    if (
+      code === 'invalid_credentials' ||
+      /invalid login credentials|invalid grant|invalid email or password/i.test(msg)
+    ) {
+      return tr.errInvalidCreds;
+    }
+    if (code === 'email_not_confirmed' || /email not confirmed/i.test(msg)) {
+      return tr.errVerifyNeeded;
+    }
+  }
+
+  // Rate limits — checked AFTER user_already_exists so existing-email errors
+  // don't get misclassified as "signups paused".
+  if (status === 429 || code === 'over_request_rate_limit' || code === 'rate_limited') {
+    return isLogin ? tr.errRateLimit : tr.errOver;
   }
 
   if (status >= 500) return tr.errServer;
 
   return tr.errGeneric;
+}
+
+/**
+ * After a successful signUp, decide which "you did it" panel to show.
+ *
+ * Supabase deliberately hides the "email already taken" error when
+ * email confirmation is required — to prevent account enumeration. Instead
+ * it returns a fake success: `data.user` is populated but `user.identities`
+ * is an EMPTY array (a real new user always has at least one identity), and
+ * `data.session` is null because confirmation is still pending.
+ *
+ * We can't tell those two states apart with 100% certainty from the client,
+ * but the empty-identities signal is good enough for a soft warning that
+ * guides the user to the login tab if they already have an account.
+ */
+function looksLikeExistingEmailSignup(user: { identities?: unknown[] } | null | undefined): boolean {
+  if (!user) return false;
+  return Array.isArray(user.identities) && user.identities.length === 0;
 }
 
 export default function Auth() {
@@ -143,6 +211,9 @@ export default function Auth() {
   const navigate = useNavigate();
 
   const errorRef = useRef<HTMLDivElement>(null);
+  // Debounce: prevent rapid double-submits from triggering Supabase rate
+  // limits (or worse, creating duplicate accounts on a brief network blip).
+  const lastSubmitAt = useRef<number>(0);
   const tr = t[language];
 
   useEffect(() => {
@@ -165,6 +236,18 @@ export default function Auth() {
   const handleAuth = async (e: React.FormEvent) => {
     e.preventDefault();
     if (loading) return;
+
+    // Client-side debounce. Supabase's auth rate limit is generous but not
+    // infinite — a double-click on a slow connection can produce two requests
+    // in 50ms, which the server then rates and returns 429. Bouncing the
+    // second click here gives a friendlier experience and a clear error.
+    const now = Date.now();
+    if (now - lastSubmitAt.current < 1500) {
+      setError(tr.slowSubmit);
+      return;
+    }
+    lastSubmitAt.current = now;
+
     setLoading(true);
     setError('');
 
@@ -186,13 +269,24 @@ export default function Auth() {
         }
         navigate('/');
       } else {
-        const { error: signUpErr } = await supabase.auth.signUp({
+        const { data, error: signUpErr } = await supabase.auth.signUp({
           email,
           password,
           options: { data: { full_name: name } },
         });
         if (signUpErr) {
           setError(mapAuthError(signUpErr, false, language));
+          return;
+        }
+        // Supabase returns success-with-no-error for signups where the email
+        // already exists AND email confirmation is required (anti-enumeration).
+        // The giveaway is `user.identities.length === 0` for the existing-email
+        // case vs ≥1 for a real new user. Show a soft hint instead of the
+        // "check your inbox" panel so people with existing accounts don't sit
+        // there waiting for an email that was never sent.
+        if (looksLikeExistingEmailSignup(data?.user)) {
+          setError(tr.errMaybeExisting);
+          // Offer a one-click jump to login so they don't have to retype email.
           return;
         }
         setShowSuccess(true);
@@ -283,10 +377,24 @@ export default function Auth() {
                 ref={errorRef}
                 tabIndex={-1}
                 role="alert"
-                className="mb-6 p-4 bg-pink-500/10 border-l-4 border-pink-500 text-pink-500 font-bold rounded-r-xl text-sm flex items-start gap-3 focus:outline-none focus:ring-2 focus:ring-pink-500/40"
+                className="mb-6 p-4 bg-pink-500/10 border-l-4 border-pink-500 text-pink-500 font-bold rounded-r-xl text-sm focus:outline-none focus:ring-2 focus:ring-pink-500/40"
               >
-                <AlertCircle size={18} className="shrink-0 mt-0.5" />
-                <span>{error}</span>
+                <div className="flex items-start gap-3">
+                  <AlertCircle size={18} className="shrink-0 mt-0.5" />
+                  <span className="flex-1">{error}</span>
+                </div>
+                {/* Inline CTA for the "this email may already be registered" case:
+                    gives the user a one-click escape to login instead of leaving
+                    them stuck staring at the form. */}
+                {!isLogin && error === tr.errMaybeExisting && (
+                  <button
+                    type="button"
+                    onClick={() => { setIsLogin(true); setError(''); }}
+                    className="mt-2 ml-7 text-xs font-black uppercase tracking-wider text-pink-500 hover:text-pink-400 underline underline-offset-2 transition-colors"
+                  >
+                    {tr.switchToLoginCta}
+                  </button>
+                )}
               </div>
             )}
 
