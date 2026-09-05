@@ -11,7 +11,7 @@ import LevelUpModal from '@/components/modals/LevelUpModal';
 import StreakModal from '@/components/modals/StreakModal';
 import { play, unlockAudio } from '@/lib/audio';
 
-const LOGO_URL = "https://i.ibb.co.com/gZ5tDFn2/wordmark.png";
+const LOGO_URL = "/wordmark.png";
 
 export default function AppShell({ children }: { children: React.ReactNode }) {
   const { streak, hearts, gems } = useUserStore();

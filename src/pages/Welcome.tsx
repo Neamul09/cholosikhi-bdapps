@@ -8,7 +8,7 @@ import { useSettingsStore } from '@/store/settingsStore';
 
 const CSLogo = ({ className = "h-10 w-auto" }) => (
   <img
-    src="https://i.ibb.co.com/gZ5tDFn2/wordmark.png"
+    src="/wordmark.png"
     alt="CholoSikhi"
     className={`drop-shadow-lg ${className}`}
   />

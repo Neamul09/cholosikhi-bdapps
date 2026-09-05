@@ -204,7 +204,7 @@ export default function Auth() {
         {/* Header Branding */}
         <div className="text-center mb-6">
           <img
-            src="https://i.ibb.co.com/gZ5tDFn2/wordmark.png"
+            src="/wordmark.png"
             alt="CholoSikhi"
             className="h-10 w-auto mx-auto mb-3 drop-shadow-md"
           />
