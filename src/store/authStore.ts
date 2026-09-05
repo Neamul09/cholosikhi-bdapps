@@ -295,6 +295,10 @@ export const useAuthStore = create<AuthState>((set, get) => ({
       };
 
       get().setSession(session);
+      set({
+        subscriptionStatus: status,
+        isSubscribed: isSub,
+      });
       return { success: true, status, isSubscribed: isSub };
     }
 
