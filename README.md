@@ -1,4 +1,4 @@
-# 🚀 CholoSikhi (চল শিখি) — bdapps Mobile Gateway Edition
+# 🚀 CholoSikhi (চলো শিখি) — bdapps Mobile Gateway Edition
 
 > **Bangladesh's Premier Gamified Mobile Programming Academy for Robi & Cirkle Subscribers**
 
@@ -9,7 +9,7 @@
 
 ## 📌 Executive Summary
 
-**CholoSikhi (চল শিখি)** is a full-featured, gamified mobile programming learning platform integrated directly with **Robi & Cirkle bdapps Telecom Subscription API Gateway**. It allows learners across Bangladesh to master software engineering fundamentals (**Python** and **C++**) through bite-sized interactive lessons, live code compilation, real-time feedback, gamified XP points, streak mechanics, and competitive national leaderboards.
+**CholoSikhi (চলো শিখি)** is a full-featured, gamified mobile programming learning platform integrated directly with **Robi & Cirkle bdapps Telecom Subscription API Gateway**. It allows learners across Bangladesh to master software engineering fundamentals (**Python** and **C++**) through bite-sized interactive lessons, live code compilation, real-time feedback, gamified XP points, streak mechanics, and competitive national leaderboards.
 
 ---
 
