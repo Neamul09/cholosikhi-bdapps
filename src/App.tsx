@@ -23,6 +23,10 @@ const Achievements = lazy(() => import('./pages/Achievements'));
 const CodePlayground = lazy(() => import('./pages/CodePlayground'));
 const Discover = lazy(() => import('./pages/Discover'));
 
+/**
+ * Main Application Routing and Context Provider Component
+ * Configures React Router, global stores initialization, theme toggling, and page code-splitting.
+ */
 export default function App() {
   const { theme, loadSettings } = useSettingsStore();
   const { initialize, session } = useAuthStore();
@@ -30,11 +34,12 @@ export default function App() {
   const { loadFromSupabase: loadProgress } = useProgressStore();
   const { loadQuests, initializeQuests } = useQuestStore();
 
+  // 1. Initialize bdapps session state on application boot
   useEffect(() => {
     initialize();
   }, [initialize]);
 
-  // Load cloud data on login
+  // 2. Synchronize user profile, progress, settings, and quests when an active session exists
   useEffect(() => {
     if (session) {
       loadUser().then(() => {
@@ -46,6 +51,7 @@ export default function App() {
     }
   }, [session, loadUser, loadProgress, loadSettings, loadQuests, initializeQuests]);
 
+  // 3. Apply active theme (Dark/Light mode) to document root
   useEffect(() => {
     if (theme === 'dark') {
       document.documentElement.classList.add('dark');
@@ -56,16 +62,20 @@ export default function App() {
 
   return (
     <BrowserRouter>
+      {/* Toast Notification Container */}
       <Toaster />
+
       <Routes>
+        {/* Public Gateway Routes */}
         <Route path="/auth" element={<Auth />} />
         <Route path="/welcome" element={<Welcome />} />
 
+        {/* Protected Application Routes (Requires valid session) */}
         <Route element={<ProtectedRoute />}>
-          {/* Full screen Immersive Session Route */}
+          {/* Immersive Fullscreen Coding Session Route */}
           <Route path="/session/:lessonId" element={<Suspense fallback={null}><Session /></Suspense>} />
 
-          {/* Dashboard Routes wrapped in AppShell structure */}
+          {/* Core Dashboard Views wrapped in AppShell Layout */}
           <Route
             path="/"
             element={
@@ -78,11 +88,12 @@ export default function App() {
           <Route path="/leaderboard" element={<Suspense fallback={null}><AppShell><Leaderboard /></AppShell></Suspense>} />
           <Route path="/achievements" element={<Suspense fallback={null}><AppShell><Achievements /></AppShell></Suspense>} />
           <Route path="/profile" element={<AppShell><Profile /></AppShell>} />
-          {/* /discover kept for backward compat — no nav link */}
+          
+          {/* Legacy route fallback */}
           <Route path="/discover" element={<Suspense fallback={null}><AppShell><Discover /></AppShell></Suspense>} />
         </Route>
 
-        {/* Redirect based on session */}
+        {/* Fallback wildcard redirect */}
         <Route path="*" element={session ? <Navigate to="/" replace /> : <Navigate to="/welcome" replace />} />
       </Routes>
     </BrowserRouter>

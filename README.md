@@ -1,95 +1,135 @@
-# py.cholosikhi
+# 🚀 CholoSikhi (চল শিখি) — bdapps Mobile Gateway Edition
 
-Interactive, gamified lessons for **Python** and **C++**, delivered as a
-single-page React app with a Supabase backend. Live at
-[py.cholosikhi.com](https://py.cholosikhi.com).
+> **Bangladesh's Premier Gamified Mobile Programming Academy for Robi & Cirkle Subscribers**
 
-> Sister site & marketing: [cholosikhi.com](https://cholosikhi.com)
-> (the [`cholosikhi`](../cholosikhi) repo).
+[![Live Demo](https://img.shields.io/badge/Vercel-cholosikhibdapps.vercel.app-blue?style=for-the-badge&logo=vercel)](https://cholosikhibdapps.vercel.app)
+[![bdapps Gateway](https://img.shields.io/badge/bdapps-Gateway_Integrated-emerald?style=for-the-badge)](https://bdappsdigitalapps.com/CholoSikhi)
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg?style=for-the-badge)](LICENSE)
 
-## Features
+---
 
-- **Two full curricula** — Python (bangla-first) and C++, organized into
-  gamified sections, lessons, and exercises.
-- **Five exercise types** — MCQ, fill-in-the-blank, output prediction, bug
-  hunt, and code-arrange, plus a mini-challenge playground.
-- **DSA visualizer** — live sorting (bubble / selection / insertion) and
-  BST visualizations powered by framer-motion.
-- **Auth + progress sync** via Supabase (email/Google). All progress
-  survives logout/login.
-- **Bilingual** — full bangla (বাংলা) translations for every lesson and
-  exercise.
-- **Streak / XP / league / shop** loop with gems, hearts, streak shields,
-  XP boost, and an achievements panel.
-- **Strict security** — CSP, HSTS, frame-ancestors, no exposed secrets,
-  RLS-guarded DB.
+## 📌 Executive Summary
 
-## Tech
+**CholoSikhi (চল শিখি)** is a full-featured, gamified mobile programming learning platform integrated directly with **Robi & Cirkle bdapps Telecom Subscription API Gateway**. It allows learners across Bangladesh to master software engineering fundamentals (**Python** and **C++**) through bite-sized interactive lessons, live code compilation, real-time feedback, gamified XP points, streak mechanics, and competitive national leaderboards.
 
-- **React 19** + **TypeScript (strict)** + **Vite 8**
-- **Tailwind CSS 4** + **framer-motion**
-- **Zustand** for client state (`auth`, `progress`, `user`, `quest`, `settings`)
-- **Supabase** (Postgres + Auth) — RLS-guarded, anon JWT only
-- **lucide-react** icons
+---
 
-## Quick start
+## ✨ Key Features & Highlights
 
-```bash
-git clone https://github.com/Neamul09/py.cholosikhi.git
-cd py.cholosikhi
-cp .env.example .env.local      # fill in VITE_SUPABASE_* values
-npm install
-npm run dev                     # http://localhost:5173
+- 📱 **bdapps API Gateway Integration**:
+  - **OTP Authentication**: Real-time 6-digit SMS OTP verification.
+  - **Mobile & Password Auth**: Password hashing using SHA-256 with dual Supabase DB & LocalStorage fallback.
+  - **Subscription Status Verification**: Live checks against bdapps gateway endpoints (`check_subscription.php`, `send_otp.php`, `verify_otp.php`, `unsubscribe.php`).
+  - **Payment Pending Flow**: Users with pending billing (`INITIAL CHARGING PENDING` / `PENDING_CHARGE`) can log in to view their profile dashboard while premium learning routes remain securely locked until payment activation (৳2.78/day).
+- 🐍 **Comprehensive Curricula**:
+  - **Python Course**: Beginner to advanced bite-sized modules translated into authentic Bangla.
+  - **C++ Course**: Core syntax, object-oriented concepts, and memory management.
+- ⚡ **Live In-Browser Code Playground**: Real-time code execution and stdout inspection.
+- 🎮 **Gamification Engine**:
+  - Daily Streak Counters & Fire Animations.
+  - XP Points, Gems, and Hearts system.
+  - Level-Up popups and Achievement Unlocks.
+  - Global & Regional Leaderboards.
+- 🔒 **Enterprise-Grade Security**:
+  - Content Security Policy (CSP) with explicit script-src guidelines.
+  - Supabase Row Level Security (RLS) policies.
+  - Strict input validation and SHA-256 credential hashing.
+
+---
+
+## 📋 bdapps Application Specs
+
+| Parameter | Details |
+| :--- | :--- |
+| **App Name** | CholoSikhi |
+| **App ID** | `APP_140038` |
+| **Developer Name** | Md. Neamul Morshed Neon |
+| **Username** | `neamulmorshedneon` |
+| **Access Mode** | SMS / USSD / Web App |
+| **App Code** | `73469` |
+| **Host IP** | `176.9.54.45` |
+| **Production URL** | [cholosikhibdapps.vercel.app](https://cholosikhibdapps.vercel.app) |
+| **Daily Charge** | ৳ 2.78 + (VAT + SD + SC) / day (auto-renewal) |
+
+---
+
+## 📲 Telecom USSD & SMS Commands
+
+- **Subscribe via SMS**: Send `START 73469` to `21213`
+- **Subscribe via USSD**: Dial `*213*73469#`
+- **Unsubscribe via SMS**: Send `STOP 73469` to `21213`
+- **Unsubscribe via Web**: Click the **Unsubscribe** button inside Profile Settings.
+
+---
+
+## 🛠️ Architecture & Tech Stack
+
+- **Frontend**: React 19, TypeScript (Strict Mode), Vite 8
+- **Styling & Motion**: Tailwind CSS 4, Framer Motion
+- **State Management**: Zustand (`authStore`, `userStore`, `settingsStore`, `progressStore`, `questStore`)
+- **Backend & Database**: Supabase (PostgreSQL, Row Level Security, RPC functions)
+- **Telecom Gateway**: bdapps cURL / Form URL-Encoded API Wrappers (`bdappsService.ts`)
+- **Icons & UI Assets**: Lucide React, Custom SVG Vector assets
+
+---
+
+## 📁 Repository Directory Structure
+
 ```
-
-A fresh Supabase project is required. Run the SQL from `sql/avatars_bucket.sql`
-in your Supabase SQL editor to provision the avatar storage bucket + RLS
-policies (additional schema migrations live alongside it in `sql/`).
-
-## Scripts
-
-```bash
-npm run dev          # Vite dev server with HMR
-npm run lint         # ESLint (strict react-hooks + react-refresh)
-npm run typecheck    # tsc --noEmit
-npm run build        # type-check + production bundle into dist/
-npm run preview      # serve the production build
-npm run test         # Vitest unit tests  (when added)
-npm run test:e2e     # Playwright e2e  (when added)
-```
-
-## Project layout
-
-```
-py.cholosikhi/
-├── index.html              # CSP + OG meta
-├── vercel.json             # security headers (HSTS, frame-options, …)
+CholoSikhi - bdapps/
+├── index.html                   # Entry HTML with CSP rules & font preloads
+├── vercel.json                  # Vercel deployment rewrites & security headers
+├── sql/                         # Database schema migrations & RLS policies
+│   └── bdapps_users.sql         # Supabase table definition for bdapps users
 ├── src/
-│   ├── components/         # UI shells, exercises, visualizers, modals
-│   ├── content/            # hand-authored lessons + curriculum schema
-│   │   ├── schema.ts       # LocalizedString, Exercise, Lesson, Course
-│   │   ├── python/         # python lessons + metadata
-│   │   └── cpp/            # cpp lessons + metadata
-│   ├── lib/supabase.ts     # single client + isSupabaseConfigured guard
-│   ├── pages/              # route components
-│   ├── store/              # Zustand stores
-│   ├── utils/              # helpers (confetti, etc.)
-│   ├── App.tsx
-│   └── main.tsx
-├── eslint.config.js        # strict: react-hooks + react-refresh
-├── postcss.config.js       # Tailwind 4 plugin
-├── tsconfig.json           # strict TS
-├── LICENSE                 # MIT
-└── SECURITY.md             # private disclosure policy
+│   ├── components/              # Modular UI components
+│   │   ├── common/              # Toaster, Modals, Buttons
+│   │   └── layout/              # AppShell navigation & ProtectedRoute guard
+│   ├── content/                 # Curriculum data & localized lesson content
+│   ├── lib/                     # Audio manager & Supabase client wrapper
+│   ├── pages/                   # Auth, Welcome, Home, Profile, Playground, etc.
+│   ├── services/                # bdapps Gateway API service wrapper
+│   ├── store/                   # Zustand global state stores
+│   ├── App.tsx                  # Root application router & initialization
+│   └── main.tsx                 # React entry point
+└── README.md                    # Official documentation
 ```
 
-## Security
+---
 
-- Never commit `.env.local`. Use `.env.example` only as a template.
-- All secrets come from `VITE_*` env vars; the anon JWT is the only one
-  that ships to the client. Service role keys are server-side only.
-- See [SECURITY.md](./SECURITY.md) for how to report vulnerabilities.
+## 🚀 Local Development Setup
 
-## License
+1. **Clone the repository**:
+   ```bash
+   git clone https://github.com/Neamul09/cholosikhi-bdapps.git
+   cd cholosikhi-bdapps
+   ```
 
-[MIT](./LICENSE) © 2025–2026 Neamul09.
+2. **Install dependencies**:
+   ```bash
+   npm install
+   ```
+
+3. **Configure Environment Variables**:
+   Create a `.env.local` file in the root directory:
+   ```env
+   VITE_SUPABASE_URL=https://your-supabase-project.supabase.co
+   VITE_SUPABASE_ANON_KEY=your-supabase-anon-key
+   VITE_BDAPPS_BASE_URL=https://bdappsdigitalapps.com/CholoSikhi
+   ```
+
+4. **Launch local development server**:
+   ```bash
+   npm run dev
+   ```
+
+5. **Build & Verify Production Bundle**:
+   ```bash
+   npm run build
+   ```
+
+---
+
+## 📜 License
+
+Distributed under the **MIT License**. Created with ❤️ by **Md. Neamul Morshed Neon**.
