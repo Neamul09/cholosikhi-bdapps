@@ -6,13 +6,30 @@ interface ConfirmProps {
   open: boolean;
   title: string;
   body: string;
-  confirmLabel: string;
-  cancelLabel: string;
+  confirmText?: string;
+  cancelText?: string;
+  confirmLabel?: string;
+  cancelLabel?: string;
+  danger?: boolean;
   onConfirm: () => void;
   onCancel: () => void;
 }
 
-export default function Confirm({ open, title, body, confirmLabel, cancelLabel, onConfirm, onCancel }: ConfirmProps) {
+export default function Confirm({
+  open,
+  title,
+  body,
+  confirmText,
+  cancelText,
+  confirmLabel,
+  cancelLabel,
+  danger = true,
+  onConfirm,
+  onCancel
+}: ConfirmProps) {
+  const confirmBtnLabel = confirmLabel || confirmText || 'Confirm';
+  const cancelBtnLabel = cancelLabel || cancelText || 'Cancel';
+
   useEffect(() => {
     if (!open) return;
     const onKey = (e: KeyboardEvent) => {
@@ -30,7 +47,7 @@ export default function Confirm({ open, title, body, confirmLabel, cancelLabel, 
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
           exit={{ opacity: 0 }}
-          className="fixed inset-0 z-[100] flex items-center justify-center bg-black/60 backdrop-blur-sm p-4"
+          className="fixed inset-0 z-[100] flex items-center justify-center bg-black/70 backdrop-blur-md p-4"
           onClick={onCancel}
           role="dialog"
           aria-modal="true"
@@ -41,30 +58,37 @@ export default function Confirm({ open, title, body, confirmLabel, cancelLabel, 
             animate={{ scale: 1, y: 0 }}
             exit={{ scale: 0.9, y: 20 }}
             transition={{ type: 'spring', stiffness: 300, damping: 25 }}
-            className="bg-panel border-2 border-border-subtle rounded-3xl p-6 max-w-md w-full shadow-2xl"
+            className="bg-panel border-2 border-border-subtle rounded-3xl p-6 max-w-md w-full shadow-2xl space-y-6"
             onClick={(e) => e.stopPropagation()}
           >
-            <div className="flex items-start gap-3 mb-4">
-              <div className="w-10 h-10 rounded-xl bg-rose-500/15 flex items-center justify-center text-rose-400 shrink-0">
-                <AlertTriangle size={20} />
+            <div className="flex items-start gap-3.5">
+              <div className="w-12 h-12 rounded-2xl bg-rose-500/15 border border-rose-500/30 flex items-center justify-center text-rose-400 shrink-0">
+                <AlertTriangle size={24} />
               </div>
-              <div>
-                <h3 id="confirm-title" className="text-lg font-black mb-1">{title}</h3>
-                <p className="text-sm text-app-fg/60 font-medium">{body}</p>
+              <div className="space-y-1">
+                <h3 id="confirm-title" className="text-xl font-black text-app-fg">{title}</h3>
+                <p className="text-sm text-app-fg-muted font-bold leading-relaxed">{body}</p>
               </div>
             </div>
-            <div className="flex gap-2 justify-end">
+
+            <div className="flex gap-3 justify-end pt-2">
               <button
+                type="button"
                 onClick={onCancel}
-                className="px-4 py-2 rounded-xl font-bold text-app-fg/70 hover:bg-app-bg transition-colors"
+                className="px-5 py-3 rounded-2xl font-bold bg-app-bg border border-border-subtle text-app-fg-muted hover:text-app-fg transition-colors"
               >
-                {cancelLabel}
+                {cancelBtnLabel}
               </button>
               <button
+                type="button"
                 onClick={onConfirm}
-                className="px-4 py-2 rounded-xl font-bold bg-rose-500 text-white hover:bg-rose-600 transition-colors shadow-lg shadow-rose-500/20"
+                className={`px-6 py-3 rounded-2xl font-black text-white transition-all shadow-lg active:scale-95 ${
+                  danger
+                    ? 'bg-rose-500 hover:bg-rose-600 shadow-rose-500/30'
+                    : 'bg-blue-500 hover:bg-blue-600 shadow-blue-500/30'
+                }`}
               >
-                {confirmLabel}
+                {confirmBtnLabel}
               </button>
             </div>
           </motion.div>

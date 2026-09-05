@@ -1,42 +1,48 @@
+import { useEffect } from 'react';
 import { motion } from 'framer-motion';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useSearchParams } from 'react-router-dom';
 import {
-  ArrowRight, Globe, Sparkles, Code, Terminal, Home, Moon, Sun,
-  CheckCircle2, Heart, Trophy
+  ArrowRight, Globe, Sparkles, Home, Moon, Sun,
+  CheckCircle2, Trophy, Smartphone, ShieldCheck, Zap, Lock
 } from 'lucide-react';
 import { useSettingsStore } from '@/store/settingsStore';
 
 const CSLogo = ({ className = "h-10 w-auto" }) => (
   <img
-    src="/wordmark.png"
-    alt="py.cholosikhi"
+    src="https://i.ibb.co.com/gZ5tDFn2/wordmark.png"
+    alt="CholoSikhi"
     className={`drop-shadow-lg ${className}`}
-    width={160}
-    height={40}
   />
 );
 
 export default function Welcome() {
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
   const { language, setLanguage, theme, setTheme } = useSettingsStore();
+
+  const isPaywallRequired = searchParams.get('paywall') === '1';
 
   return (
     <div className="min-h-screen bg-app-bg overflow-x-hidden font-['Hind_Siliguri',_sans-serif]">
+      {/* Paywall Alert Banner if redirected from protected route */}
+      {isPaywallRequired && (
+        <div className="bg-amber-500/20 border-b border-amber-500/40 text-amber-400 px-4 py-3 text-center font-bold text-xs sm:text-sm flex items-center justify-center gap-2 z-50">
+          <Lock size={18} className="shrink-0" />
+          <span>
+            {language === 'bn'
+              ? 'প্রিমিয়াম কন্টেন্ট লকিং: CholoSikhi-এর সব লেসন ও প্র্যাকটিস ব্যবহার করতে সক্রিয় bdapps সাবস্ক্রিপশন প্রয়োজন (৳২.৭৮/দিন)।'
+              : 'Premium Access Locked: Active bdapps Subscription required (৳2.78/day). Please subscribe or log in below.'}
+          </span>
+        </div>
+      )}
+
       {/* Navbar */}
-      <nav className="max-w-7xl mx-auto px-6 py-8 flex justify-between items-center relative z-10">
+      <nav className="max-w-7xl mx-auto px-6 py-6 flex justify-between items-center relative z-10">
         <div className="flex items-center gap-3">
           <CSLogo className="h-12 w-auto" />
         </div>
 
         <div className="flex items-center gap-2 sm:gap-6">
-          <a
-            href="https://cholosikhi.com"
-            className="flex items-center gap-2 text-app-fg-muted font-black uppercase text-xs tracking-widest hover:text-blue-500 transition-colors hidden md:flex"
-          >
-            <Home size={16} />
-            {language === 'bn' ? 'মূল পাতা' : 'MAIN HUB'}
-          </a>
-
           <div className="flex items-center gap-2">
             <button
               onClick={() => setTheme(theme === 'dark' ? 'light' : 'dark')}
@@ -59,12 +65,12 @@ export default function Welcome() {
             onClick={() => navigate('/auth')}
             className="px-6 py-2.5 rounded-xl bg-blue-500 hover:bg-blue-600 text-white font-black text-sm shadow-lg shadow-blue-500/20 transition-all active:scale-95 hidden sm:block"
           >
-            {language === 'bn' ? 'লগইন' : 'LOGIN'}
+            {language === 'bn' ? 'লগইন / সাবস্ক্রাইব' : 'LOGIN / SUBSCRIBE'}
           </button>
         </div>
       </nav>
 
-      <main className="max-w-7xl mx-auto px-6 pt-12 pb-24 grid grid-cols-1 lg:grid-cols-2 gap-12 items-center relative">
+      <main className="max-w-7xl mx-auto px-6 pt-4 pb-24 grid grid-cols-1 lg:grid-cols-2 gap-12 items-center relative">
         {/* Decorative elements */}
         <div className="absolute top-1/4 -left-20 w-64 h-64 bg-blue-500/10 rounded-full blur-[100px] pointer-events-none" aria-hidden="true" />
         <div className="absolute bottom-1/4 -right-20 w-80 h-80 bg-cyan-400/10 rounded-full blur-[100px] pointer-events-none" aria-hidden="true" />
@@ -78,161 +84,135 @@ export default function Welcome() {
         >
           <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-blue-500/10 border border-blue-500/20 text-blue-400 font-black text-xs uppercase tracking-widest">
             <Sparkles size={14} />
-            {language === 'bn' ? 'বাংলায় কোডিং — মজা করে' : 'Bangla-first coding'}
+            {language === 'bn' ? 'রবি ও সার্কেল গ্রাহকদের জন্য — বাংলায় কোডিং' : 'For Robi & Cirkle Users — Bangla Coding'}
           </div>
 
-          <h1 className="text-6xl sm:text-7xl font-black leading-tight tracking-tight text-app-fg">
+          <h1 className="text-5xl sm:text-6xl font-black leading-tight tracking-tight text-app-fg">
             {language === 'bn' ? (
-              <>পাইথন শেখা <span className="text-blue-500">মজার</span> হোক</>
+              <>CholoSikhi — পাইথন শেখা <span className="text-blue-500">মজার ও সহজ</span></>
             ) : (
-              <>Python that <span className="text-blue-500">actually sticks</span></>
+              <>CholoSikhi — Learn Python <span className="text-blue-500">The Smart Way</span></>
             )}
           </h1>
 
-          <p className="text-xl text-app-fg-muted font-bold leading-relaxed max-w-lg">
+          <p className="text-lg text-app-fg-muted font-bold leading-relaxed max-w-lg">
             {language === 'bn'
-              ? 'গেম খেলার মতো করে পাইথন শিখুন — ছোট ছোট পাঠ, চ্যালেঞ্জ আর সরাসরি ব্রাউজারে কোড চালানো। বাংলায় ব্যাখ্যা, ইংরেজিতে কোড।'
-              : 'Lessons that feel like a game. Challenges that take minutes, not hours. Write real Python in your browser — explained in Bangla when you need it.'}
+              ? 'গেম খেলার মতো ছোট ছোট ধাপে পাইথন শিখুন। সরাসরি ব্রাউজারে কোড লিখুন, চ্যালেঞ্জ জিতুন আর স্ট্রিক ধরে রাখুন। রবি ও সার্কেল গ্রাহকদের জন্য প্রতিদিন মাত্র ২.৭৮ টাকা।'
+              : 'Interactive Python coding lessons in Bangla. Practice directly in your browser with simple BDApps Mobile Subscription for Robi & Cirkle users.'}
           </p>
 
-          <div className="flex flex-col sm:flex-row gap-4 pt-4">
+          <div className="flex flex-col sm:flex-row gap-4 pt-2">
             <button
               onClick={() => navigate('/auth')}
-              className="px-10 py-5 rounded-2xl bg-blue-500 hover:bg-blue-600 text-white font-black text-xl shadow-[0_8px_0_rgb(29,78,216)] active:shadow-none active:translate-y-2 transition-all flex items-center justify-center gap-3 group"
+              className="px-8 py-4 rounded-2xl bg-blue-500 hover:bg-blue-600 text-white font-black text-lg shadow-[0_6px_0_rgb(29,78,216)] active:shadow-none active:translate-y-1.5 transition-all flex items-center justify-center gap-3 group"
             >
-              {language === 'bn' ? 'ফ্রি-তে শুরু করুন' : 'Start learning free'}
+              <Smartphone size={20} />
+              {language === 'bn' ? 'সাবস্ক্রাইব করুন (রবি/সার্কেল)' : 'Subscribe with Robi / Cirkle'}
               <ArrowRight className="group-hover:translate-x-1 transition-transform" />
             </button>
             <button
               onClick={() => navigate('/auth')}
-              className="px-10 py-5 rounded-2xl bg-panel border-2 border-border-subtle text-app-fg font-black text-xl shadow-[0_6px_0_var(--border-subtle)] active:shadow-none active:translate-y-1.5 transition-all"
+              className="px-8 py-4 rounded-2xl bg-panel border-2 border-border-subtle text-app-fg font-black text-lg shadow-[0_4px_0_var(--border-subtle)] active:shadow-none active:translate-y-1 transition-all"
             >
-              {language === 'bn' ? 'আগেই অ্যাকাউন্ট আছে' : 'I already have an account'}
+              {language === 'bn' ? 'লগইন করুন' : 'Already Subscribed? Log In'}
             </button>
           </div>
 
-          {/* Trust strip — answers "too generic" complaint */}
+          {/* Trust strip */}
           <div className="flex flex-wrap items-center gap-x-6 gap-y-2 pt-2 text-sm font-bold text-app-fg-muted">
-            <span className="inline-flex items-center gap-1.5"><CheckCircle2 size={14} className="text-emerald-400" />{language === 'bn' ? 'ফ্রি, সবসময়' : 'Always free'}</span>
-            <span className="inline-flex items-center gap-1.5"><Heart size={14} className="text-pink-400" />{language === 'bn' ? 'কার্ড লাগে না' : 'No card needed'}</span>
-            <span className="inline-flex items-center gap-1.5"><Trophy size={14} className="text-amber-400" />{language === 'bn' ? '১০০+ পাঠ' : '100+ lessons'}</span>
-          </div>
-
-          <div className="pt-2">
-            <a
-              href="https://cholosikhi.com"
-              className="inline-flex items-center gap-2 text-blue-400 font-black uppercase text-xs tracking-[0.2em] hover:gap-4 transition-all"
-            >
-              <ArrowRight className="rotate-180" size={16} />
-              {language === 'bn' ? 'CholoSikhi মূল পাতায় ফিরে যান' : 'Back to CholoSikhi main hub'}
-            </a>
+            <span className="inline-flex items-center gap-1.5"><ShieldCheck size={16} className="text-emerald-400" />{language === 'bn' ? 'bdapps গেটওয়ে অনুমোদিত' : 'bdapps Verified'}</span>
+            <span className="inline-flex items-center gap-1.5"><Smartphone size={16} className="text-blue-400" />{language === 'bn' ? 'রবি ও সার্কেল ইউজার' : 'Robi & Cirkle Users'}</span>
+            <span className="inline-flex items-center gap-1.5"><Trophy size={16} className="text-amber-400" />{language === 'bn' ? '১০০+ ইন্টারঅ্যাক্টিভ লেসন' : '100+ Lessons & Quizzes'}</span>
           </div>
         </motion.div>
 
-        {/* Hero Visual */}
+        {/* bdapps Pricing & Plan Info Card */}
         <motion.div
-          initial={{ opacity: 0, scale: 0.8 }}
-          animate={{ opacity: 1, scale: 1 }}
+          initial={{ opacity: 0, y: 30 }}
+          animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.8, delay: 0.2 }}
-          className="relative hidden lg:block"
+          className="relative"
         >
-          <div className="relative z-10 grid grid-cols-2 gap-4">
-            <div className="space-y-4 pt-12">
-              <div className="glass p-6 rounded-[2rem] border-2 border-blue-500/20 shadow-xl space-y-4">
-                <div className="w-12 h-12 rounded-2xl bg-blue-500/20 flex items-center justify-center text-blue-400">
-                  <Code size={24} />
-                </div>
-                <div className="space-y-2">
-                  <div className="h-2 w-20 bg-blue-500/20 rounded-full" />
-                  <div className="h-2 w-32 bg-blue-500/10 rounded-full" />
-                </div>
+          <div className="glass p-8 rounded-[2.5rem] border-2 border-blue-500/30 shadow-2xl bg-panel/80 backdrop-blur-xl space-y-6">
+            <div className="flex items-center justify-between border-b border-border-subtle pb-4">
+              <div>
+                <span className="px-3 py-1 rounded-full bg-blue-500/10 text-blue-400 font-black text-xs uppercase tracking-wider">
+                  {language === 'bn' ? 'অফিসিয়াল bdapps প্ল্যান' : 'Official bdapps Plan'}
+                </span>
+                <h3 className="text-2xl font-black text-app-fg mt-2">CholoSikhi Premium Access</h3>
               </div>
-              <div className="glass p-6 rounded-[2rem] border-2 border-emerald-500/20 shadow-xl space-y-4">
-                <div className="w-12 h-12 rounded-2xl bg-emerald-500/20 flex items-center justify-center text-emerald-400">
-                  <Sparkles size={24} />
-                </div>
-                <div className="space-y-2">
-                  <div className="h-2 w-24 bg-emerald-500/20 rounded-full" />
-                  <div className="h-2 w-16 bg-emerald-500/10 rounded-full" />
-                </div>
+              <div className="text-right">
+                <div className="text-3xl font-black text-blue-500">৳২.৭৮<span className="text-xs text-app-fg-muted font-bold">/দিন</span></div>
+                <div className="text-[10px] text-app-fg-muted font-bold">ভ্যাট, সম্পূরক শুল্ক ও সারচার্জ সহ</div>
               </div>
             </div>
-            <div className="space-y-4">
-              <div className="glass p-6 rounded-[2rem] border-2 border-amber-500/20 shadow-xl space-y-4">
-                <div className="w-12 h-12 rounded-2xl bg-amber-500/20 flex items-center justify-center text-amber-400">
-                  <Terminal size={24} />
-                </div>
-                <div className="space-y-2">
-                  <div className="h-2 w-32 bg-amber-500/20 rounded-full" />
-                  <div className="h-2 w-20 bg-amber-500/10 rounded-full" />
-                </div>
-              </div>
-              <div className="glass p-8 rounded-[2.5rem] border-2 border-blue-500/30 shadow-2xl bg-blue-500/5 backdrop-blur-3xl">
-                <div className="flex items-center gap-3 mb-6">
-                  <div className="w-10 h-10 rounded-xl bg-blue-500 flex items-center justify-center text-white font-black">2</div>
-                  <div className="font-black text-app-fg tracking-tight">
-                    {language === 'bn' ? 'লেভেল আপডেট' : 'Level Reached'}
-                  </div>
-                </div>
-                <div className="space-y-3">
-                  <div className="h-3 w-full bg-app-fg/10 rounded-full overflow-hidden">
-                    <div className="h-full w-2/3 bg-blue-500 rounded-full" />
-                  </div>
-                  <div className="flex justify-between text-xs font-black text-app-fg-muted">
-                    <span>325 XP</span>
-                    <span>500 XP</span>
-                  </div>
-                </div>
-              </div>
-            </div>
-          </div>
 
-          {/* Floating abstract shapes */}
-          <motion.div
-            animate={{ y: [0, -20, 0] }}
-            transition={{ duration: 4, repeat: Infinity, ease: "easeInOut" }}
-            className="absolute -top-10 -right-10 w-24 h-24 bg-blue-500/20 rounded-3xl blur-2xl"
-            aria-hidden="true"
-          />
-          <motion.div
-            animate={{ y: [0, 20, 0] }}
-            transition={{ duration: 5, repeat: Infinity, ease: "easeInOut" }}
-            className="absolute -bottom-10 left-10 w-32 h-32 bg-cyan-400/20 rounded-full blur-2xl"
-            aria-hidden="true"
-          />
+            <div className="space-y-3">
+              <div className="flex items-center gap-3 text-sm font-bold text-app-fg">
+                <CheckCircle2 size={18} className="text-emerald-400 shrink-0" />
+                <span>{language === 'bn' ? 'সকল পাইথন ও ডিএসএ কোর্স আনলক' : 'Unlock all Python & DSA Lessons'}</span>
+              </div>
+              <div className="flex items-center gap-3 text-sm font-bold text-app-fg">
+                <CheckCircle2 size={18} className="text-emerald-400 shrink-0" />
+                <span>{language === 'bn' ? 'সরাসরি ব্রাউজারে কোড লেখার প্লেগ্রাউন্ড' : 'Interactive In-browser Code Playground'}</span>
+              </div>
+              <div className="flex items-center gap-3 text-sm font-bold text-app-fg">
+                <CheckCircle2 size={18} className="text-emerald-400 shrink-0" />
+                <span>{language === 'bn' ? 'প্রতিদিনের লিডারবোর্ড ও ব্যাজ অর্জন' : 'Daily Streaks, Badges & Leaderboards'}</span>
+              </div>
+              <div className="flex items-center gap-3 text-sm font-bold text-app-fg">
+                <CheckCircle2 size={18} className="text-emerald-400 shrink-0" />
+                <span>{language === 'bn' ? 'যেকোনো সময় ১-ক্লিকে আনসাবস্ক্রাইব করার সুযোগ' : 'Cancel/Unsubscribe anytime with 1-click'}</span>
+              </div>
+            </div>
+
+            <div className="p-4 rounded-2xl bg-blue-500/10 border border-blue-500/20 text-xs font-bold text-app-fg-muted flex items-start gap-3">
+              <Zap size={18} className="text-blue-400 shrink-0 mt-0.5" />
+              <span>
+                {language === 'bn'
+                  ? 'রবি (Robi) এবং সার্কেল (Cirkle) সিম গ্রাহকদের জন্য প্রযোজ্য। কোনো ক্রেডিট কার্ড লাগে না, সরাসরি আপনার মোবাইল ব্যালেন্স থেকে অটো সাবস্ক্রিপশন।'
+                  : 'Exclusively for Robi & Cirkle mobile customers. Charged directly from your mobile account balance.'}
+              </span>
+            </div>
+
+            <button
+              onClick={() => navigate('/auth')}
+              className="w-full py-4 rounded-2xl bg-blue-500 hover:bg-blue-600 text-white font-black text-lg shadow-lg shadow-blue-500/30 transition-all active:scale-[0.98]"
+            >
+              {language === 'bn' ? 'মোবাইল নম্বর দিয়ে সাবস্ক্রাইব করুন' : 'Subscribe via Mobile Number'}
+            </button>
+          </div>
         </motion.div>
       </main>
 
-      {/* Social Proof Section */}
-      <section className="bg-panel/50 border-y border-border-subtle py-16 px-6">
-        <div className="max-w-7xl mx-auto flex flex-col md:flex-row justify-around items-center gap-12 text-center">
+      {/* Stats Section */}
+      <section className="bg-panel/50 border-y border-border-subtle py-12 px-6">
+        <div className="max-w-7xl mx-auto flex flex-col md:flex-row justify-around items-center gap-8 text-center">
           <div>
             <div className="text-4xl font-black text-app-fg">100+</div>
-            <div className="text-app-fg-muted font-bold uppercase tracking-widest text-xs mt-2">
+            <div className="text-app-fg-muted font-bold uppercase tracking-widest text-xs mt-1">
               {language === 'bn' ? 'কোডিং পাঠ' : 'Coding lessons'}
             </div>
           </div>
           <div>
-            <div className="text-4xl font-black text-app-fg">5</div>
-            <div className="text-app-fg-muted font-bold uppercase tracking-widest text-xs mt-2">
-              {language === 'bn' ? 'গল্পের মতো ইউনিট' : 'Story-driven units'}
+            <div className="text-4xl font-black text-app-fg">Robi & Cirkle</div>
+            <div className="text-app-fg-muted font-bold uppercase tracking-widest text-xs mt-1">
+              {language === 'bn' ? 'সমর্থিত টেলিকম নেটওয়ার্ক' : 'Supported Telecom Network'}
             </div>
           </div>
           <div>
-            <div className="text-4xl font-black text-app-fg">∞</div>
-            <div className="text-app-fg-muted font-bold uppercase tracking-widest text-xs mt-2">
-              {language === 'bn' ? 'যত খুশি চালিয়ে যান' : 'Practice as much as you want'}
+            <div className="text-4xl font-black text-app-fg">bdapps</div>
+            <div className="text-app-fg-muted font-bold uppercase tracking-widest text-xs mt-1">
+              {language === 'bn' ? 'অফিসিয়াল গেটওয়ে' : 'Official Gateway'}
             </div>
           </div>
         </div>
       </section>
 
-      {/* Footer trust line */}
-      <footer className="max-w-7xl mx-auto px-6 py-10 text-center">
+      {/* Footer */}
+      <footer className="max-w-7xl mx-auto px-6 py-8 text-center">
         <p className="text-xs font-bold text-app-fg-muted">
-          {language === 'bn'
-            ? 'বাংলাদেশে তৈরি ❤️  ·  বিশ্বের জন্য'
-            : 'Made with ❤️ in Bangladesh  ·  Built for the world'}
+          CholoSikhi  ·  Powered by bdapps  ·  Robi & Cirkle Network
         </p>
       </footer>
     </div>

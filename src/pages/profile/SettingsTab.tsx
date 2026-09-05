@@ -1,6 +1,6 @@
 import { useState, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Settings as SettingsIcon, LogOut, AlertTriangle, Volume2, Sparkles } from 'lucide-react';
+import { Settings as SettingsIcon, LogOut, AlertTriangle, Volume2, Sparkles, UserX, ShieldAlert } from 'lucide-react';
 import { clsx } from 'clsx';
 import { useUserStore } from '@/store/userStore';
 import { useSettingsStore } from '@/store/settingsStore';
@@ -21,11 +21,13 @@ export default function SettingsTab() {
     setCourse,
     setHasSeenTutorial,
   } = useSettingsStore();
-  const { signOut } = useAuthStore();
+  const { signOut, unsubscribe, user, subscriptionStatus } = useAuthStore();
   const navigate = useNavigate();
 
   const [resetOpen, setResetOpen] = useState(false);
   const [signOutOpen, setSignOutOpen] = useState(false);
+  const [unsubOpen, setUnsubOpen] = useState(false);
+  const [unsubLoading, setUnsubLoading] = useState(false);
 
   const confirmReset = useCallback(() => {
     resetAccount();
@@ -35,8 +37,19 @@ export default function SettingsTab() {
   const confirmSignOut = useCallback(async () => {
     setSignOutOpen(false);
     await signOut();
-    navigate('/auth');
+    navigate('/welcome');
   }, [signOut, navigate]);
+
+  const confirmUnsubscribe = useCallback(async () => {
+    setUnsubLoading(true);
+    try {
+      await unsubscribe();
+      setUnsubOpen(false);
+      navigate('/welcome', { replace: true });
+    } finally {
+      setUnsubLoading(false);
+    }
+  }, [unsubscribe, navigate]);
 
   const tr = {
     en: {
@@ -71,6 +84,10 @@ export default function SettingsTab() {
       resetCancel: 'Cancel',
       signOutConfirm: 'Sign out',
       signOutCancel: 'Stay',
+      unsubscribe: 'Unsubscribe bdapps Service',
+      unsubscribeTitle: 'Cancel bdapps Subscription?',
+      unsubscribeBody: 'Warning: Canceling will stop your daily charging (৳2.78/day) and revoke access to CholoSikhi premium courses until you subscribe again.',
+      unsubscribeConfirm: 'Yes, Unsubscribe Now',
     },
     bn: {
       settings: 'সেটিংস',
@@ -98,24 +115,31 @@ export default function SettingsTab() {
       signOut: 'লগ আউট',
       signOutTitle: 'লগ আউট করবেন?',
       signOutBody: 'স্ট্রিক ধরে রাখতে আবার লগইন করতে হবে।',
-      resetTitle: 'সব মুছে দেবেন?',
-      resetBody: 'XP, স্ট্রিক আর পাঠের অগ্রগতি সব শেষ। ফেরানোর উপায় নেই।',
-      resetConfirm: 'মুছুন',
-      resetCancel: 'থাক',
+      resetTitle: 'সব মুছে ফেলবেন?',
+      resetBody: 'সকল XP, স্ট্রিক এবং শেখার অগ্রগতি মুছে যাবে। পুনরুদ্ধার করা সম্ভব নয়।',
+      resetConfirm: 'রিসেট',
+      resetCancel: 'বাতিল',
       signOutConfirm: 'লগ আউট',
-      signOutCancel: 'থাকি',
+      signOutCancel: 'থাকুন',
+      unsubscribe: 'bdapps সাবস্ক্রিপশন বাতিল করুন',
+      unsubscribeTitle: 'সাবস্ক্রিপশন কি বাতিল করতে চান?',
+      unsubscribeBody: 'সতর্কতা: এটি আপনার দৈনিক ২.৭৮ টাকা চার্জিং বন্ধ করে দেবে এবং প্রিমিয়াম লেসনের অ্যাক্সেস সাময়িক বন্ধ করে দেবে।',
+      unsubscribeConfirm: 'হ্যাঁ, আনসাবস্ক্রাইব করুন',
     },
   };
-  const tx = tr[language];
+
+  const tx = language === 'bn' ? tr.bn : tr.en;
 
   return (
-    <div className="space-y-8 pb-24">
+    <div className="space-y-8 max-w-2xl mx-auto">
+      {/* Dialog Modals */}
       <Confirm
         open={resetOpen}
         title={tx.resetTitle}
         body={tx.resetBody}
-        confirmLabel={tx.resetConfirm}
-        cancelLabel={tx.resetCancel}
+        confirmText={tx.resetConfirm}
+        cancelText={tx.resetCancel}
+        danger
         onConfirm={confirmReset}
         onCancel={() => setResetOpen(false)}
       />
@@ -123,110 +147,76 @@ export default function SettingsTab() {
         open={signOutOpen}
         title={tx.signOutTitle}
         body={tx.signOutBody}
-        confirmLabel={tx.signOutConfirm}
-        cancelLabel={tx.signOutCancel}
+        confirmText={tx.signOutConfirm}
+        cancelText={tx.signOutCancel}
         onConfirm={confirmSignOut}
         onCancel={() => setSignOutOpen(false)}
       />
+      <Confirm
+        open={unsubOpen}
+        title={tx.unsubscribeTitle}
+        body={tx.unsubscribeBody}
+        confirmText={unsubLoading ? 'Processing…' : tx.unsubscribeConfirm}
+        cancelText={tx.signOutCancel}
+        danger
+        onConfirm={confirmUnsubscribe}
+        onCancel={() => setUnsubOpen(false)}
+      />
 
-      <div className="flex items-center gap-3 mb-2">
-        <div className="w-12 h-12 rounded-2xl bg-duo-blue/10 flex items-center justify-center text-duo-blue border-2 border-duo-blue/20">
-          <SettingsIcon size={28} />
+      {/* Account Profile Header */}
+      <section className="p-6 border-2 border-border-subtle rounded-3xl bg-panel space-y-4">
+        <h3 className="text-xl font-black flex items-center gap-2">
+          <SettingsIcon size={20} className="text-blue-500" />
+          {tx.profile}
+        </h3>
+        <div>
+          <label className="block text-xs font-bold uppercase text-app-fg/50 mb-2">
+            {tx.nameLabel}
+          </label>
+          <input
+            type="text"
+            value={name}
+            onChange={(e) => setName(e.target.value)}
+            placeholder={tx.namePh}
+            className="w-full px-4 py-3 rounded-2xl bg-app-bg border border-border-subtle font-bold text-app-fg focus:outline-none focus:border-blue-500 transition-all"
+          />
         </div>
-        <h2 className="text-3xl font-black">{tx.settings}</h2>
-      </div>
-
-      {/* Profile Settings */}
-      <section className="card-duo p-6">
-        <h3 className="text-xl font-bold mb-4">{tx.profile}</h3>
-        <div className="space-y-4">
-          <div>
-            <label
-              htmlFor="settings-name"
-              className="block text-sm text-app-fg/50 mb-2 font-bold"
-            >
-              {tx.nameLabel}
-            </label>
-            <input
-              id="settings-name"
-              type="text"
-              value={name}
-              onChange={(e) => setName(e.target.value)}
-              className="w-full bg-app-bg border-2 border-border-subtle rounded-2xl px-4 py-3 outline-none focus:border-duo-blue transition-all font-bold placeholder:text-app-fg/30"
-              placeholder={tx.namePh}
-            />
+        {user?.mobile && (
+          <div className="p-3.5 rounded-2xl bg-blue-500/10 border border-blue-500/20 text-xs font-bold text-blue-400 flex justify-between items-center">
+            <span>Mobile: {user.mobile}</span>
+            <span className="px-2.5 py-1 rounded-full bg-blue-500/20 text-[10px] font-black uppercase">
+              {subscriptionStatus || 'REGISTERED'}
+            </span>
           </div>
-        </div>
+        )}
       </section>
 
-      {/* App Preferences */}
-      <section className="card-duo p-6 space-y-8">
-        <h3 className="text-xl font-bold mb-2">{tx.prefs}</h3>
+      {/* Preferences Section */}
+      <section className="p-6 border-2 border-border-subtle rounded-3xl bg-panel space-y-6">
+        <h3 className="text-xl font-black">{tx.prefs}</h3>
 
-        {/* Theme */}
-        <div className="flex items-center justify-between py-2 gap-4">
-          <div className="flex-1">
+        {/* Theme Toggle */}
+        <div className="flex items-center justify-between py-2 border-t border-border-subtle pt-6">
+          <div>
             <div className="font-bold text-lg">{tx.theme}</div>
             <div className="text-sm text-app-fg/50 font-medium">{tx.themeSub}</div>
           </div>
-          <div
-            className="flex bg-app-bg p-1 rounded-2xl border-2 border-border-subtle shrink-0"
-            role="radiogroup"
-            aria-label={tx.theme}
+          <button
+            onClick={toggleTheme}
+            className="px-5 py-2 rounded-xl bg-app-bg border border-border-subtle font-black text-sm hover:border-blue-500 transition-all"
           >
-            <button
-              role="radio"
-              aria-checked={theme === 'light'}
-              onClick={() => {
-                if (theme !== 'light') {
-                  toggleTheme();
-                  play('toggle');
-                }
-              }}
-              className={clsx(
-                'px-5 py-2 rounded-xl text-sm font-black transition-all',
-                theme === 'light'
-                  ? 'bg-duo-blue text-white shadow-lg'
-                  : 'text-app-fg/40 hover:text-app-fg/70',
-              )}
-            >
-              {language === 'bn' ? 'লাইট' : 'Light'}
-            </button>
-            <button
-              role="radio"
-              aria-checked={theme === 'dark'}
-              onClick={() => {
-                if (theme !== 'dark') {
-                  toggleTheme();
-                  play('toggle');
-                }
-              }}
-              className={clsx(
-                'px-5 py-2 rounded-xl text-sm font-black transition-all',
-                theme === 'dark'
-                  ? 'bg-duo-blue text-white shadow-lg'
-                  : 'text-app-fg/40 hover:text-app-fg/70',
-              )}
-            >
-              {language === 'bn' ? 'ডার্ক' : 'Dark'}
-            </button>
-          </div>
+            {theme === 'dark' ? 'Dark' : 'Light'}
+          </button>
         </div>
 
-        {/* Language */}
-        <div className="flex items-center justify-between py-2 border-t-2 border-border-subtle pt-6 gap-4">
-          <div className="flex-1">
+        {/* Language Selection */}
+        <div className="flex items-center justify-between py-2 border-t border-border-subtle">
+          <div>
             <div className="font-bold text-lg">{tx.language}</div>
             <div className="text-sm text-app-fg/50 font-medium">{tx.languageSub}</div>
           </div>
-          <div
-            className="flex bg-app-bg p-1 rounded-2xl border-2 border-border-subtle shrink-0"
-            role="radiogroup"
-            aria-label={tx.language}
-          >
+          <div className="flex bg-app-bg p-1 rounded-2xl border border-border-subtle gap-1">
             <button
-              role="radio"
-              aria-checked={language === 'bn'}
               onClick={() => {
                 if (language !== 'bn') {
                   setLanguage('bn');
@@ -234,17 +224,15 @@ export default function SettingsTab() {
                 }
               }}
               className={clsx(
-                'px-5 py-2 rounded-xl text-sm font-black transition-all',
+                'px-4 py-2 rounded-xl text-sm font-black transition-all',
                 language === 'bn'
-                  ? 'bg-duo-blue text-white shadow-lg'
+                  ? 'bg-blue-500 text-white shadow-lg'
                   : 'text-app-fg/40 hover:text-app-fg/70',
               )}
             >
               বাংলা
             </button>
             <button
-              role="radio"
-              aria-checked={language === 'en'}
               onClick={() => {
                 if (language !== 'en') {
                   setLanguage('en');
@@ -252,9 +240,9 @@ export default function SettingsTab() {
                 }
               }}
               className={clsx(
-                'px-5 py-2 rounded-xl text-sm font-black transition-all',
+                'px-4 py-2 rounded-xl text-sm font-black transition-all',
                 language === 'en'
-                  ? 'bg-duo-blue text-white shadow-lg'
+                  ? 'bg-blue-500 text-white shadow-lg'
                   : 'text-app-fg/40 hover:text-app-fg/70',
               )}
             >
@@ -263,124 +251,52 @@ export default function SettingsTab() {
           </div>
         </div>
 
-        {/* Sound Effects — static "soon" pill, not a fake toggle */}
-        <div className="flex items-center justify-between py-2 border-t-2 border-border-subtle pt-6 gap-4">
-          <div className="flex-1">
-            <div className="font-bold text-lg">{tx.sound}</div>
-            <div className="text-sm text-app-fg/50 font-medium">{tx.soundSub}</div>
-          </div>
-          <span
-            role="status"
-            className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-panel border border-border-subtle text-app-fg/50 text-xs font-black uppercase tracking-wider shrink-0"
-            title="New sound pack is on the way"
-          >
-            <Volume2 size={12} aria-hidden="true" />
-            {tx.soundSoon}
-          </span>
-        </div>
-
         {/* Course Selection */}
-        <div className="flex items-center justify-between py-2 border-t border-white/5 gap-4">
+        <div className="flex items-center justify-between py-2 border-t border-border-subtle gap-4">
           <div className="flex-1">
-            <div className="font-bold">{tx.course}</div>
+            <div className="font-bold text-lg">{tx.course}</div>
             <div className="text-sm text-app-fg/50 font-medium">{tx.courseSub}</div>
-          </div>
-          <div className="flex items-center gap-3 shrink-0">
-            <button
-              onClick={() => {
-                if (currentCourse !== 'python') {
-                  setCourse('python');
-                  play('tap');
-                }
-              }}
-              aria-pressed={currentCourse === 'python'}
-              className={clsx(
-                'flex items-center gap-2 px-4 py-1.5 rounded-xl text-sm font-bold transition-all border-2',
-                currentCourse === 'python'
-                  ? 'bg-duo-green/15 border-duo-green/40 text-duo-green'
-                  : 'bg-white/5 border-white/10 text-app-fg/40 hover:text-app-fg',
-              )}
-            >
-              <img src="/icons/python-original.svg" alt="" className="w-4 h-4" />
-              Python
-            </button>
-            <span
-              className="flex items-center gap-2 px-3 py-1.5 rounded-xl bg-white/5 border border-white/10 opacity-50 cursor-not-allowed"
-              title={language === 'bn' ? 'C++ শীঘ্রই আসছে' : 'C++ coming soon'}
-            >
-              <img src="/icons/cplusplus-original.svg" alt="" className="w-4 h-4 grayscale" />
-              <span className="text-xs font-bold text-gray-400">C++</span>
-              <span className="text-[10px] font-black text-amber-400 uppercase tracking-widest bg-amber-400/10 px-1.5 py-0.5 rounded-md">
-                {language === 'bn' ? 'শীঘ্রই' : 'Soon'}
-              </span>
-            </span>
-          </div>
-        </div>
-
-        {/* Daily XP Goal */}
-        <div className="py-2 border-t border-white/5">
-          <div className="mb-3">
-            <div className="font-bold">{tx.dailyGoal}</div>
-            <div className="text-sm text-app-fg/50 font-medium">{tx.dailyGoalSub}</div>
-          </div>
-          <div className="flex gap-2" role="radiogroup" aria-label={tx.dailyGoal}>
-            {[30, 50, 100].map((xp) => (
-              <button
-                key={xp}
-                role="radio"
-                aria-checked={dailyGoalXp === xp}
-                onClick={() => {
-                  setDailyGoal(xp);
-                  play('tap');
-                }}
-                className={clsx(
-                  'flex-1 py-2 rounded-xl text-sm font-bold border transition-all',
-                  dailyGoalXp === xp
-                    ? 'border-amber-500 bg-amber-500/20 text-amber-400'
-                    : 'border-white/10 glass hover:border-white/20',
-                )}
-              >
-                {xp} XP
-              </button>
-            ))}
-          </div>
-        </div>
-
-        {/* Tutorial */}
-        <div className="py-2 border-t border-white/5">
-          <div className="mb-3">
-            <div className="font-bold">{tx.tutorial}</div>
-            <div className="text-sm text-app-fg/50 font-medium">{tx.tutorialSub}</div>
           </div>
           <button
             onClick={() => {
-              setHasSeenTutorial(false);
-              navigate('/');
+              if (currentCourse !== 'python') {
+                setCourse('python');
+                play('tap');
+              }
             }}
-            className="w-full py-3 rounded-xl text-sm font-bold border border-blue-500/30 bg-blue-500/10 text-blue-400 hover:bg-blue-500/20 transition-all inline-flex items-center justify-center gap-2"
+            className="flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-bold bg-emerald-500/15 border-2 border-emerald-500/40 text-emerald-400"
           >
-            <Sparkles size={14} />
-            {tx.tutorialCta}
+            Python
           </button>
         </div>
       </section>
 
       {/* Danger Zone */}
-      <section className="p-6 border-2 border-rose-500/20 rounded-3xl bg-rose-500/5">
-        <h3 className="text-xl font-bold text-rose-500 mb-4 flex items-center gap-2">
+      <section className="p-6 border-2 border-rose-500/20 rounded-3xl bg-rose-500/5 space-y-4">
+        <h3 className="text-xl font-bold text-rose-500 flex items-center gap-2">
           <AlertTriangle size={20} /> {tx.danger}
         </h3>
-        <p className="text-sm text-app-fg/60 mb-4 font-medium">{tx.dangerBody}</p>
-        <button
-          onClick={() => setResetOpen(true)}
-          className="px-6 py-3 rounded-xl font-bold bg-rose-500/20 text-rose-400 hover:bg-rose-500 hover:text-white transition-colors"
-        >
-          {tx.reset}
-        </button>
+        <p className="text-sm text-app-fg/60 font-medium">{tx.dangerBody}</p>
+        <div className="flex flex-col sm:flex-row gap-3 pt-2">
+          <button
+            onClick={() => setResetOpen(true)}
+            className="px-6 py-3 rounded-xl font-bold bg-rose-500/20 text-rose-400 hover:bg-rose-500 hover:text-white transition-colors"
+          >
+            {tx.reset}
+          </button>
+
+          <button
+            onClick={() => setUnsubOpen(true)}
+            className="px-6 py-3 rounded-xl font-black bg-amber-500/20 border border-amber-500/30 text-amber-400 hover:bg-amber-500 hover:text-white transition-colors flex items-center justify-center gap-2"
+          >
+            <UserX size={18} />
+            {tx.unsubscribe}
+          </button>
+        </div>
       </section>
 
-      {/* Account Section */}
-      <section className="p-6 border-2 border-app/10 rounded-3xl bg-panel">
+      {/* Account Sign Out Section */}
+      <section className="p-6 border-2 border-border-subtle rounded-3xl bg-panel">
         <button
           onClick={() => setSignOutOpen(true)}
           className="w-full flex items-center justify-center gap-3 px-6 py-4 rounded-2xl font-black bg-blue-500/10 text-blue-400 hover:bg-blue-500 hover:text-white transition-all shadow-lg shadow-blue-500/10"

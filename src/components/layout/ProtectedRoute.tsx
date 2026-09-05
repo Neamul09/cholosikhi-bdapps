@@ -12,6 +12,7 @@ export default function ProtectedRoute() {
     );
   }
 
+  // Not logged in -> redirect to /welcome
   if (!session) {
     return <Navigate to="/welcome" replace />;
   }
