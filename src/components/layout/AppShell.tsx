@@ -17,7 +17,7 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
   const { streak, hearts, gems } = useUserStore();
   const location = useLocation();
   const navigate = useNavigate();
-  const { language, theme, toggleTheme, currentCourse } = useSettingsStore();
+  const { language, theme, toggleTheme } = useSettingsStore();
   const { subscriptionStatus, isSubscribed, user, checkMobileSubscription } = useAuthStore();
   const { showLevelUp, setShowLevelUp, showStreak, setShowStreak, hasSeenTutorial, setHasSeenTutorial, achievements, level } = useUserStore();
   const [shouldShowTutorial, setShouldShowTutorial] = useState(false);

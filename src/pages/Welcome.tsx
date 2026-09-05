@@ -1,8 +1,7 @@
-import { useEffect } from 'react';
 import { motion } from 'framer-motion';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import {
-  ArrowRight, Globe, Sparkles, Home, Moon, Sun,
+  ArrowRight, Globe, Sparkles, Moon, Sun,
   CheckCircle2, Trophy, Smartphone, ShieldCheck, Zap, Lock
 } from 'lucide-react';
 import { useSettingsStore } from '@/store/settingsStore';

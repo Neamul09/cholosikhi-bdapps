@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
   Smartphone, KeyRound, User as UserIcon, Loader2, ArrowRight, AlertCircle,
-  CheckCircle2, ShieldCheck, ArrowLeft, Lock, AlertTriangle, HelpCircle
+  CheckCircle2, ShieldCheck, ArrowLeft, Lock, AlertTriangle
 } from 'lucide-react';
 import { useSettingsStore } from '@/store/settingsStore';
 import { useAuthStore } from '@/store/authStore';
@@ -32,7 +32,6 @@ export default function Auth() {
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
   const [subStatus, setSubStatus] = useState<string>('');
   const [isSubActive, setIsSubActive] = useState<boolean>(false);
-  const [isRegOnBdapps, setIsRegOnBdapps] = useState<boolean>(false);
 
   const resetError = () => setErrorMsg(null);
 
@@ -60,7 +59,6 @@ export default function Auth() {
 
       setSubStatus(status);
       setIsSubActive(active);
-      setIsRegOnBdapps(registered);
 
       if (registered) {
         // Registered or Payment Pending -> Prompt for Password
@@ -85,7 +83,6 @@ export default function Auth() {
       if (res.success) {
         setStep('OTP');
       } else if (res.alreadyRegistered) {
-        setIsRegOnBdapps(true);
         setStep('LOGIN_PASSWORD');
       } else {
         setErrorMsg(res.error || 'Failed to send OTP to your mobile number.');

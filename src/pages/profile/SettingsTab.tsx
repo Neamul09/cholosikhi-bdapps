@@ -1,6 +1,6 @@
 import { useState, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Settings as SettingsIcon, LogOut, AlertTriangle, Volume2, Sparkles, UserX, ShieldAlert } from 'lucide-react';
+import { Settings as SettingsIcon, LogOut, AlertTriangle, UserX } from 'lucide-react';
 import { clsx } from 'clsx';
 import { useUserStore } from '@/store/userStore';
 import { useSettingsStore } from '@/store/settingsStore';
@@ -11,15 +11,12 @@ import Confirm from './Confirm';
 export default function SettingsTab() {
   const { name, setName, resetAccount } = useUserStore();
   const {
-    dailyGoalXp,
-    setDailyGoal,
     language,
     setLanguage,
     theme,
     toggleTheme,
     currentCourse,
     setCourse,
-    setHasSeenTutorial,
   } = useSettingsStore();
   const { signOut, unsubscribe, user, subscriptionStatus } = useAuthStore();
   const navigate = useNavigate();
