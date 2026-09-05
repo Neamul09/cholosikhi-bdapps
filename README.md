@@ -3,7 +3,6 @@
 > **Bangladesh's Premier Gamified Mobile Programming Academy for Robi & Cirkle Subscribers**
 
 [![Live Demo](https://img.shields.io/badge/Vercel-cholosikhibdapps.vercel.app-blue?style=for-the-badge&logo=vercel)](https://cholosikhibdapps.vercel.app)
-[![bdapps Gateway](https://img.shields.io/badge/bdapps-Gateway_Integrated-emerald?style=for-the-badge)](https://bdappsdigitalapps.com/CholoSikhi)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg?style=for-the-badge)](LICENSE)
 
 ---
@@ -17,10 +16,10 @@
 ## ✨ Key Features & Highlights
 
 - 📱 **bdapps API Gateway Integration**:
-  - **OTP Authentication**: Real-time 6-digit SMS OTP verification.
-  - **Mobile & Password Auth**: Password hashing using SHA-256 with dual Supabase DB & LocalStorage fallback.
-  - **Subscription Status Verification**: Live checks against bdapps gateway endpoints (`check_subscription.php`, `send_otp.php`, `verify_otp.php`, `unsubscribe.php`).
-  - **Payment Pending Flow**: Users with pending billing (`INITIAL CHARGING PENDING` / `PENDING_CHARGE`) can log in to view their profile dashboard while premium learning routes remain securely locked until payment activation (৳2.78/day).
+  - **OTP Authentication**: Real-time 6-digit SMS OTP verification via telecom gateway.
+  - **Mobile & Password Auth**: Password hashing using SHA-256 with dual database & local storage fallback.
+  - **Subscription Status Verification**: Live checks against bdapps gateway subscription endpoints.
+  - **Payment Pending Flow**: Users with pending billing can log in to view their profile dashboard while premium learning routes remain securely locked until payment activation (৳2.78/day).
 - 🐍 **Comprehensive Curricula**:
   - **Python Course**: Beginner to advanced bite-sized modules translated into authentic Bangla.
   - **C++ Course**: Core syntax, object-oriented concepts, and memory management.
@@ -32,33 +31,8 @@
   - Global & Regional Leaderboards.
 - 🔒 **Enterprise-Grade Security**:
   - Content Security Policy (CSP) with explicit script-src guidelines.
-  - Supabase Row Level Security (RLS) policies.
+  - Database Row Level Security (RLS) policies.
   - Strict input validation and SHA-256 credential hashing.
-
----
-
-## 📋 bdapps Application Specs
-
-| Parameter | Details |
-| :--- | :--- |
-| **App Name** | CholoSikhi |
-| **App ID** | `APP_140038` |
-| **Developer Name** | Md. Neamul Morshed Neon |
-| **Username** | `neamulmorshedneon` |
-| **Access Mode** | SMS / USSD / Web App |
-| **App Code** | `73469` |
-| **Host IP** | `176.9.54.45` |
-| **Production URL** | [cholosikhibdapps.vercel.app](https://cholosikhibdapps.vercel.app) |
-| **Daily Charge** | ৳ 2.78 + (VAT + SD + SC) / day (auto-renewal) |
-
----
-
-## 📲 Telecom USSD & SMS Commands
-
-- **Subscribe via SMS**: Send `START 73469` to `21213`
-- **Subscribe via USSD**: Dial `*213*73469#`
-- **Unsubscribe via SMS**: Send `STOP 73469` to `21213`
-- **Unsubscribe via Web**: Click the **Unsubscribe** button inside Profile Settings.
 
 ---
 
@@ -68,7 +42,7 @@
 - **Styling & Motion**: Tailwind CSS 4, Framer Motion
 - **State Management**: Zustand (`authStore`, `userStore`, `settingsStore`, `progressStore`, `questStore`)
 - **Backend & Database**: Supabase (PostgreSQL, Row Level Security, RPC functions)
-- **Telecom Gateway**: bdapps cURL / Form URL-Encoded API Wrappers (`bdappsService.ts`)
+- **Telecom Gateway**: bdapps cURL / Form URL-Encoded API Wrappers
 - **Icons & UI Assets**: Lucide React, Custom SVG Vector assets
 
 ---
@@ -111,12 +85,7 @@ CholoSikhi - bdapps/
    ```
 
 3. **Configure Environment Variables**:
-   Create a `.env.local` file in the root directory:
-   ```env
-   VITE_SUPABASE_URL=https://your-supabase-project.supabase.co
-   VITE_SUPABASE_ANON_KEY=your-supabase-anon-key
-   VITE_BDAPPS_BASE_URL=https://bdappsdigitalapps.com/CholoSikhi
-   ```
+   Create a `.env.local` file in the root directory following `.env.example`.
 
 4. **Launch local development server**:
    ```bash
