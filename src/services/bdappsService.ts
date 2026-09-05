@@ -1,5 +1,12 @@
+/**
+ * bdapps Gateway API Integration Service
+ * Application: CholoSikhi
+ * Developer: Md. Neamul Morshed Neon
+ */
+
 const BDAPPS_BASE_URL = import.meta.env.VITE_BDAPPS_BASE_URL || 'https://bdappsdigitalapps.com/CholoSikhi';
 
+/** Response structure for subscription status check endpoint */
 export interface BdappsCheckSubResponse {
   subscriptionStatus?: string; // "REGISTERED", "UNREGISTERED", "PENDING_CHARGE", "INITIAL CHARGING PENDING", etc.
   isSubscribed?: boolean;
@@ -11,6 +18,7 @@ export interface BdappsCheckSubResponse {
   error?: string;
 }
 
+/** Response structure for OTP generation endpoint */
 export interface BdappsSendOtpResponse {
   success?: boolean;
   alreadyRegistered?: boolean;
@@ -22,6 +30,7 @@ export interface BdappsSendOtpResponse {
   error?: string;
 }
 
+/** Response structure for OTP verification endpoint */
 export interface BdappsVerifyOtpResponse {
   statusCode?: string; // "S1000" success, "E1850" invalid OTP
   statusDetail?: string;
@@ -31,6 +40,7 @@ export interface BdappsVerifyOtpResponse {
   error?: string;
 }
 
+/** Response structure for unsubscription endpoint */
 export interface BdappsUnsubscribeResponse {
   success?: boolean;
   subscriberId?: string;
