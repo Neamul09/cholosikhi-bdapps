@@ -4,7 +4,9 @@
  * Developer: Md. Neamul Morshed Neon
  */
 
-const BDAPPS_BASE_URL = import.meta.env.VITE_BDAPPS_BASE_URL || 'https://bdappsdigitalapps.com/CholoSikhi';
+// Use relative path `/api/bdapps` by default so requests are same-origin via Vercel rewrites (in prod)
+// or Vite proxy (in dev). This eliminates browser CORS issues entirely.
+const BDAPPS_BASE_URL = (import.meta.env.VITE_BDAPPS_BASE_URL as string | undefined)?.replace(/\/$/, '') || '/api/bdapps';
 
 /** Response structure for subscription status check endpoint */
 export interface BdappsCheckSubResponse {
@@ -85,7 +87,13 @@ async function postFormUrlEncoded<T>(url: string, params: Record<string, string>
   });
 
   if (!response.ok) {
-    throw new Error(`HTTP error ${response.status}: ${response.statusText}`);
+    let errorDetails = '';
+    try {
+      errorDetails = await response.text();
+    } catch {
+      // ignore
+    }
+    throw new Error(`HTTP error ${response.status}: ${response.statusText}${errorDetails ? ` - ${errorDetails.slice(0, 100)}` : ''}`);
   }
 
   return response.json();

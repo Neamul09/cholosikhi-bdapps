@@ -132,7 +132,11 @@ export const useAuthStore = create<AuthState>((set, get) => ({
         const active = currentStatus === 'REGISTERED' || !!subRes.isSubscribed;
         const isRegistered = subRes.isRegistered || currentStatus !== 'UNREGISTERED';
 
-        if (isRegistered) {
+        if (subRes.error) {
+          // If gateway check failed due to network / CORS / server outage, preserve existing saved session
+          console.warn('[authStore] Gateway check failed during initialize, preserving saved session:', subRes.error);
+          get().setSession(savedSession);
+        } else if (isRegistered) {
           const updatedSession: UserSession = {
             ...savedSession,
             subscriptionStatus: currentStatus,
@@ -140,7 +144,7 @@ export const useAuthStore = create<AuthState>((set, get) => ({
           };
           get().setSession(updatedSession);
         } else {
-          // Unsubscribed remotely
+          // Explicitly confirmed unregistered from BDApps gateway
           get().setSession(null);
           set({
             subscriptionStatus: 'UNREGISTERED',
@@ -286,20 +290,28 @@ export const useAuthStore = create<AuthState>((set, get) => ({
         return { success: false, error: 'Incorrect password. Please try again.' };
       }
 
+      // If gateway check had an error, fallback to recorded status from DB
+      const effectiveStatus = subRes.error
+        ? (dbUser.subscription_status || 'REGISTERED')
+        : status;
+      const effectiveIsSub = subRes.error
+        ? (effectiveStatus === 'REGISTERED')
+        : isSub;
+
       const session: UserSession = {
         id: dbUser.id || `usr_${formatted.replace(/\D/g, '')}`,
         mobile: formatted,
         name: dbUser.name || 'Learner',
-        subscriptionStatus: status,
-        isSubscribed: isSub,
+        subscriptionStatus: effectiveStatus,
+        isSubscribed: effectiveIsSub,
       };
 
       get().setSession(session);
       set({
-        subscriptionStatus: status,
-        isSubscribed: isSub,
+        subscriptionStatus: effectiveStatus,
+        isSubscribed: effectiveIsSub,
       });
-      return { success: true, status, isSubscribed: isSub };
+      return { success: true, status: effectiveStatus, isSubscribed: effectiveIsSub };
     }
 
     // 4. If password hash is NOT found in the database (or user profile hasn't set password yet)
@@ -308,6 +320,14 @@ export const useAuthStore = create<AuthState>((set, get) => ({
         success: false,
         requiresPasswordSetup: true,
         error: 'No password set for this account yet. Please create a password to complete setup.',
+      };
+    }
+
+    if (subRes.error) {
+      return {
+        success: false,
+        status: 'UNREGISTERED',
+        error: 'Unable to reach subscription gateway. Please try again shortly.',
       };
     }
 

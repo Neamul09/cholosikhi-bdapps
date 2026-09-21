@@ -7,6 +7,15 @@ export default defineConfig({
   resolve: {
     alias: { '@': path.resolve(__dirname, './src') },
   },
+  server: {
+    proxy: {
+      '/api/bdapps': {
+        target: 'https://bdappsdigitalapps.com/CholoSikhi',
+        changeOrigin: true,
+        rewrite: (p) => p.replace(/^\/api\/bdapps/, ''),
+      },
+    },
+  },
   css: {
     postcss: './postcss.config.js',
   },
