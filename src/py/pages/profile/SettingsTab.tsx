@@ -1,6 +1,6 @@
 import { useState, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Settings as SettingsIcon, LogOut, AlertTriangle, UserX } from 'lucide-react';
+import { Settings as SettingsIcon, LogOut, AlertTriangle, UserX, Volume2, Sparkles } from 'lucide-react';
 import { clsx } from 'clsx';
 import { useUserStore } from '@/store/userStore';
 import { useSettingsStore } from '@/store/settingsStore';
@@ -11,12 +11,13 @@ import Confirm from './Confirm';
 export default function SettingsTab() {
   const { name, setName, resetAccount } = useUserStore();
   const {
+    dailyGoalXp,
+    setDailyGoal,
     language,
     setLanguage,
-    theme,
-    toggleTheme,
     currentCourse,
     setCourse,
+    setHasSeenTutorial,
   } = useSettingsStore();
   const { signOut, unsubscribe, user, subscriptionStatus } = useAuthStore();
   const navigate = useNavigate();
@@ -128,7 +129,7 @@ export default function SettingsTab() {
   const tx = language === 'bn' ? tr.bn : tr.en;
 
   return (
-    <div className="space-y-8 max-w-2xl mx-auto">
+    <div className="space-y-8 max-w-2xl mx-auto pb-24">
       {/* Dialog Modals */}
       <Confirm
         open={resetOpen}
@@ -160,17 +161,27 @@ export default function SettingsTab() {
         onCancel={() => setUnsubOpen(false)}
       />
 
+      <div className="flex items-center gap-3 mb-2">
+        <div className="w-12 h-12 rounded-2xl bg-blue-500/10 flex items-center justify-center text-blue-400 border-2 border-blue-500/20">
+          <SettingsIcon size={28} />
+        </div>
+        <h2 className="text-3xl font-black">{tx.settings}</h2>
+      </div>
+
       {/* Account Profile Header */}
       <section className="p-6 border-2 border-border-subtle rounded-3xl bg-panel space-y-4">
         <h3 className="text-xl font-black flex items-center gap-2">
-          <SettingsIcon size={20} className="text-blue-500" />
           {tx.profile}
         </h3>
         <div>
-          <label className="block text-xs font-bold uppercase text-app-fg/50 mb-2">
+          <label
+            htmlFor="settings-name"
+            className="block text-xs font-bold uppercase text-app-fg/50 mb-2"
+          >
             {tx.nameLabel}
           </label>
           <input
+            id="settings-name"
             type="text"
             value={name}
             onChange={(e) => setName(e.target.value)}
@@ -189,31 +200,36 @@ export default function SettingsTab() {
       </section>
 
       {/* Preferences Section */}
-      <section className="p-6 border-2 border-border-subtle rounded-3xl bg-panel space-y-6">
+      <section className="p-6 border-2 border-border-subtle rounded-3xl bg-panel space-y-8">
         <h3 className="text-xl font-black">{tx.prefs}</h3>
 
-        {/* Theme Toggle */}
-        <div className="flex items-center justify-between py-2 border-t border-border-subtle pt-6">
-          <div>
+        {/* Theme: Official Dark Mode Only */}
+        <div className="flex items-center justify-between py-2 gap-4">
+          <div className="flex-1">
             <div className="font-bold text-lg">{tx.theme}</div>
-            <div className="text-sm text-app-fg/50 font-medium">{tx.themeSub}</div>
+            <div className="text-sm text-app-fg/50 font-medium">
+              {language === 'bn' ? 'অফিসিয়াল ডার্ক মোড সক্রিয়' : 'Official Dark Mode (Active)'}
+            </div>
           </div>
-          <button
-            onClick={toggleTheme}
-            className="px-5 py-2 rounded-xl bg-app-bg border border-border-subtle font-black text-sm hover:border-blue-500 transition-all"
-          >
-            {theme === 'dark' ? 'Dark' : 'Light'}
-          </button>
+          <span className="inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-xl bg-blue-500/15 border border-blue-500/30 text-blue-400 text-xs font-black uppercase tracking-wider shrink-0">
+            {language === 'bn' ? 'শুধুমাত্র ডার্ক' : 'Dark Only'}
+          </span>
         </div>
 
         {/* Language Selection */}
-        <div className="flex items-center justify-between py-2 border-t border-border-subtle">
-          <div>
+        <div className="flex items-center justify-between py-2 border-t-2 border-border-subtle pt-6 gap-4">
+          <div className="flex-1">
             <div className="font-bold text-lg">{tx.language}</div>
             <div className="text-sm text-app-fg/50 font-medium">{tx.languageSub}</div>
           </div>
-          <div className="flex bg-app-bg p-1 rounded-2xl border border-border-subtle gap-1">
+          <div
+            className="flex bg-app-bg p-1 rounded-2xl border-2 border-border-subtle shrink-0"
+            role="radiogroup"
+            aria-label={tx.language}
+          >
             <button
+              role="radio"
+              aria-checked={language === 'bn'}
               onClick={() => {
                 if (language !== 'bn') {
                   setLanguage('bn');
@@ -221,7 +237,7 @@ export default function SettingsTab() {
                 }
               }}
               className={clsx(
-                'px-4 py-2 rounded-xl text-sm font-black transition-all',
+                'px-5 py-2 rounded-xl text-sm font-black transition-all',
                 language === 'bn'
                   ? 'bg-blue-500 text-white shadow-lg'
                   : 'text-app-fg/40 hover:text-app-fg/70',
@@ -230,6 +246,8 @@ export default function SettingsTab() {
               বাংলা
             </button>
             <button
+              role="radio"
+              aria-checked={language === 'en'}
               onClick={() => {
                 if (language !== 'en') {
                   setLanguage('en');
@@ -237,7 +255,7 @@ export default function SettingsTab() {
                 }
               }}
               className={clsx(
-                'px-4 py-2 rounded-xl text-sm font-black transition-all',
+                'px-5 py-2 rounded-xl text-sm font-black transition-all',
                 language === 'en'
                   ? 'bg-blue-500 text-white shadow-lg'
                   : 'text-app-fg/40 hover:text-app-fg/70',
@@ -248,22 +266,104 @@ export default function SettingsTab() {
           </div>
         </div>
 
-        {/* Course Selection */}
-        <div className="flex items-center justify-between py-2 border-t border-border-subtle gap-4">
+        {/* Sound Effects — static "soon" pill */}
+        <div className="flex items-center justify-between py-2 border-t-2 border-border-subtle pt-6 gap-4">
           <div className="flex-1">
-            <div className="font-bold text-lg">{tx.course}</div>
+            <div className="font-bold text-lg">{tx.sound}</div>
+            <div className="text-sm text-app-fg/50 font-medium">{tx.soundSub}</div>
+          </div>
+          <span
+            role="status"
+            className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-panel border border-border-subtle text-app-fg/50 text-xs font-black uppercase tracking-wider shrink-0"
+            title="New sound pack is on the way"
+          >
+            <Volume2 size={12} aria-hidden="true" />
+            {tx.soundSoon}
+          </span>
+        </div>
+
+        {/* Course Selection */}
+        <div className="flex items-center justify-between py-2 border-t border-white/5 gap-4">
+          <div className="flex-1">
+            <div className="font-bold">{tx.course}</div>
             <div className="text-sm text-app-fg/50 font-medium">{tx.courseSub}</div>
+          </div>
+          <div className="flex items-center gap-3 shrink-0">
+            <button
+              onClick={() => {
+                if (currentCourse !== 'python') {
+                  setCourse('python');
+                  play('tap');
+                }
+              }}
+              aria-pressed={currentCourse === 'python'}
+              className={clsx(
+                'flex items-center gap-2 px-4 py-1.5 rounded-xl text-sm font-bold transition-all border-2',
+                currentCourse === 'python'
+                  ? 'bg-emerald-500/15 border-emerald-500/40 text-emerald-400'
+                  : 'bg-white/5 border-white/10 text-app-fg/40 hover:text-app-fg',
+              )}
+            >
+              <img src="/icons/python-original.svg" alt="" className="w-4 h-4" />
+              Python
+            </button>
+            <span
+              className="flex items-center gap-2 px-3 py-1.5 rounded-xl bg-white/5 border border-white/10 opacity-50 cursor-not-allowed"
+              title={language === 'bn' ? 'C++ শীঘ্রই আসছে' : 'C++ coming soon'}
+            >
+              <img src="/icons/cplusplus-original.svg" alt="" className="w-4 h-4 grayscale" />
+              <span className="text-xs font-bold text-gray-400">C++</span>
+              <span className="text-[10px] font-black text-amber-400 uppercase tracking-widest bg-amber-400/10 px-1.5 py-0.5 rounded-md">
+                {language === 'bn' ? 'শীঘ্রই' : 'Soon'}
+              </span>
+            </span>
+          </div>
+        </div>
+
+        {/* Daily XP Goal */}
+        <div className="py-2 border-t border-white/5">
+          <div className="mb-3">
+            <div className="font-bold">{tx.dailyGoal}</div>
+            <div className="text-sm text-app-fg/50 font-medium">{tx.dailyGoalSub}</div>
+          </div>
+          <div className="flex gap-2" role="radiogroup" aria-label={tx.dailyGoal}>
+            {[30, 50, 100].map((xp) => (
+              <button
+                key={xp}
+                role="radio"
+                aria-checked={dailyGoalXp === xp}
+                onClick={() => {
+                  setDailyGoal(xp);
+                  play('tap');
+                }}
+                className={clsx(
+                  'flex-1 py-2 rounded-xl text-sm font-bold border transition-all',
+                  dailyGoalXp === xp
+                    ? 'border-amber-500 bg-amber-500/20 text-amber-400'
+                    : 'border-white/10 glass hover:border-white/20',
+                )}
+              >
+                {xp} XP
+              </button>
+            ))}
+          </div>
+        </div>
+
+        {/* Tutorial */}
+        <div className="py-2 border-t border-white/5">
+          <div className="mb-3">
+            <div className="font-bold">{tx.tutorial}</div>
+            <div className="text-sm text-app-fg/50 font-medium">{tx.tutorialSub}</div>
           </div>
           <button
             onClick={() => {
-              if (currentCourse !== 'python') {
-                setCourse('python');
-                play('tap');
-              }
+              setHasSeenTutorial(false);
+              navigate('/py');
             }}
-            className="flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-bold bg-emerald-500/15 border-2 border-emerald-500/40 text-emerald-400"
+            className="w-full py-3 rounded-xl text-sm font-bold border border-blue-500/30 bg-blue-500/10 text-blue-400 hover:bg-blue-500/20 transition-all inline-flex items-center justify-center gap-2"
           >
-            Python
+            <Sparkles size={14} />
+            {tx.tutorialCta}
           </button>
         </div>
       </section>

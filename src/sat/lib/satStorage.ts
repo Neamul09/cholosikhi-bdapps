@@ -461,11 +461,26 @@ export async function syncToSupabase(state: SatUserState) {
     const userId = getEffectiveUserId();
     if (!userId) return;
 
-    // 1. Sync XP & Streak to profiles table
-    await supabase.from('profiles').update({
-      xp: state.xp,
-      updated_at: new Date().toISOString()
-    }).eq('id', userId);
+    const currentUserName =
+      (typeof window !== 'undefined' ? (localStorage.getItem('cs_sat_user_name') || localStorage.getItem('cholosikhi_user_name')) : '') ||
+      'Digital SAT Scholar';
+
+    // 1. Ensure basic profile row exists for identity without clobbering python progress
+    const { data: existingProfile } = await supabase
+      .from('profiles')
+      .select('id, name')
+      .eq('id', userId)
+      .maybeSingle();
+
+    if (!existingProfile) {
+      await supabase.from('profiles').insert({
+        id: userId,
+        name: currentUserName,
+        avatar: 'hero',
+        created_at: new Date().toISOString(),
+        updated_at: new Date().toISOString()
+      });
+    }
 
     // 2. Sync routine and full attempts payload into sat_user_routines
     let rawStatusMap: Record<string, unknown> = {};

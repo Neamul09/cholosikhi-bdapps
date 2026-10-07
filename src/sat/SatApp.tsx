@@ -18,6 +18,7 @@ import CustomTestModal from './components/CustomTestModal';
 import SatFeedbackModal from './components/SatFeedbackModal';
 import { loadSatUserState, loadSatUserStateFromCloud } from './lib/satStorage';
 import { useAuthStore } from '@/store/authStore';
+import { useUserStore } from '@/store/userStore';
 import type { SatUserState } from './types';
 
 export default function SatApp() {
@@ -50,6 +51,7 @@ export default function SatApp() {
 
   useEffect(() => {
     if (session) {
+      useUserStore.getState().loadFromSupabase();
       loadSatUserStateFromCloud().then((cloudState) => {
         if (cloudState) setUserState(cloudState);
       });

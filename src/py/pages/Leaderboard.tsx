@@ -31,7 +31,8 @@ export default function LeaderboardView() {
       const data = filter === 'global' ? await loadLeaderboard() : await loadFriendsLeaderboard();
       if (cancelled) return;
       const session = useAuthStore.getState().session;
-      const userId = session?.id;
+      const user = useAuthStore.getState().user;
+      const userId = session?.id || user?.id;
 
       // Fetch following status for all users in view
       if (userId) {

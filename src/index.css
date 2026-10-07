@@ -358,12 +358,25 @@ table {
   }
 }
 
+@keyframes card-grid-drift {
+  0% {
+    background-position: 0 0;
+  }
+  100% {
+    background-position: 40px 40px;
+  }
+}
+
 .animate-card-aurora {
   animation: card-aurora-glow 10s ease-in-out infinite;
 }
 
 .animate-card-aurora-slow {
   animation: card-aurora-counter 14s ease-in-out infinite;
+}
+
+.animate-card-grid {
+  animation: card-grid-drift 20s linear infinite;
 }
 
 /* ─── Scrollbars ─────────────────────────────────── */
