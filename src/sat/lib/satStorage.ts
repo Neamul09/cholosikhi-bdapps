@@ -9,6 +9,7 @@ import type {
   MistakeRecord
 } from '../types';
 import { calculatePredictedScore } from './scorePredictor';
+import { supabase, isSupabaseConfigured } from '../../lib/supabase';
 import { useAuthStore } from '../../py/store/authStore';
 import { MICRO_TYPES } from '../data/microtypes';
 
