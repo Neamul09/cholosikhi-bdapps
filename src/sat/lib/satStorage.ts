@@ -484,6 +484,8 @@ export async function syncToSupabase(state: SatUserState) {
       ...cleanTasks,
       {
         id: '__sat_attempts_store__',
+        xp: state.xp,
+        streak: state.streak,
         attempts: state.attempts,
         questionStatus: rawStatusMap,
         syncedAt: new Date().toISOString()
@@ -622,21 +624,17 @@ export async function loadSatUserStateFromCloud(): Promise<SatUserState | null> 
 
     const local = loadSatUserState();
 
-    // 1. Fetch Profile for XP & Streak
+    // 1. Fetch Profile for Name only (do not clobber SAT XP with Python total_xp)
     const { data: profile } = await supabase
       .from('profiles')
-      .select('xp, streak')
+      .select('name, avatar_url')
       .eq('id', userId)
-      .single();
+      .maybeSingle();
 
     if (profile) {
-      if (typeof profile.xp === 'number') {
-        local.xp = profile.xp;
-        localStorage.setItem(KEYS.XP, String(local.xp));
-      }
-      if (typeof profile.streak === 'number') {
-        local.streak = profile.streak;
-        localStorage.setItem(KEYS.STREAK, String(local.streak));
+      if (profile.name && typeof window !== 'undefined') {
+        localStorage.setItem('cs_sat_user_name', profile.name);
+        localStorage.setItem('cholosikhi_user_name', profile.name);
       }
     }
 
@@ -645,12 +643,14 @@ export async function loadSatUserStateFromCloud(): Promise<SatUserState | null> 
       .from('sat_user_routines')
       .select('*')
       .eq('user_id', userId)
-      .single();
+      .maybeSingle();
 
     if (routineData) {
       let tasks: RoutineTask[] = [];
       interface RoutineStorePayload {
         id?: string;
+        xp?: number;
+        streak?: number;
         attempts?: QuestionAttemptLog[];
         questionStatus?: Record<string, unknown>;
       }
@@ -662,6 +662,14 @@ export async function loadSatUserStateFromCloud(): Promise<SatUserState | null> 
         if (storeTask) {
           cloudAttempts = storeTask.attempts || null;
           cloudQuestionStatus = storeTask.questionStatus || null;
+          if (typeof storeTask.xp === 'number' && storeTask.xp > 0) {
+            local.xp = Math.max(local.xp, storeTask.xp);
+            localStorage.setItem(KEYS.XP, String(local.xp));
+          }
+          if (typeof storeTask.streak === 'number' && storeTask.streak > 0) {
+            local.streak = Math.max(local.streak, storeTask.streak);
+            localStorage.setItem(KEYS.STREAK, String(local.streak));
+          }
           tasks = (routineData.daily_tasks as (RoutineStorePayload & RoutineTask)[]).filter((t) => t && t.id !== '__sat_attempts_store__');
         } else {
           tasks = routineData.daily_tasks as RoutineTask[];
@@ -669,12 +677,22 @@ export async function loadSatUserStateFromCloud(): Promise<SatUserState | null> 
       } else if (routineData.daily_tasks && typeof routineData.daily_tasks === 'object') {
         const payload = routineData.daily_tasks as {
           tasks?: RoutineTask[];
+          xp?: number;
+          streak?: number;
           attempts?: QuestionAttemptLog[];
           questionStatus?: Record<string, unknown>;
         };
         tasks = payload.tasks || [];
         cloudAttempts = payload.attempts || null;
         cloudQuestionStatus = payload.questionStatus || null;
+        if (typeof payload.xp === 'number' && payload.xp > 0) {
+          local.xp = Math.max(local.xp, payload.xp);
+          localStorage.setItem(KEYS.XP, String(local.xp));
+        }
+        if (typeof payload.streak === 'number' && payload.streak > 0) {
+          local.streak = Math.max(local.streak, payload.streak);
+          localStorage.setItem(KEYS.STREAK, String(local.streak));
+        }
       }
 
       local.routine = {

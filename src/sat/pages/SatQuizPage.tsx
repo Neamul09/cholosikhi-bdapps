@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo } from 'react';
+import { useState, useEffect, useMemo, useCallback } from 'react';
 import { useSearchParams, useNavigate, Link } from 'react-router-dom';
 import { clsx } from 'clsx';
 import confetti from 'canvas-confetti';
@@ -464,42 +464,70 @@ export default function SatQuizPage() {
     const initialMods = computeModulesForTest(pool, mode === 'practice_test');
     const firstModule = initialMods[0];
     setTimeRemainingSeconds(firstModule ? firstModule.timeLimitSeconds : pool.length * 80);
-  }, [mode, microTypeParam, questionIdParam, sectionParam, countParam, domainParam, topicsParam, difficultyParam, diffMixParam, dueOnlyParam]);
+  }, [mode, microTypeParam, questionIdParam, sectionParam, countParam, domainParam, parsedTopics, difficultyParam, diffMixParam, dueOnlyParam]);
 
-  // Main active module timer countdown
-  useEffect(() => {
-    if (isQuizCompleted || timedParam === 'false' || isOnBreak) return;
-    const timer = setInterval(() => {
-      setTimeRemainingSeconds(prev => {
-        if (prev <= 1) {
-          clearInterval(timer);
-          handleTimeExpiredAdvance();
-          return 0;
-        }
-        return prev - 1;
-      });
-    }, 1000);
-    return () => clearInterval(timer);
-  }, [isQuizCompleted, timedParam, isOnBreak, currentModuleIdx, modules]);
+  const handleFinishQuiz = useCallback(() => {
+    play('achievement');
+    setIsQuizCompleted(true);
+    confetti({ particleCount: 120, spread: 70, origin: { y: 0.6 } });
 
-  // 10-Minute Break countdown timer
-  useEffect(() => {
-    if (!isOnBreak) return;
-    const breakTimer = setInterval(() => {
-      setBreakRemainingSeconds(prev => {
-        if (prev <= 1) {
-          clearInterval(breakTimer);
-          handleResumeFromBreak();
-          return 0;
-        }
-        return prev - 1;
-      });
-    }, 1000);
-    return () => clearInterval(breakTimer);
-  }, [isOnBreak, currentModuleIdx]);
+    // Evaluate all answers
+    const evaluatedStates = questionStates.map(state => {
+      const q = state.question;
+      const ans = state.userAnswer?.trim();
+      const isAnsCorrect = Boolean(
+        ans &&
+        (q.correctAnswers.includes(ans) ||
+         q.correctAnswers.some(c => c.toLowerCase() === ans.toLowerCase()))
+      );
+
+      if (ans) {
+        recordQuestionAttempt(
+          q.id,
+          q.test,
+          q.domain,
+          q.skill,
+          q.microType,
+          q.difficulty,
+          ans,
+          q.correctAnswers[0] || '',
+          isAnsCorrect
+        );
+      }
+
+      return {
+        ...state,
+        isCorrect: isAnsCorrect
+      };
+    });
+
+    setQuestionStates(evaluatedStates);
+
+    const correctCount = evaluatedStates.filter(s => s.isCorrect).length;
+    const accuracy = Math.round((correctCount / questions.length) * 100);
+
+    const result: QuizSessionResult = {
+      id: 'session-' + Date.now(),
+      title: mode === 'practice_test' ? 'SAT Full Practice Test' : 'Diagnostic Drill',
+      quizType: (mode as 'custom_drill' | 'hardest_drill' | 'practice_test' | 'mistake_review'),
+      section: sectionParam === 'all' ? 'full' : sectionParam,
+      totalQuestions: questions.length,
+      correctCount,
+      incorrectCount: questions.length - correctCount,
+      unansweredCount: evaluatedStates.filter(s => !s.userAnswer).length,
+      accuracy,
+      timeSpentSeconds: questions.length * 80 - timeRemainingSeconds,
+      xpEarned: correctCount * 20 + 25,
+      predictedScoreImpact: Math.round((accuracy - 60) * 0.4),
+      completedAt: new Date().toISOString(),
+      questionStates: evaluatedStates
+    };
+
+    recordQuizSession(result);
+  }, [mode, questions, questionStates, sectionParam, timeRemainingSeconds]);
 
   // Auto-advance when time expires in a module
-  const handleTimeExpiredAdvance = () => {
+  const handleTimeExpiredAdvance = useCallback(() => {
     play('incorrect');
     if (!isModuleBased || isLastModule) {
       handleFinishQuiz();
@@ -526,10 +554,10 @@ export default function SatQuizPage() {
         handleFinishQuiz();
       }
     }
-  };
+  }, [currentModuleIdx, handleFinishQuiz, isLastModule, isModuleBased, modules, questions.length]);
 
   // User confirmed advance to next module or break
-  const handleConfirmAdvanceModule = () => {
+  const handleConfirmAdvanceModule = useCallback(() => {
     setShowModuleReviewModal(false);
 
     // Check if transitioning from Reading & Writing to Math (Section 1 -> Section 2: Trigger 10-Minute Break)
@@ -552,10 +580,10 @@ export default function SatQuizPage() {
         handleFinishQuiz();
       }
     }
-  };
+  }, [currentModuleIdx, handleFinishQuiz, modules, questions.length]);
 
   // Resume early or after countdown from 10-minute break
-  const handleResumeFromBreak = () => {
+  const handleResumeFromBreak = useCallback(() => {
     play('tap');
     setIsOnBreak(false);
 
@@ -568,7 +596,39 @@ export default function SatQuizPage() {
     } else {
       handleFinishQuiz();
     }
-  };
+  }, [currentModuleIdx, handleFinishQuiz, modules]);
+
+  // Main active module timer countdown
+  useEffect(() => {
+    if (isQuizCompleted || timedParam === 'false' || isOnBreak) return;
+    const timer = setInterval(() => {
+      setTimeRemainingSeconds(prev => {
+        if (prev <= 1) {
+          clearInterval(timer);
+          handleTimeExpiredAdvance();
+          return 0;
+        }
+        return prev - 1;
+      });
+    }, 1000);
+    return () => clearInterval(timer);
+  }, [isQuizCompleted, timedParam, isOnBreak, currentModuleIdx, modules, handleTimeExpiredAdvance]);
+
+  // 10-Minute Break countdown timer
+  useEffect(() => {
+    if (!isOnBreak) return;
+    const breakTimer = setInterval(() => {
+      setBreakRemainingSeconds(prev => {
+        if (prev <= 1) {
+          clearInterval(breakTimer);
+          handleResumeFromBreak();
+          return 0;
+        }
+        return prev - 1;
+      });
+    }, 1000);
+    return () => clearInterval(breakTimer);
+  }, [isOnBreak, currentModuleIdx, handleResumeFromBreak]);
 
   const currentQ = questions[currentIndex];
   const currentState = questionStates[currentIndex] || {
@@ -649,66 +709,6 @@ export default function SatQuizPage() {
       copy[currentIndex] = { ...copy[currentIndex], isCorrect: isAnsCorrect };
       return copy;
     });
-  };
-
-  const handleFinishQuiz = () => {
-    play('achievement');
-    setIsQuizCompleted(true);
-    confetti({ particleCount: 120, spread: 70, origin: { y: 0.6 } });
-
-    // Evaluate all answers
-    const evaluatedStates = questionStates.map(state => {
-      const q = state.question;
-      const ans = state.userAnswer?.trim();
-      const isAnsCorrect = Boolean(
-        ans &&
-        (q.correctAnswers.includes(ans) ||
-         q.correctAnswers.some(c => c.toLowerCase() === ans.toLowerCase()))
-      );
-
-      if (ans) {
-        recordQuestionAttempt(
-          q.id,
-          q.test,
-          q.domain,
-          q.skill,
-          q.microType,
-          q.difficulty,
-          ans,
-          q.correctAnswers[0] || '',
-          isAnsCorrect
-        );
-      }
-
-      return {
-        ...state,
-        isCorrect: isAnsCorrect
-      };
-    });
-
-    setQuestionStates(evaluatedStates);
-
-    const correctCount = evaluatedStates.filter(s => s.isCorrect).length;
-    const accuracy = Math.round((correctCount / questions.length) * 100);
-
-    const result: QuizSessionResult = {
-      id: 'session-' + Date.now(),
-      title: mode === 'practice_test' ? 'SAT Full Practice Test' : 'Diagnostic Drill',
-      quizType: (mode as 'custom_drill' | 'hardest_drill' | 'practice_test' | 'mistake_review'),
-      section: sectionParam === 'all' ? 'full' : sectionParam,
-      totalQuestions: questions.length,
-      correctCount,
-      incorrectCount: questions.length - correctCount,
-      unansweredCount: evaluatedStates.filter(s => !s.userAnswer).length,
-      accuracy,
-      timeSpentSeconds: questions.length * 80 - timeRemainingSeconds,
-      xpEarned: correctCount * 20 + 25,
-      predictedScoreImpact: Math.round((accuracy - 60) * 0.4),
-      completedAt: new Date().toISOString(),
-      questionStates: evaluatedStates
-    };
-
-    recordQuizSession(result);
   };
 
   const handlePracticeMoreInMicroType = () => {

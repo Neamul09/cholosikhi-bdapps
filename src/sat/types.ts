@@ -191,6 +191,7 @@ export interface SatLeaderboardUser {
   league: 'wood' | 'bronze' | 'silver' | 'gold' | 'sapphire' | 'ruby' | 'diamond';
   rank: number;
   isCurrentUser?: boolean;
+  isFollowing?: boolean;
 }
 
 export interface QuestionAttemptLog {

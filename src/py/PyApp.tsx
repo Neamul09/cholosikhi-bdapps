@@ -10,6 +10,7 @@ import { useQuestStore } from './store/questStore';
 import ProtectedRoute from './components/layout/ProtectedRoute';
 import Toaster from './components/common/Toaster';
 import NiniNotification from './components/common/NiniNotification';
+import SuspensePageLoader from '../components/SuspensePageLoader';
 
 // Eager-loaded core pages
 import Home from './pages/Home';
@@ -60,37 +61,37 @@ export default function PyApp() {
       <Routes>
         <Route path="/auth" element={<Auth />} />
         <Route path="/welcome" element={<Welcome />} />
-        <Route path="/privacy" element={<Suspense fallback={null}><Privacy /></Suspense>} />
-        <Route path="/terms" element={<Suspense fallback={null}><Terms /></Suspense>} />
-        <Route path="/admin" element={<Suspense fallback={null}><AdminAnalytics /></Suspense>} />
-        <Route path="/admin/analytics" element={<Suspense fallback={null}><AdminAnalytics /></Suspense>} />
+        <Route path="/privacy" element={<Suspense fallback={<SuspensePageLoader />}><Privacy /></Suspense>} />
+        <Route path="/terms" element={<Suspense fallback={<SuspensePageLoader />}><Terms /></Suspense>} />
+        <Route path="/admin" element={<Suspense fallback={<SuspensePageLoader />}><AdminAnalytics /></Suspense>} />
+        <Route path="/admin/analytics" element={<Suspense fallback={<SuspensePageLoader />}><AdminAnalytics /></Suspense>} />
         <Route
           path="/certificate"
           element={
-            <Suspense fallback={null}>
+            <Suspense fallback={<SuspensePageLoader />}>
               {session ? <AppShell><Certificate /></AppShell> : <Certificate />}
             </Suspense>
           }
         />
 
         <Route element={<ProtectedRoute />}>
-          <Route path="/session/:lessonId" element={<Suspense fallback={null}><Session /></Suspense>} />
+          <Route path="/session/:lessonId" element={<Suspense fallback={<SuspensePageLoader />}><Session /></Suspense>} />
           <Route
             path="/"
             element={
-              <Suspense fallback={null}>
+              <Suspense fallback={<SuspensePageLoader />}>
                 <AppShell><Home /></AppShell>
               </Suspense>
             }
           />
-          <Route path="/playground" element={<Suspense fallback={null}><AppShell><CodePlayground /></AppShell></Suspense>} />
-          <Route path="/leaderboard" element={<Suspense fallback={null}><AppShell><Leaderboard /></AppShell></Suspense>} />
-          <Route path="/achievements" element={<Suspense fallback={null}><AppShell><Achievements /></AppShell></Suspense>} />
-          <Route path="/certificate/exam" element={<Suspense fallback={null}><CertificationExam /></Suspense>} />
-          <Route path="/ai-tutor" element={<Suspense fallback={null}><AppShell><AiTutor /></AppShell></Suspense>} />
+          <Route path="/playground" element={<Suspense fallback={<SuspensePageLoader />}><AppShell><CodePlayground /></AppShell></Suspense>} />
+          <Route path="/leaderboard" element={<Suspense fallback={<SuspensePageLoader />}><AppShell><Leaderboard /></AppShell></Suspense>} />
+          <Route path="/achievements" element={<Suspense fallback={<SuspensePageLoader />}><AppShell><Achievements /></AppShell></Suspense>} />
+          <Route path="/certificate/exam" element={<Suspense fallback={<SuspensePageLoader />}><CertificationExam /></Suspense>} />
+          <Route path="/ai-tutor" element={<Suspense fallback={<SuspensePageLoader />}><AppShell><AiTutor /></AppShell></Suspense>} />
           <Route path="/tutor" element={<Navigate to="/py/ai-tutor" replace />} />
           <Route path="/profile" element={<AppShell><Profile /></AppShell>} />
-          <Route path="/discover" element={<Suspense fallback={null}><AppShell><Discover /></AppShell></Suspense>} />
+          <Route path="/discover" element={<Suspense fallback={<SuspensePageLoader />}><AppShell><Discover /></AppShell></Suspense>} />
           <Route path="/learn" element={<Navigate to="/py" replace />} />
         </Route>
 

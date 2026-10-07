@@ -22,6 +22,7 @@ import AdminDashboard from './pages/AdminDashboard';
 import SatApp from './sat/SatApp';
 import PyApp from './py/PyApp';
 import Auth from './py/pages/Auth';
+import TopLoadingBar from './components/TopLoadingBar';
 
 const FacebookIcon = ({ size = 20 }: { size?: number }) => (
   <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M18 2h-3a5 5 0 0 0-5 5v3H7v4h3v8h4v-8h3l1-4h-4V7a1 1 0 0 1 1-1h3z"/></svg>
@@ -63,7 +64,7 @@ function MainLandingPage() {
       ecosystemTitle: 'CHOLOSIKHI ECOSYSTEM',
       platformEnter: 'Explore Platform',
       platformComing: 'Coming Soon',
-      bdappsBanner: 'Powered by bdapps Direct Carrier Billing · ৳2.78/day (Robi & Airtel subscribers)',
+      bdappsBanner: 'Powered by bdapps Direct Carrier Billing · ৳2.78/day (Robi & Cirkle subscribers)',
       footerDesc: 'Building high-impact gamified learning products for the next generation. From acing the Digital SAT to mastering Python, C++, and AI.',
       copyright: '© 2026 CholoSikhi Ecosystem. All rights reserved.',
       madeIn: 'Made with ❤️ in Bangladesh for the world'
@@ -79,7 +80,7 @@ function MainLandingPage() {
       ecosystemTitle: 'চলোশিখি ইকোসিস্টেম',
       platformEnter: 'শুরু করো',
       platformComing: 'শীঘ্রই আসছে',
-      bdappsBanner: 'bdapps ডিরেক্ট ক্যারিয়ার বিলিং সমর্থিত · মাত্র ৳২.৭৮/দিন (রবি ও এয়ারটেল গ্রাহকদের জন্য)',
+      bdappsBanner: 'bdapps ডিরেক্ট ক্যারিয়ার বিলিং সমর্থিত · মাত্র ৳২.৭৮/দিন (রবি ও সার্কেল গ্রাহকদের জন্য)',
       footerDesc: 'পরবর্তী প্রজন্মের জন্য শীর্ষমানের প্রযুক্তি শিক্ষা ও টেস্ট প্রেপ প্ল্যাটফর্ম। ডিজিটাল SAT প্রস্তুতি থেকে শুরু করে পাইথন, সি++ ও এআই।',
       copyright: '© ২০২৬ CholoSikhi ইকোসিস্টেম। সর্বস্বত্ব সংরক্ষিত।',
       madeIn: 'বিশ্বের জন্য বাংলাদেশে ❤️ দিয়ে তৈরি'
@@ -270,7 +271,7 @@ function MainLandingPage() {
               <div className="flex flex-wrap items-center gap-2.5">
                 <span className="inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-full bg-emerald-400/15 border border-emerald-400/40 text-emerald-400 font-black text-[11px] uppercase tracking-wider">
                   <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
-                  {language === 'en' ? 'DIRECT CARRIER BILLING (DCB)' : 'রবি ও এয়ারটেল ডিরেক্ট ক্যারিয়ার বিলিং'}
+                  {language === 'en' ? 'DIRECT CARRIER BILLING (DCB)' : 'রবি ও সার্কেল ডিরেক্ট ক্যারিয়ার বিলিং'}
                 </span>
                 <span className="px-3 py-1 rounded-full bg-cyan-400/10 border border-cyan-400/30 text-cyan-300 font-bold text-xs">
                   {language === 'en' ? 'Powered by bdapps' : 'bdapps সমর্থিত'}
@@ -287,14 +288,14 @@ function MainLandingPage() {
                 </h2>
                 <p className="text-sm sm:text-base text-app-fg/75 font-medium mt-2 leading-relaxed">
                   {language === 'en'
-                    ? 'A single micro-subscription via Robi & Airtel mobile balance unlocks unlimited access to both our Digital SAT Suite and Python & C++ Academy with 24/7 Nini AI.'
-                    : 'রবি ও এয়ারটেল মোবাইল ব্যালেন্স থেকে মাত্র ৳২.৭৮/দিন (+ভ্যাট/এসডি/এসসি) চার্জে ডিজিটাল SAT স্যুট এবং পাইথন ও সি++ একাডেমি—দুটি প্ল্যাটফর্মেরই পূর্ণ অ্যাক্সেস ও ২৪/৭ নিনি এআই মেন্টরিং।'}
+                    ? 'A single micro-subscription via Robi & Cirkle mobile balance unlocks unlimited access to both our Digital SAT Suite and Python & C++ Academy with 24/7 Nini AI.'
+                    : 'রবি ও সার্কেল মোবাইল ব্যালেন্স থেকে মাত্র ৳২.৭৮/দিন (+ভ্যাট/এসডি/এসসি) চার্জে ডিজিটাল SAT স্যুট এবং পাইথন ও সি++ একাডেমি—দুটি প্ল্যাটফর্মেরই পূর্ণ অ্যাক্সেস ও ২৪/৭ নিনি এআই মেন্টরিং।'}
                 </p>
               </div>
 
               <div className="grid grid-cols-2 sm:grid-cols-4 gap-2.5 pt-1">
                 {[
-                  { icon: <Smartphone size={14} className="text-emerald-400" />, text: language === 'en' ? 'Robi & Airtel Airtime' : 'রবি ও এয়ারটেল ব্যালেন্স' },
+                  { icon: <Smartphone size={14} className="text-emerald-400" />, text: language === 'en' ? 'Robi & Cirkle Airtime' : 'রবি ও সার্কেল ব্যালেন্স' },
                   { icon: <ShieldCheck size={14} className="text-emerald-400" />, text: language === 'en' ? 'Instant OTP Login' : 'ইনস্ট্যান্ট OTP লগইন' },
                   { icon: <Target size={14} className="text-cyan-400" />, text: language === 'en' ? 'Dual-Track Access' : 'SAT + কোডিং অ্যাক্সেস' },
                   { icon: <BrainCircuit size={14} className="text-purple-400" />, text: language === 'en' ? '24/7 Nini AI Tutor' : '২৪/৭ নিনি এআই টিউটর' }
@@ -313,7 +314,7 @@ function MainLandingPage() {
                   ৳২.৭৮ <span className="text-xs text-app-fg/60 font-bold uppercase">{language === 'en' ? '/ day (+tax)' : '/ দিন (+ভ্যাট)'}</span>
                 </div>
                 <p className="text-[11px] font-bold text-app-fg/50">
-                  {language === 'en' ? 'Robi & Airtel DCB · Cancel anytime' : 'রবি ও এয়ারটেল গ্রাহকদের জন্য · যেকোনো সময় বাতিলযোগ্য'}
+                  {language === 'en' ? 'Robi & Cirkle DCB · Cancel anytime' : 'রবি ও সার্কেল গ্রাহকদের জন্য · যেকোনো সময় বাতিলযোগ্য'}
                 </p>
               </div>
 
@@ -635,27 +636,30 @@ export default function App() {
   }, []);
 
   return (
-    <Routes>
-      <Route path="/admin/*" element={<AdminDashboard />} />
-      <Route path="/sat/*" element={<SatApp />} />
-      <Route path="/auth" element={<Auth />} />
-      <Route path="/py/auth" element={<Auth />} />
-      <Route path="/py/*" element={<PyApp />} />
+    <>
+      <TopLoadingBar />
+      <Routes>
+        <Route path="/admin/*" element={<AdminDashboard />} />
+        <Route path="/sat/*" element={<SatApp />} />
+        <Route path="/auth" element={<Auth />} />
+        <Route path="/py/auth" element={<Auth />} />
+        <Route path="/py/*" element={<PyApp />} />
 
-      {/* Direct/External link fallbacks for PyApp routes */}
-      <Route path="/session/*" element={<RedirectToPy />} />
-      <Route path="/certificate/*" element={<RedirectToPy />} />
-      <Route path="/certificate" element={<RedirectToPy />} />
-      <Route path="/playground" element={<RedirectToPy prefix="/playground" />} />
-      <Route path="/leaderboard" element={<RedirectToPy prefix="/leaderboard" />} />
-      <Route path="/achievements" element={<RedirectToPy prefix="/achievements" />} />
-      <Route path="/discover" element={<RedirectToPy prefix="/discover" />} />
-      <Route path="/welcome" element={<RedirectToPy prefix="/welcome" />} />
-      <Route path="/learn/*" element={<RedirectToPy prefix="" />} />
-      <Route path="/learn" element={<RedirectToPy prefix="" />} />
+        {/* Direct/External link fallbacks for PyApp routes */}
+        <Route path="/session/*" element={<RedirectToPy />} />
+        <Route path="/certificate/*" element={<RedirectToPy />} />
+        <Route path="/certificate" element={<RedirectToPy />} />
+        <Route path="/playground" element={<RedirectToPy prefix="/playground" />} />
+        <Route path="/leaderboard" element={<RedirectToPy prefix="/leaderboard" />} />
+        <Route path="/achievements" element={<RedirectToPy prefix="/achievements" />} />
+        <Route path="/discover" element={<RedirectToPy prefix="/discover" />} />
+        <Route path="/welcome" element={<RedirectToPy prefix="/welcome" />} />
+        <Route path="/learn/*" element={<RedirectToPy prefix="" />} />
+        <Route path="/learn" element={<RedirectToPy prefix="" />} />
 
-      <Route path="/" element={<MainLandingPage />} />
-      <Route path="*" element={<MainLandingPage />} />
-    </Routes>
+        <Route path="/" element={<MainLandingPage />} />
+        <Route path="*" element={<MainLandingPage />} />
+      </Routes>
+    </>
   );
 }
