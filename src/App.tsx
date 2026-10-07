@@ -114,16 +114,16 @@ function MainLandingPage() {
         : ['ব্রাউজারে কোড এক্সিকিউশন', 'নিনি এআই টিউটর', 'গ্যামিফাইড স্ট্রিক ও লিগ', 'ভেরিফায়েড সার্টিফিকেট']
     },
     {
-      title: language === 'en' ? 'bdapps All-Access Pass' : 'bdapps অল-অ্যাক্সেস পাস',
+      title: language === 'en' ? 'Nini AI 24/7 Co-Pilot' : 'নিনি এআই ২৪/৭ কো-পাইলট',
       description: language === 'en'
-        ? 'Single ৳2.78/day micro-subscription via Robi/Airtel DCB unlocking full access to both Digital SAT Suite and Python Academy with 24/7 Nini AI.'
-        : 'রবি ও এয়ারটেল ডিরেক্ট ক্যারিয়ার বিলিং এর মাধ্যমে মাত্র ৳২.৭৮/দিনে SAT স্যুট ও পাইথন একাডেমির ফুল অ্যাক্সেস ও নিনি এআই সাপোর্ট।',
-      icon: <Smartphone className="text-emerald-400" size={32} />,
-      link: '/auth',
-      tag: language === 'en' ? '৳2.78 / DAY' : '৳২.৭৮ / দিন',
+        ? 'Real-time contextual pedagogical mentoring, error diagnosis, syntax hints, and conversational test prep support in English & Bengali.'
+        : 'রিয়েল-টাইম এআই মেন্টরিং, কোড এরর ডায়াগনসিস, সিনট্যাক্স হিন্টস এবং বাংলা ও ইংরেজিতে সার্বক্ষণিক টেস্ট প্রেপ গাইডেন্স।',
+      icon: <BrainCircuit className="text-purple-400" size={32} />,
+      link: '/py/ai-tutor',
+      tag: 'LIVE',
       features: language === 'en'
-        ? ['Robi & Airtel DCB', 'Instant OTP Login', 'Dual-Track Access', 'Nini AI 24/7']
-        : ['রবি ও এয়ারটেল DCB', 'তাৎক্ষণিক OTP লগইন', 'সব ট্র্যাকে অ্যাক্সেস', '২৪/৭ নিনি এআই']
+        ? ['Bengali & English Support', 'Smart Error Diagnosis', 'Socratic Guidance', 'Direct Code Execution']
+        : ['বাংলা ও ইংরেজি সমর্থন', 'স্মার্ট এরর ডায়াগনসিস', 'সক্রেটিক গাইডেন্স', 'সরাসরি কোড টেস্ট']
     },
     {
       title: language === 'en' ? 'AI Horizon' : 'এআই হরাইজন',
@@ -233,7 +233,7 @@ function MainLandingPage() {
           initial={{ opacity: 0, y: 25 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.7, ease: "easeOut" }}
-          className="text-center space-y-4 max-w-4xl mx-auto mb-16"
+          className="text-center space-y-4 max-w-4xl mx-auto mb-12"
         >
           <div className="inline-flex items-center gap-2 px-5 py-2 rounded-full bg-white/5 border border-white/10 text-blue-400 font-black text-[10px] uppercase tracking-[0.2em]">
             <Sparkles size={12} />
@@ -248,18 +248,98 @@ function MainLandingPage() {
 
           <p className="text-base md:text-xl text-app-fg/70 font-semibold max-w-2xl mx-auto leading-relaxed">
             {language === 'en'
-              ? 'Jump directly into our specialized learning platforms. From micro-type Digital SAT mastery to gamified programming and AI mentoring.'
-              : 'সরাসরি আমাদের বিশেষায়িত প্ল্যাটফর্মে যুক্ত হও। ডিজিটাল SAT প্রস্তুতি থেকে শুরু করে গ্যামিফাইড কোডিং ও এআই টিউটরিং।'}
+              ? 'Jump directly into our specialized learning platforms or activate your bdapps All-Access Pass for unlimited access to both suites.'
+              : 'সরাসরি আমাদের বিশেষায়িত প্ল্যাটফর্মে যুক্ত হও অথবা bdapps অল-অ্যাক্সেস পাস সক্রিয় করে দুটি প্ল্যাটফর্মের সম্পূর্ণ সুবিধা উপভোগ করো।'}
           </p>
         </motion.div>
 
-        {/* ─── Product Cards Grid ─── */}
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-8 items-stretch">
+        {/* ─── bdapps All-Access Pass Spotlight Ribbon (Above 2 Products) ─── */}
+        <motion.div
+          initial={{ opacity: 0, y: 25 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.7, delay: 0.1 }}
+          className="mb-12 rounded-[2.5rem] p-6 sm:p-8 md:p-10 bg-panel/90 border-2 border-emerald-500/40 hover:border-emerald-400 shadow-2xl relative overflow-hidden backdrop-blur-xl transition-all duration-300 group"
+        >
+          <div className="absolute inset-0 pointer-events-none overflow-hidden rounded-[2.5rem]">
+            <div className="absolute -top-24 -right-24 w-96 h-96 rounded-full bg-emerald-500/15 blur-3xl animate-card-aurora" />
+            <div className="absolute -bottom-24 -left-24 w-96 h-96 rounded-full bg-teal-600/15 blur-3xl animate-card-aurora-slow" />
+          </div>
+
+          <div className="relative z-10 flex flex-col lg:flex-row items-center justify-between gap-8">
+            <div className="space-y-4 max-w-3xl">
+              <div className="flex flex-wrap items-center gap-2.5">
+                <span className="inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-full bg-emerald-400/15 border border-emerald-400/40 text-emerald-400 font-black text-[11px] uppercase tracking-wider">
+                  <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
+                  {language === 'en' ? 'DIRECT CARRIER BILLING (DCB)' : 'রবি ও এয়ারটেল ডিরেক্ট ক্যারিয়ার বিলিং'}
+                </span>
+                <span className="px-3 py-1 rounded-full bg-cyan-400/10 border border-cyan-400/30 text-cyan-300 font-bold text-xs">
+                  {language === 'en' ? 'Powered by bdapps' : 'bdapps সমর্থিত'}
+                </span>
+                <span className="px-3 py-1 rounded-full bg-white/5 border border-white/10 text-app-fg/70 font-bold text-xs">
+                  {language === 'en' ? 'No Credit Card Needed' : 'কোনো ক্রেডিট কার্ড ছাড়াই'}
+                </span>
+              </div>
+
+              <div>
+                <h2 className="text-2xl sm:text-3xl md:text-4xl font-black text-app-fg tracking-tight">
+                  {language === 'en' ? 'bdapps All-Access Pass' : 'bdapps অল-অ্যাক্সেস পাস'}
+                  <span className="text-emerald-400 ml-2">৳2.78 {language === 'en' ? '/ day' : '/ দিন'}</span>
+                </h2>
+                <p className="text-sm sm:text-base text-app-fg/75 font-medium mt-2 leading-relaxed">
+                  {language === 'en'
+                    ? 'A single micro-subscription via Robi & Airtel mobile balance unlocks unlimited access to both our Digital SAT Suite and Python & C++ Academy with 24/7 Nini AI.'
+                    : 'রবি ও এয়ারটেল মোবাইল ব্যালেন্স থেকে মাত্র ৳২.৭৮/দিন (+ভ্যাট/এসডি/এসসি) চার্জে ডিজিটাল SAT স্যুট এবং পাইথন ও সি++ একাডেমি—দুটি প্ল্যাটফর্মেরই পূর্ণ অ্যাক্সেস ও ২৪/৭ নিনি এআই মেন্টরিং।'}
+                </p>
+              </div>
+
+              <div className="grid grid-cols-2 sm:grid-cols-4 gap-2.5 pt-1">
+                {[
+                  { icon: <Smartphone size={14} className="text-emerald-400" />, text: language === 'en' ? 'Robi & Airtel Airtime' : 'রবি ও এয়ারটেল ব্যালেন্স' },
+                  { icon: <ShieldCheck size={14} className="text-emerald-400" />, text: language === 'en' ? 'Instant OTP Login' : 'ইনস্ট্যান্ট OTP লগইন' },
+                  { icon: <Target size={14} className="text-cyan-400" />, text: language === 'en' ? 'Dual-Track Access' : 'SAT + কোডিং অ্যাক্সেস' },
+                  { icon: <BrainCircuit size={14} className="text-purple-400" />, text: language === 'en' ? '24/7 Nini AI Tutor' : '২৪/৭ নিনি এআই টিউটর' }
+                ].map((pill, idx) => (
+                  <div key={idx} className="flex items-center gap-2 p-2.5 rounded-xl bg-white/5 border border-white/10 text-xs font-bold text-app-fg/85">
+                    {pill.icon}
+                    <span className="truncate">{pill.text}</span>
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            <div className="w-full lg:w-auto shrink-0 flex flex-col items-center lg:items-end gap-3 text-center lg:text-right">
+              <div className="space-y-1">
+                <div className="text-3xl sm:text-4xl font-black text-emerald-400 tracking-tight">
+                  ৳২.৭৮ <span className="text-xs text-app-fg/60 font-bold uppercase">{language === 'en' ? '/ day (+tax)' : '/ দিন (+ভ্যাট)'}</span>
+                </div>
+                <p className="text-[11px] font-bold text-app-fg/50">
+                  {language === 'en' ? 'Robi & Airtel DCB · Cancel anytime' : 'রবি ও এয়ারটেল গ্রাহকদের জন্য · যেকোনো সময় বাতিলযোগ্য'}
+                </p>
+              </div>
+
+              <button
+                onClick={() => {
+                  play('correct');
+                  trackEvent('cta_click', { cta: 'hero_bdapps_pass_banner' });
+                  navigate('/auth');
+                }}
+                className="w-full sm:w-auto btn-duo btn-duo-green py-4 px-8 text-sm flex items-center justify-center gap-2.5 shadow-[0_0_25px_rgba(16,185,129,0.3)] hover:shadow-[0_0_35px_rgba(16,185,129,0.5)] transition-all"
+              >
+                <ShieldCheck size={18} />
+                <span>{language === 'en' ? 'Get All-Access Pass' : 'অল-অ্যাক্সেস পাস নাও / লগইন'}</span>
+                <ArrowRight size={16} className="group-hover:translate-x-1.5 transition-transform" />
+              </button>
+            </div>
+          </div>
+        </motion.div>
+
+        {/* ─── 2 Flagship Product Cards Grid ─── */}
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 items-stretch">
           {/* Card 1: Digital SAT Suite (Flagship) */}
           <motion.div
             initial={{ opacity: 0, y: 30 }}
             animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.6, delay: 0.1 }}
+            transition={{ duration: 0.6, delay: 0.2 }}
             className="group relative rounded-[2.5rem] p-8 md:p-9 bg-panel border-2 border-cyan-500/40 hover:border-cyan-400 shadow-2xl hover:shadow-[0_0_40px_rgba(6,182,212,0.2)] transition-all duration-500 flex flex-col justify-between overflow-hidden"
           >
             <div className="absolute inset-0 pointer-events-none overflow-hidden rounded-[2.5rem]">
@@ -328,7 +408,7 @@ function MainLandingPage() {
           <motion.div
             initial={{ opacity: 0, y: 30 }}
             animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.6, delay: 0.2 }}
+            transition={{ duration: 0.6, delay: 0.3 }}
             className="group relative rounded-[2.5rem] p-8 md:p-9 bg-panel border border-border-subtle hover:border-blue-500/60 shadow-xl hover:shadow-[0_0_40px_rgba(59,130,246,0.15)] transition-all duration-500 flex flex-col justify-between overflow-hidden"
           >
             <div className="absolute inset-0 pointer-events-none overflow-hidden rounded-[2.5rem]">
@@ -386,74 +466,6 @@ function MainLandingPage() {
                 className="w-full btn-duo btn-duo-blue py-4 px-6 text-sm flex items-center justify-center gap-2 group-hover:shadow-[0_0_20px_rgba(59,130,246,0.3)] transition-all"
               >
                 <span>{language === 'en' ? 'Start Coding (/py)' : 'কোডিং শুরু করো (/py)'}</span>
-                <ArrowRight size={16} className="group-hover:translate-x-1.5 transition-transform" />
-              </button>
-            </div>
-          </motion.div>
-
-          {/* Card 3: bdapps Daily All-Access Pass */}
-          <motion.div
-            initial={{ opacity: 0, y: 30 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.6, delay: 0.3 }}
-            className="group relative rounded-[2.5rem] p-8 md:p-9 bg-panel border-2 border-emerald-500/40 hover:border-emerald-400 shadow-xl hover:shadow-[0_0_40px_rgba(16,185,129,0.2)] transition-all duration-500 flex flex-col justify-between overflow-hidden"
-          >
-            <div className="absolute inset-0 pointer-events-none overflow-hidden rounded-[2.5rem]">
-              <div className="absolute -top-20 -right-20 w-72 h-72 rounded-full bg-emerald-500/20 blur-3xl animate-card-aurora" />
-              <div className="absolute -bottom-20 -left-20 w-72 h-72 rounded-full bg-teal-600/15 blur-3xl animate-card-aurora-slow" />
-            </div>
-
-            <div className="relative z-10 space-y-6">
-              <div className="flex items-center justify-between">
-                <span className="inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-full bg-emerald-400/10 border border-emerald-400/30 text-emerald-400 font-black text-[11px] uppercase tracking-wider">
-                  <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
-                  {language === 'en' ? 'LIVE • ৳2.78 / DAY' : 'সক্রিয় • মাত্র ৳২.৭৮ / দিন'}
-                </span>
-                <div className="w-12 h-12 rounded-2xl bg-emerald-500/10 border border-emerald-500/20 flex items-center justify-center text-emerald-400 group-hover:scale-110 transition-transform duration-300">
-                  <Smartphone size={24} />
-                </div>
-              </div>
-
-              <div>
-                <h3 className="text-2xl md:text-3xl font-black text-app-fg tracking-tight">
-                  {language === 'en' ? 'bdapps All-Access Pass' : 'bdapps অল-অ্যাক্সেস পাস'}
-                </h3>
-                <p className="text-xs font-black uppercase tracking-wider text-emerald-400 mt-1">
-                  {language === 'en' ? 'Robi & Airtel Direct Carrier Billing' : 'রবি ও এয়ারটেল ডিরেক্ট ক্যারিয়ার বিলিং'}
-                </p>
-                <p className="text-sm text-app-fg/70 font-medium mt-3 leading-relaxed">
-                  {language === 'en'
-                    ? 'Unlock both the Digital SAT Suite & Python Academy for just ৳2.78/day (+tax). Micro-charged directly from your mobile balance with instant telco OTP activation.'
-                    : 'মোবাইল ব্যালেন্স থেকে মাত্র ৳২.৭৮/দিন (+ভ্যাট) এ SAT স্যুট ও পাইথন একাডেমির ফুল অ্যাক্সেস। কোনো ক্রেডিট কার্ড ছাড়াই রবি ও এয়ারটেল ওটিপিতে এক ক্লিকে অ্যাক্টিভেশন।'}
-                </p>
-              </div>
-
-              <div className="space-y-2.5 pt-2">
-                {[
-                  language === 'en' ? '৳2.78/day Direct Carrier Billing (Robi & Airtel)' : 'মোবাইল ব্যালেন্স থেকে ৳২.৭৮/দিন সাশ্রয়ী বিলিং',
-                  language === 'en' ? 'Instant Telco OTP Onboarding & Activation' : 'রবি ও এয়ারটেল ওটিপি দিয়ে তাৎক্ষণিক অ্যাক্টিভেশন',
-                  language === 'en' ? 'Single Pass Unlocks SAT Suite & Python Academy' : 'একই পাসে SAT স্যুট ও পাইথন একাডেমি আনলক',
-                  language === 'en' ? '24/7 Unlimited Nini AI Tutor & Mistake Bank' : '২৪/৭ আনলিমিটেড নিনি এআই টিউটর ও মিসটেক ব্যাংক'
-                ].map((feat, idx) => (
-                  <div key={idx} className="flex items-center gap-2.5 text-xs font-bold text-app-fg/80">
-                    <CheckCircle2 size={15} className="text-emerald-400 shrink-0" />
-                    <span>{feat}</span>
-                  </div>
-                ))}
-              </div>
-            </div>
-
-            <div className="relative z-10 pt-8">
-              <button
-                onClick={() => {
-                  play('correct');
-                  trackEvent('cta_click', { cta: 'hero_card_bdapps_pass' });
-                  navigate('/auth');
-                }}
-                className="w-full btn-duo btn-duo-green py-4 px-6 text-sm flex items-center justify-center gap-2 group-hover:shadow-[0_0_20px_rgba(16,185,129,0.3)] transition-all"
-              >
-                <ShieldCheck size={16} />
-                <span>{language === 'en' ? 'Get Daily Pass (৳2.78/day)' : 'ডেইলি পাস নাও (৳২.৭৮/দিন)'}</span>
                 <ArrowRight size={16} className="group-hover:translate-x-1.5 transition-transform" />
               </button>
             </div>
