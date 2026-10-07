@@ -18,7 +18,8 @@ import {
   LogOut,
   User as UserIcon,
   PanelLeftClose,
-  PanelLeftOpen
+  PanelLeftOpen,
+  Sparkles
 } from 'lucide-react';
 import { clsx } from 'clsx';
 import { play } from '../../lib/audio';
@@ -122,6 +123,7 @@ export default function SatNavbar({
   };
 
   const masteryLinks = [
+    { label: 'Nini AI Tutor', path: '/sat/ai-tutor', icon: Sparkles, isAi: true },
     { label: 'Vocab Vault', path: '/sat/vocab', icon: FileText },
     { label: 'Study Routine', path: '/sat/routine', icon: Calendar },
     { label: 'Leaderboard', path: '/sat/leaderboard', icon: Award },
@@ -131,11 +133,12 @@ export default function SatNavbar({
 
   const mobileNavItems = [
     { label: 'Home', path: '/sat', icon: Target },
+    { label: 'AI Tutor', path: '/sat/ai-tutor', icon: Sparkles },
     { label: 'Custom', action: 'custom_practice', icon: Sliders },
     { label: 'Types', path: '/sat/types', icon: BookOpen },
     { label: 'Mistakes', path: '/sat/mistakes', icon: AlertTriangle, isMistake: true },
     { label: 'Hardest', path: '/sat/hardest', icon: Skull },
-    { label: 'Quick', path: '/sat/quick-practice', icon: Zap },
+    { label: 'Vocab', path: '/sat/vocab', icon: FileText },
     { label: 'Profile', path: '/sat/profile', icon: UserIcon }
   ];
 
@@ -337,14 +340,23 @@ export default function SatNavbar({
                   to={item.path}
                   onClick={(e) => handleNavClick(e, item.path)}
                   className={clsx(
-                    "flex items-center gap-3 px-3.5 py-2.5 rounded-2xl font-bold text-xs transition-all",
+                    "flex items-center justify-between px-3.5 py-2.5 rounded-2xl font-bold text-xs transition-all group",
                     isActive
                       ? "bg-blue-500/15 border border-blue-500/30 text-blue-400 font-black shadow-sm"
+                      : item.isAi
+                      ? "text-cyan-300 hover:text-cyan-200 hover:bg-cyan-500/10 border border-cyan-500/20"
                       : "text-app-fg/70 hover:text-app-fg hover:bg-panel border border-transparent"
                   )}
                 >
-                  <Icon size={16} strokeWidth={isActive ? 2.5 : 2} />
-                  <span>{item.label}</span>
+                  <div className="flex items-center gap-3">
+                    <Icon size={16} strokeWidth={isActive ? 2.5 : 2} className={item.isAi ? "text-cyan-400 animate-pulse" : ""} />
+                    <span>{item.label}</span>
+                  </div>
+                  {item.isAi && (
+                    <span className="px-1.5 py-0.5 rounded-md bg-gradient-to-r from-blue-500 to-cyan-400 text-white font-black text-[9px] uppercase tracking-wider shadow-sm">
+                      AI 24/7
+                    </span>
+                  )}
                 </Link>
               );
             })}

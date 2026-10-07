@@ -363,16 +363,26 @@ export default function SatDashboard({ onOpenCustomTest }: SatDashboardProps = {
         {/* Right Col: Mascot Nini + Diagnostic Stats Strip with Hardest Mastery */}
         <div className="glass p-6 rounded-[2.5rem] border border-border-subtle flex flex-col justify-between space-y-5">
           {/* Mascot Nini Coach compact card */}
-          <div className="p-4 rounded-2xl bg-panel border border-border-subtle flex items-center gap-3">
+          <div className="p-4 rounded-2xl bg-panel border border-border-subtle space-y-3">
             <NiniCoach
               mood={totalAttempted > 0 && overallAccuracy > 65 ? 'happy' : 'thoughtful'}
               message={
                 totalAttempted === 0
-                  ? "Welcome! Let's take your first diagnostic drill."
+                  ? "Welcome! Let's take your first diagnostic drill or chat with me for advice."
                   : `Solved ${totalAttempted} Qs with ${overallAccuracy}% accuracy. Keep rolling!`
               }
               size="sm"
             />
+            <div className="pt-2 border-t border-border-subtle/50 flex justify-end">
+              <Link
+                to="/sat/ai-tutor"
+                onClick={() => play('tap')}
+                className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-gradient-to-r from-blue-500/20 to-cyan-500/20 hover:from-blue-500/30 hover:to-cyan-500/30 border border-cyan-500/30 text-cyan-300 hover:text-white font-black text-xs transition-all shadow-sm group"
+              >
+                <Sparkles size={12} className="text-cyan-400 group-hover:scale-110 transition-transform" />
+                <span>Ask Nini AI 24/7 →</span>
+              </Link>
+            </div>
           </div>
 
           <div className="space-y-3">

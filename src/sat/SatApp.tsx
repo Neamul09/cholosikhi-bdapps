@@ -13,6 +13,7 @@ import SatResourcesPage from './pages/SatResourcesPage';
 import SatQuickPracticePage from './pages/SatQuickPracticePage';
 import SatTypeDrillPage from './pages/SatTypeDrillPage';
 import SatProfilePage from './pages/SatProfilePage';
+import SatAiTutor from './pages/SatAiTutor';
 import SatNiniNotification from './components/SatNiniNotification';
 import CustomTestModal from './components/CustomTestModal';
 import SatFeedbackModal from './components/SatFeedbackModal';
@@ -126,6 +127,7 @@ export default function SatApp() {
           <Route path="/routine" element={<SatRoutinePage />} />
           <Route path="/vocab" element={<SatVocabPage />} />
           <Route path="/resources" element={<SatResourcesPage />} />
+          <Route path="/ai-tutor" element={<SatAiTutor />} />
           <Route path="/profile" element={<SatProfilePage />} />
           <Route path="*" element={<Navigate to="/sat" replace />} />
         </Routes>
