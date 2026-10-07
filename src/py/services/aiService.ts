@@ -8,35 +8,33 @@ export interface ChatMessage {
 }
 
 function generateLocalPedagogicalResponse(userPrompt: string, isEnglish = false): string {
-  const lower = userPrompt.toLowerCase();
-
-  if (lower.includes('loop') || lower.includes('লুপ') || lower.includes('for') || lower.includes('while')) {
+  if (/\b(loops?|while|iteration)\b/i.test(userPrompt) || /\bfor\s+\w+\s+in\b/i.test(userPrompt) || /\bfor\s+loop\b/i.test(userPrompt) || /লুপ/.test(userPrompt)) {
     return isEnglish
       ? "💡 **Understanding Loops in Python:**\n\nLoops repeat a block of code efficiently:\n- `for` loop: Iterate over ranges or sequences (e.g. `for i in range(5):`).\n- `while` loop: Runs continuously while a boolean condition remains `True`.\n\nWould you like an example tailored to a specific problem?"
       : "💡 **লুপ (Loop) এর মূল ধারণা:**\n\nPython-এ যখন একই কাজ বারবার করতে হয়, তখন আমরা লুপ ব্যবহার করি।\n\n- `for` লুপ: নির্দিষ্ট সংখ্যক বার ঘোরার জন্য (যেমন: `for i in range(5): print(i)`)\n- `while` লুপ: কোনো শর্ত সত্য থাকা পর্যন্ত চলার জন্য (যেমন: `while count < 5:`)\n\nতুমি কি কোনো নির্দিষ্ট লুপ বা কোড নিয়ে জানতে চাও?";
   }
 
-  if (lower.includes('function') || lower.includes('ফাংশন') || lower.includes('def')) {
+  if (/\b(def|functions?|methods?|return)\b/i.test(userPrompt) || /ফাংশন/.test(userPrompt)) {
     return isEnglish
       ? "💡 **Python Functions:**\n\nFunctions are reusable blocks of code executed when called.\n\n```python\ndef greet(name):\n    return f'Hello, {name}!'\n\nprint(greet('Scholar'))\n```\n\nUse `def` to define them and `return` to pass back output values."
       : "💡 **ফাংশন (Function) কী?**\n\nফাংশন হলো কোডের একটি রিইউজেবল ব্লক যা নির্দিষ্ট কোনো কাজ সম্পাদন করে।\n\n```python\ndef greet(name):\n    return f'হ্যালো, {name}!'\n\nprint(greet('শিক্ষার্থী'))\n```\n\n`def` কিওয়ার্ড দিয়ে ফাংশন তৈরি করা হয়। তোমার কোডে ফাংশন প্রয়োগ করতে কোনো সাহায্য প্রয়োজন?";
   }
 
-  if (lower.includes('variable') || lower.includes('ভেরিয়েবল') || lower.includes('ভেরিয়েবল') || lower.includes('data type')) {
+  if (/\b(variables?|data\s*types?|integers?|strings?|boolean|float)\b/i.test(userPrompt) || /ভেরিয়েবল|ভেরিয়েবল|ডেটা\s*টাইপ/.test(userPrompt)) {
     return isEnglish
       ? "💡 **Variables & Data Types:**\n\nVariables store data in memory:\n- `str`: Text string (e.g. `'CholoSikhi'`)\n- `int`: Whole numbers (e.g. `100`)\n- `float`: Decimals (e.g. `3.14`)\n- `bool`: `True` or `False`"
       : "💡 **ভেরিয়েবল (Variable) ও ডেটা টাইপ:**\n\nভেরিয়েবল হলো ডেটা জমা রাখার পাত্র বা বক্সের মতো।\n\n```python\nname = 'CholoSikhi'\nxp = 100\nis_active = True\n```\n\nPython-এ ডেটা টাইপ নিজে থেকেই নির্ধারিত হয় (Dynamic Typing)।";
   }
 
-  if (lower.includes('error') || lower.includes('ভুল') || lower.includes('বাগ') || lower.includes('bug') || lower.includes('syntax')) {
+  if (/\b(errors?|bugs?|debug|syntaxerror|nameerror|typeerror|indentation)\b/i.test(userPrompt) || /ভুল|বাগ|এরর|সিনট্যাক্স/.test(userPrompt)) {
     return isEnglish
       ? "🔍 **Debugging Tip:**\n\n1. Check line indentation (Python uses 4 spaces).\n2. Ensure colons `:` are present after `if`, `for`, `while`, and `def` statements.\n3. Make sure variable names match spelling and case exactly."
       : "🔍 **কোড ডিবাগিং টিপস:**\n\n১. ইনডেন্টেশন (Indentation / ফাঁকা জায়গা) ঠিক আছে কিনা লক্ষ্য করো (Python-এ ৪টি স্পেস আদর্শ)।\n২. `if`, `for`, `while`, `def`-এর শেষে কোলন `:` দিয়েছ কিনা নিশ্চিত হও।\n৩. ভেরিয়েবলের বানান ও ছোট-বড় হাতের অক্ষর মিলিয়ে দেখো।";
   }
 
   return isEnglish
-    ? "👋 I am **Nini**, your friendly AI coding tutor on CholoSikhi! Ask me anything about Python syntax, data structures, algorithms, or SAT prep!"
-    : "👋 আমি **নিনি (Nini)**, চলোশিখির এআই টিউটর! পাইথন প্রোগ্রামিং, কোডিং সমস্যা, লুপ, ফাংশন বা ডিজিটাল SAT সম্পর্কিত যেকোনো প্রশ্ন আমাকে করতে পারো। তোমার কোড বা সমস্যার বিস্তারিত বলো, আমি বুঝিয়ে দেব!";
+    ? "👋 I am **Nini**, your friendly AI coding tutor on CholoSikhi! Ask me anything about Python syntax, data structures, algorithms, or programming concepts!"
+    : "👋 আমি **নিনি (Nini)**, চলোশিখির এআই টিউটর! পাইথন প্রোগ্রামিং, কোডিং সমস্যা, লুপ, ফাংশন বা প্রোগ্রামিং সম্পর্কিত যেকোনো প্রশ্ন আমাকে করতে পারো। তোমার কোড বা সমস্যার বিস্তারিত বলো, আমি বুঝিয়ে দেব!";
 }
 
 async function tryDirectGemini(messages: ChatMessage[], systemPrompt: string): Promise<string | null> {
