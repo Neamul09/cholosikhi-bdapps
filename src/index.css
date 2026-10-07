@@ -1,120 +1,234 @@
 @import "tailwindcss";
+@import "katex/dist/katex.min.css";
 
 @theme {
-  /* Primary Blue Spectrum */
-  --color-duo-green:        #00d4ff;   /* Cyan-electric "primary action" */
-  --color-duo-green-shadow: #0099bb;
-  --color-duo-blue:         #3b82f6;   /* Bright blue */
-  --color-duo-blue-shadow:  #1d4ed8;
-  --color-duo-purple:       #818cf8;   /* Indigo-violet */
-  --color-duo-purple-shadow:#4f46e5;
-  --color-duo-red:          #f472b6;   /* Pink accent (replaces red) */
-  --color-duo-red-shadow:   #be185d;
-  --color-duo-orange:       #38bdf8;   /* Sky blue (replaces orange) */
-  --color-duo-orange-shadow:#0284c7;
-  --color-duo-gold:         #a78bfa;   /* Violet-gold */
-  --color-duo-gold-shadow:  #7c3aed;
-
-  /* App Theme Variables */
+  /* Colors */
   --color-app-bg:           var(--app-bg);
   --color-app-fg:           var(--app-fg);
   --color-app-fg-muted:     var(--app-fg-muted);
   --color-border-subtle:    var(--border-subtle);
-  --color-panel:            var(--duo-card-bg);
-  --color-brand:            var(--color-duo-blue);
+  --color-panel:            var(--panel);
+  --color-brand:            #3b82f6;
 
-  /* Font Families */
-  --font-hind:              "Hind Siliguri", sans-serif;
-  --font-nunito:            "Nunito", sans-serif;
+  /* Playful Duo Palette */
+  --color-duo-green:        #00d4ff;
+  --color-duo-green-shadow: #0099bb;
+  --color-duo-blue:         #3b82f6;
+  --color-duo-blue-shadow:  #1d4ed8;
+  --color-duo-purple:       #818cf8;
+  --color-duo-purple-shadow:#4f46e5;
+  --color-duo-red:          #f472b6;
+  --color-duo-red-shadow:   #be185d;
+  --color-duo-gold:         #a78bfa;
+  --color-duo-gold-shadow:  #7c3aed;
+
+  /* Fonts */
+  --font-hind:              'Hind Siliguri', sans-serif;
+  --font-outfit:            'Outfit', sans-serif;
+  --font-nunito:            'Nunito', sans-serif;
+  --font-bluebook-serif:    Georgia, 'Palatino Linotype', 'Book Antiqua', Palatino, serif;
 }
 
 :root {
-  /* Light: icy blue-white */
-  --app-bg:        #f0f7ff;
-  --app-fg:        #0f2644;
-  --app-fg-muted:  #5b7fa6;
-  --duo-card-bg:   #ffffff;
-  --border-subtle: #c7dff7;
-  --sidebar-width: 280px;
-  --shadow-color:  rgba(59, 130, 246, 0.18);
+  --app-bg: #030712;
+  --app-fg: #f8fafc;
+  --app-fg-muted: #94a3b8;
+  --panel: rgba(15, 23, 42, 0.6);
+  --panel-solid: #0d1b35;
+  --duo-card-bg: #0d1b35;
+  --border-subtle: rgba(51, 65, 85, 0.5);
+  --shadow-color: rgba(59, 130, 246, 0.25);
 }
 
 .dark {
-  /* Dark: deep navy */
-  --app-bg:        #060e1f;
-  --app-fg:        #e2eeff;
-  --app-fg-muted:  #6b8db5;
-  --duo-card-bg:   #0d1b35;
-  --border-subtle: #1a2f52;
-  --shadow-color:  rgba(59, 130, 246, 0.25);
+  --app-bg: #030712;
+  --app-fg: #f8fafc;
+  --app-fg-muted: #94a3b8;
+  --panel: rgba(15, 23, 42, 0.6);
+  --panel-solid: #0d1b35;
+  --duo-card-bg: #0d1b35;
+  --border-subtle: rgba(51, 65, 85, 0.5);
+  --shadow-color: rgba(59, 130, 246, 0.25);
 }
 
-/* Base */
 body {
+  margin: 0;
+  font-family: var(--font-hind), var(--font-outfit), system-ui, -apple-system, sans-serif;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
   background-color: var(--app-bg);
   color: var(--app-fg);
-  font-family: 'Hind Siliguri', 'Nunito', sans-serif;
   overflow-x: hidden;
-  transition: background-color 0.3s ease;
+  transition: background-color 0.3s ease, color 0.3s ease;
 }
 
-/* ─── 3D Buttons ─────────────────────────────────── */
+.glass {
+  background: var(--panel);
+  backdrop-filter: blur(14px);
+  -webkit-backdrop-filter: blur(14px);
+  border: 1px solid var(--border-subtle);
+}
+
+.bg-app-bg      { background-color: var(--app-bg); }
+.bg-panel       { background-color: var(--panel); }
+.text-app-fg    { color: var(--app-fg); }
+.text-app-muted { color: var(--app-fg-muted); }
+.text-app-fg-muted { color: var(--app-fg-muted); }
+.border-subtle  { border-color: var(--border-subtle); }
+
+/* ─── SAT Typography (Hind Siliguri) ─────────────────────── */
+.font-bluebook-serif {
+  font-family: var(--font-hind), 'Hind Siliguri', 'Outfit', system-ui, sans-serif;
+  line-height: 1.75;
+}
+
+.font-bluebook-sans {
+  font-family: var(--font-hind), 'Hind Siliguri', 'Outfit', system-ui, sans-serif;
+}
+
+.sat-question-content {
+  font-family: var(--font-hind), 'Hind Siliguri', 'Outfit', system-ui, sans-serif;
+}
+
+.font-bluebook-serif.sat-question-content,
+.font-bluebook-serif .sat-question-content {
+  font-family: var(--font-hind), 'Hind Siliguri', 'Outfit', system-ui, sans-serif;
+}
+
+/* ─── 3D Pushed Buttons ──────────────────────────── */
 .btn-duo {
-  @apply relative inline-flex items-center justify-center font-black rounded-2xl transition-all active:translate-y-[2px] active:scale-95 disabled:opacity-50 disabled:pointer-events-none;
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: 900;
+  border-radius: 1rem;
+  transition: all 0.15s ease;
+  cursor: pointer;
+  user-select: none;
   text-transform: uppercase;
   letter-spacing: 0.05em;
   box-shadow: 0 4px 0 var(--shadow-color);
 }
+
 .btn-duo:active {
-  box-shadow: 0 0 0 transparent;
+  transform: translateY(2px) scale(0.98);
+  box-shadow: 0 1px 0 transparent;
 }
 
-/* Primary CTA — cyan-electric */
 .btn-duo-green {
-  @apply bg-[#00d4ff] text-[#060e1f] border-2 border-[#0099bb] hover:brightness-110;
+  background-color: #00d4ff;
+  color: #060e1f;
+  border: 2px solid #0099bb;
+  box-shadow: 0 4px 0 #0099bb;
+}
+.btn-duo-green:hover {
+  filter: brightness(1.08);
+}
+.btn-duo-green:active {
+  box-shadow: 0 1px 0 #0099bb;
 }
 
-/* Blue */
 .btn-duo-blue {
-  @apply bg-blue-500 text-white border-2 border-blue-700 hover:brightness-110;
+  background-color: #3b82f6;
+  color: #ffffff;
+  border: 2px solid #1d4ed8;
+  box-shadow: 0 4px 0 #1d4ed8;
+}
+.btn-duo-blue:hover {
+  filter: brightness(1.08);
+}
+.btn-duo-blue:active {
+  box-shadow: 0 1px 0 #1d4ed8;
 }
 
-/* Pink/Danger */
+.btn-duo-purple {
+  background-color: #818cf8;
+  color: #ffffff;
+  border: 2px solid #4f46e5;
+  box-shadow: 0 4px 0 #4f46e5;
+}
+.btn-duo-purple:hover {
+  filter: brightness(1.08);
+}
+.btn-duo-purple:active {
+  box-shadow: 0 1px 0 #4f46e5;
+}
+
 .btn-duo-red {
-  @apply bg-pink-400 text-white border-2 border-pink-700 hover:brightness-110;
+  background-color: #f472b6;
+  color: #ffffff;
+  border: 2px solid #be185d;
+  box-shadow: 0 4px 0 #be185d;
+}
+.btn-duo-red:hover {
+  filter: brightness(1.08);
+}
+.btn-duo-red:active {
+  box-shadow: 0 1px 0 #be185d;
 }
 
-/* Violet-gold */
 .btn-duo-gold {
-  @apply bg-violet-400 text-white border-2 border-violet-700 hover:brightness-110;
+  background-color: #a78bfa;
+  color: #ffffff;
+  border: 2px solid #7c3aed;
+  box-shadow: 0 4px 0 #7c3aed;
+}
+.btn-duo-gold:hover {
+  filter: brightness(1.08);
+}
+.btn-duo-gold:active {
+  box-shadow: 0 1px 0 #7c3aed;
 }
 
-/* Secondary */
 .btn-duo-secondary {
-  background-color: var(--duo-card-bg);
-  border-color: var(--border-subtle);
-  @apply text-blue-400 border-2 hover:bg-blue-50 dark:hover:bg-blue-950/30;
+  background-color: var(--panel);
+  border: 2px solid var(--border-subtle);
+  color: var(--app-fg);
+  box-shadow: 0 4px 0 var(--border-subtle);
+}
+.btn-duo-secondary:hover {
+  background-color: rgba(255, 255, 255, 0.1);
+}
+.btn-duo-secondary:active {
+  box-shadow: 0 1px 0 var(--border-subtle);
 }
 
 /* ─── Cards ──────────────────────────────────────── */
 .card-duo {
   background-color: var(--duo-card-bg);
-  border-color: var(--border-subtle);
-  @apply border-2 rounded-3xl transition-all shadow-sm hover:shadow-md active:scale-[0.98];
+  border: 2px solid var(--border-subtle);
+  border-radius: 1.5rem;
+  transition: all 0.2s ease;
+  box-shadow: 0 0 0 1px rgba(59, 130, 246, 0.08), 0 4px 24px rgba(0,0,0,0.3);
+}
+.card-duo:hover {
+  border-color: rgba(59, 130, 246, 0.4);
 }
 
 .card-duo-selected {
-  @apply ring-4 ring-blue-400/40 border-blue-500 bg-blue-500/5;
+  outline: 4px solid rgba(59, 130, 246, 0.4);
+  border-color: #3b82f6;
+  background-color: rgba(59, 130, 246, 0.05);
 }
 
-/* ─── Path / Progress ────────────────────────────── */
+/* ─── Progress Bars ──────────────────────────────── */
 .progress-rail {
-  @apply absolute top-1/2 left-0 right-0 h-4 -translate-y-1/2 rounded-full z-0 overflow-hidden;
+  position: absolute;
+  top: 50%;
+  left: 0;
+  right: 0;
+  height: 1rem;
+  transform: translateY(-50%);
+  border-radius: 9999px;
+  z-index: 0;
+  overflow: hidden;
   background: var(--border-subtle);
 }
 
 .progress-fill {
-  @apply h-full transition-all duration-700 ease-out;
+  height: 100%;
+  transition: all 0.7s ease-out;
   background: linear-gradient(90deg, #00d4ff, #3b82f6);
   background-image: linear-gradient(90deg, #00d4ff, #3b82f6),
     repeating-linear-gradient(45deg, rgba(255,255,255,0.08) 0, rgba(255,255,255,0.08) 1px, transparent 0, transparent 50%);
@@ -127,35 +241,130 @@ body {
   to   { background-position: 0 0, 40px 0; }
 }
 
-/* ─── Animations ─────────────────────────────────── */
-@keyframes bounce-subtle {
-  0%, 100% { transform: translateY(0); }
-  50%       { transform: translateY(-8px); }
-}
-@keyframes pulse-soft {
-  0%, 100% { opacity: 1; transform: scale(1); }
-  50%       { opacity: 0.8; transform: scale(1.05); }
-}
-@keyframes glow {
-  0%, 100% { box-shadow: 0 0 20px rgba(0, 212, 255, 0.35); }
-  50%       { box-shadow: 0 0 45px rgba(0, 212, 255, 0.7),
-                           0 0 80px rgba(59, 130, 246, 0.25); }
-}
-@keyframes shake {
-  0%, 100%   { transform: translateX(0); }
-  20%, 60%   { transform: translateX(-10px); }
-  40%, 80%   { transform: translateX(10px); }
-}
-@keyframes float-in {
-  from { opacity: 0; transform: translateY(16px); }
-  to   { opacity: 1; transform: translateY(0); }
+/* ─── Code Blocks ─────────────────────────────────── */
+.code-block {
+  background-color: #0d1b35;
+  border: 2px solid var(--border-subtle);
+  border-radius: 1rem;
+  padding: 1rem;
+  font-family: monospace;
+  font-size: 0.875rem;
+  color: #c7dff7;
+  box-shadow: inset 0 2px 4px rgba(0, 0, 0, 0.2);
 }
 
-.animate-bounce-subtle { animation: bounce-subtle 3s ease-in-out infinite; }
-.animate-pulse-soft     { animation: pulse-soft   4s ease-in-out infinite; }
-.animate-glow           { animation: glow         2s ease-in-out infinite; }
-.animate-shake          { animation: shake        0.5s ease-in-out; }
-.animate-float-in       { animation: float-in     0.4s ease-out both; }
+/* ─── MathML & Equation Rendering ─────────────────── */
+math {
+  font-family: 'STIX Two Math', 'Cambria Math', 'Latin Modern Math', KaTeX_Main, serif;
+  font-size: 1.1em;
+  direction: ltr;
+}
+
+mfrac {
+  padding: 0 0.15em;
+}
+
+table {
+  border-collapse: collapse;
+}
+
+/* Choice strike-through class */
+.option-eliminated {
+  opacity: 0.35;
+  text-decoration: line-through;
+  filter: grayscale(1);
+}
+
+/* SVG and Figure handling for College Board Diagrams */
+.sat-question-content figure,
+.sat-question-content svg {
+  background-color: #ffffff !important;
+  color: #0f172a !important;
+  border-radius: 1rem;
+  padding: 0.75rem;
+  margin: 1.25rem auto;
+  max-width: 100%;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+  border: 1px solid #cbd5e1;
+  display: block;
+}
+.sat-question-content figure svg {
+  margin: 0 auto;
+  box-shadow: none;
+  border: none;
+  padding: 0;
+  background-color: transparent !important;
+}
+
+/* ─── SAT Question List & Bullet Formatting ──────── */
+.sat-question-content ul {
+  list-style-type: disc !important;
+  margin-top: 0.85rem !important;
+  margin-bottom: 0.85rem !important;
+  padding-left: 1.75rem !important;
+  display: block !important;
+}
+
+.sat-question-content ol {
+  list-style-type: decimal !important;
+  margin-top: 0.85rem !important;
+  margin-bottom: 0.85rem !important;
+  padding-left: 1.75rem !important;
+  display: block !important;
+}
+
+.sat-question-content li {
+  display: list-item !important;
+  list-style-type: disc !important;
+  margin-top: 0.45rem !important;
+  margin-bottom: 0.45rem !important;
+  padding-left: 0.25rem !important;
+  line-height: 1.65 !important;
+}
+
+.sat-question-content ol > li {
+  list-style-type: decimal !important;
+}
+
+.sat-question-content p {
+  margin-top: 0.5rem;
+  margin-bottom: 0.5rem;
+}
+
+/* ─── Subtle Card Background Animations ──────────── */
+@keyframes card-aurora-glow {
+  0%, 100% {
+    transform: translate(0, 0) scale(1) rotate(0deg);
+    opacity: 0.35;
+  }
+  33% {
+    transform: translate(25px, -18px) scale(1.15) rotate(15deg);
+    opacity: 0.55;
+  }
+  66% {
+    transform: translate(-20px, 15px) scale(0.95) rotate(-10deg);
+    opacity: 0.4;
+  }
+}
+
+@keyframes card-aurora-counter {
+  0%, 100% {
+    transform: translate(0, 0) scale(1) rotate(0deg);
+    opacity: 0.3;
+  }
+  50% {
+    transform: translate(-30px, 20px) scale(1.2) rotate(-20deg);
+    opacity: 0.5;
+  }
+}
+
+.animate-card-aurora {
+  animation: card-aurora-glow 10s ease-in-out infinite;
+}
+
+.animate-card-aurora-slow {
+  animation: card-aurora-counter 14s ease-in-out infinite;
+}
 
 /* ─── Scrollbars ─────────────────────────────────── */
 ::-webkit-scrollbar             { width: 6px; height: 6px; }
@@ -163,104 +372,16 @@ body {
 ::-webkit-scrollbar-thumb       { background: var(--border-subtle); border-radius: 10px; }
 ::-webkit-scrollbar-thumb:hover { background: #3b82f6; }
 
-/* ─── Code ───────────────────────────────────────── */
-.code-block {
-  background-color: #0d1b35;
-  border-color: var(--border-subtle);
-  @apply rounded-2xl p-4 font-mono text-sm border-2 shadow-inner;
-  color: #c7dff7;
-}
-
-/* Light mode override for code blocks - keeping them dark but with better contrast */
-:root .code-block {
-  background-color: #0f172a;
-  color: #e2e8f0;
-  border-color: #cbd5e1;
-}
-
-/* ─── Utilities ──────────────────────────────────── */
 .hide-scrollbar::-webkit-scrollbar { display: none; }
 .hide-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
 
-.bg-app-bg   { background-color: var(--app-bg); }
-.text-app-fg { color: var(--app-fg); }
-.border-subtle { border-color: var(--border-subtle); }
-.bg-panel    { background-color: var(--duo-card-bg); }
-.text-app-fg { color: var(--app-fg); }
-.text-app-fg-muted { color: var(--app-fg-muted); }
-
-.horizontal-path {
-  @apply py-20 -my-20;
-}
-
-/* ─── Glassmorphism ──────────────────────────────── */
-.glass {
-  background: rgba(59, 130, 246, 0.06);
-  backdrop-filter: blur(14px);
-  -webkit-backdrop-filter: blur(14px);
-  border: 1px solid rgba(99, 179, 237, 0.15);
-}
-.dark .glass {
-  background: rgba(15, 38, 80, 0.55);
-  border: 1px solid rgba(59, 130, 246, 0.12);
-}
-
-/* ─── Gradient text ──────────────────────────────── */
-.gradient-text {
-  @apply bg-clip-text text-transparent;
-  background-image: linear-gradient(135deg, #00d4ff 0%, #3b82f6 50%, #818cf8 100%);
-}
-
-.gradient-brand {
-  background: linear-gradient(135deg, #00d4ff 0%, #3b82f6 50%, #818cf8 100%);
-}
-
-.gradient-brand-vertical {
-  background: linear-gradient(180deg, #00d4ff 0%, #3b82f6 50%, #818cf8 100%);
-}
-
-.gradient-success {
-  background: linear-gradient(135deg, #22c55e 0%, #10b981 100%);
-}
-
-.gradient-danger {
-  background: linear-gradient(135deg, #ef4444 0%, #ec4899 100%);
-}
-
-.gradient-warning {
-  background: linear-gradient(135deg, #f59e0b 0%, #d97706 100%);
-}
-
-/* ─── Snap ───────────────────────────────────────── */
-.snap-y      { scroll-snap-type: y mandatory; }
-.snap-center { scroll-snap-align: center; }
-
 /* ─── Global blue tint overrides ─────────────────── */
-
-/* Input / Select focus rings */
 input:focus, select:focus, textarea:focus {
   outline: 2px solid #3b82f6;
   outline-offset: 2px;
 }
 
-/* Selection highlight */
 ::selection {
   background: rgba(59, 130, 246, 0.35);
   color: #fff;
-}
-
-/* Light-mode subtle blue card tint */
-:root .card-duo {
-  background: linear-gradient(135deg, #ffffff 0%, #f0f7ff 100%);
-}
-
-/* Dark-mode card glow edge */
-.dark .card-duo {
-  background: linear-gradient(135deg, #0d1b35 0%, #0a1528 100%);
-  box-shadow: 0 0 0 1px rgba(59, 130, 246, 0.08), 0 4px 24px rgba(0,0,0,0.3);
-}
-
-/* ─── Nav / Bottom-bar tint ──────────────────────── */
-nav, footer {
-  border-color: var(--border-subtle);
 }
