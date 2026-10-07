@@ -1,6 +1,7 @@
 import { motion } from 'framer-motion';
 import { useUserStore, type LeaderboardUser } from '@/store/userStore';
 import { useSettingsStore } from '@/store/settingsStore';
+import { useAuthStore } from '@/store/authStore';
 import { Trophy, ArrowUp, ArrowDown, Search, X } from 'lucide-react';
 import IconAvatar from '@/components/common/IconAvatar';
 import { clsx } from 'clsx';
@@ -29,8 +30,8 @@ export default function LeaderboardView() {
       setLoading(true);
       const data = filter === 'global' ? await loadLeaderboard() : await loadFriendsLeaderboard();
       if (cancelled) return;
-      const { data: { session } } = await supabase.auth.getSession();
-      const userId = session?.user?.id;
+      const session = useAuthStore.getState().session;
+      const userId = session?.id;
 
       // Fetch following status for all users in view
       if (userId) {

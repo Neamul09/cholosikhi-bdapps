@@ -1,6 +1,7 @@
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
 import { supabase, isSupabaseConfigured } from '@/lib/supabase';
+import { useAuthStore } from './authStore';
 import { useQuestStore } from './questStore';
 import { clearAllPersistedState } from './persistKeys';
 import { toast } from './toastStore';
@@ -300,10 +301,10 @@ export const useUserStore = create<UserState>()(
         const newAchievement = { id, unlockedAt: Date.now() };
         set({ achievements: [...state.achievements, newAchievement] });
 
-        const { data: { user } } = await supabase.auth.getUser();
-        if (user) {
+        const session = useAuthStore.getState().session;
+        if (session?.id) {
           await supabase.from('achievements').upsert({
-            user_id: user.id,
+            user_id: session.id,
             achievement_id: id,
             unlocked_at: new Date().toISOString()
           });
@@ -333,8 +334,8 @@ export const useUserStore = create<UserState>()(
           toast.warn('Avatar upload is unavailable in this build.');
           return null;
         }
-        const { data: { session } } = await supabase.auth.getSession();
-        if (!session?.user) {
+        const session = useAuthStore.getState().session;
+        if (!session?.id) {
           toast.error('Sign in to upload an avatar.');
           return null;
         }
@@ -352,7 +353,7 @@ export const useUserStore = create<UserState>()(
 
         // Build a path under the user's own folder so RLS "owner can write to own folder" works.
         const ext = file.name.split('.').pop()?.toLowerCase().replace(/[^a-z0-9]/g, '') || 'png';
-        const path = `${session.user.id}/${Date.now()}.${ext}`;
+        const path = `${session.id}/${Date.now()}.${ext}`;
 
         const { error: uploadErr } = await supabase.storage
           .from('avatars')
@@ -371,7 +372,7 @@ export const useUserStore = create<UserState>()(
         const { error: updateErr } = await supabase
           .from('profiles')
           .update({ avatar_url: publicUrl })
-          .eq('id', session.user.id);
+          .eq('id', session.id);
 
         if (updateErr) {
           if (import.meta.env.DEV) console.error('[userStore] uploadAvatar: profile update failed:', updateErr);
@@ -396,7 +397,7 @@ export const useUserStore = create<UserState>()(
             .limit(30);
 
           if (!error && data && data.length > 0) {
-            const { data: { session } } = await supabase.auth.getSession();
+            const session = useAuthStore.getState().session;
             return data.map((p): LeaderboardUser => ({
               id: p.id,
               name: p.name || (p.id.substring(0, 4) === 'bot_' ? 'CholoSikhi Bot' : 'Sikhi Student'),
@@ -406,7 +407,7 @@ export const useUserStore = create<UserState>()(
               xp: (p.weekly_xp != null ? p.weekly_xp : p.total_xp) ?? 0,
               league: p.league ?? 'wood',
               streak: p.streak ?? 0,
-              isMe: p.id === session?.user?.id,
+              isMe: p.id === session?.id,
             }));
           }
         } catch {
@@ -467,17 +468,17 @@ export const useUserStore = create<UserState>()(
         };
 
         try {
-          const { data: { session } } = await supabase.auth.getSession();
-          if (!session?.user) return [currentUser];
+          const session = useAuthStore.getState().session;
+          if (!session?.id) return [currentUser];
 
           // 1. Get followed user IDs
           const { data: following } = await supabase
             .from('follows')
             .select('following_id')
-            .eq('follower_id', session.user.id);
+            .eq('follower_id', session.id);
 
           const followingIds = following?.map(f => f.following_id) || [];
-          followingIds.push(session.user.id); // Include myself
+          followingIds.push(session.id); // Include myself
 
           // 2. Get profiles
           const { data: profiles, error } = await supabase
@@ -496,7 +497,7 @@ export const useUserStore = create<UserState>()(
               xp: p.weekly_xp ?? 0,
               league: 'wood',
               streak: 0,
-              isMe: p.id === session.user.id,
+              isMe: p.id === session.id,
             }));
           }
         } catch {
@@ -550,12 +551,13 @@ export const useUserStore = create<UserState>()(
       },
 
       syncToSupabase: async () => {
-        const { data: { session } } = await supabase.auth.getSession();
-        if (!session?.user) return;
+        const session = useAuthStore.getState().session;
+        if (!session?.id) return;
 
         const state = get();
         const profileData = {
-          name: state.name,
+          id: session.id,
+          name: state.name || session.name || 'Learner',
           avatar: state.avatar,
           avatar_url: state.avatarUrl,
           xp: state.xp,
@@ -583,7 +585,7 @@ export const useUserStore = create<UserState>()(
           updated_at: new Date().toISOString(),
         };
 
-        const { error } = await supabase.from('profiles').update(profileData).eq('id', session.user.id);
+        const { error } = await supabase.from('profiles').upsert(profileData);
 
         if (error) {
           if (import.meta.env.DEV) console.error('Supabase Sync Error:', error);
@@ -624,19 +626,18 @@ export const useUserStore = create<UserState>()(
       },
 
       loadFromSupabase: async () => {
-        const { data: { session } } = await supabase.auth.getSession();
-        if (!session?.user) return;
+        const session = useAuthStore.getState().session;
+        if (!session?.id) return;
 
         const { data: initialProfile, error: loadError } = await supabase
           .from('profiles')
           .select('*')
-          .eq('id', session.user.id)
-          .single();
+          .eq('id', session.id)
+          .maybeSingle();
         let profile = initialProfile;
 
         if (loadError && loadError.code !== 'PGRST116') {
           if (import.meta.env.DEV) console.error('Supabase Load Error:', loadError);
-          toast.error('Could not load your profile.');
         }
 
         if (!profile) {
@@ -644,8 +645,8 @@ export const useUserStore = create<UserState>()(
           const { data: newProfile, error: createError } = await supabase
             .from('profiles')
             .upsert({
-              id: session.user.id,
-              name: session.user.user_metadata?.full_name || '',
+              id: session.id,
+              name: session.name || 'Learner',
               avatar: 'code',
               xp: 100,
               total_xp: 100,
@@ -660,11 +661,10 @@ export const useUserStore = create<UserState>()(
               current_course: 'python',
             })
             .select()
-            .single();
+            .maybeSingle();
 
           if (createError) {
             if (import.meta.env.DEV) console.error('Supabase Create Profile Error:', createError);
-            toast.error('Could not create your profile. Try signing in again.');
           }
 
           if (!createError) profile = newProfile;
@@ -688,7 +688,7 @@ export const useUserStore = create<UserState>()(
           }
 
           set({
-            name: profile.name || session.user.user_metadata?.full_name || '',
+            name: profile.name || session.name || 'Learner',
             avatar: profile.avatar || 'code',
             avatarUrl: profile.avatar_url || '',
             xp: profile.xp || 0,
@@ -734,8 +734,8 @@ export const useUserStore = create<UserState>()(
           if (import.meta.env.DEV) console.log('✅ py.cholosikhi: Database connected and profile loaded successfully.');
 
           // Load follower/following counts
-          const { count: followers } = await supabase.from('follows').select('*', { count: 'exact', head: true }).eq('following_id', session.user.id);
-          const { count: following } = await supabase.from('follows').select('*', { count: 'exact', head: true }).eq('follower_id', session.user.id);
+          const { count: followers } = await supabase.from('follows').select('*', { count: 'exact', head: true }).eq('following_id', session.id);
+          const { count: following } = await supabase.from('follows').select('*', { count: 'exact', head: true }).eq('follower_id', session.id);
 
           set({
             followersCount: followers || 0,
@@ -747,7 +747,7 @@ export const useUserStore = create<UserState>()(
         const { data: achievements } = await supabase
           .from('achievements')
           .select('achievement_id, unlocked_at')
-          .eq('user_id', session.user.id);
+          .eq('user_id', session.id);
 
         if (achievements) {
           set({
@@ -760,33 +760,33 @@ export const useUserStore = create<UserState>()(
       },
 
       isFollowing: async (targetUserId) => {
-        const { data: { session } } = await supabase.auth.getSession();
-        if (!session?.user) return false;
+        const session = useAuthStore.getState().session;
+        if (!session?.id) return false;
         const { data } = await supabase.from('follows')
           .select('*')
-          .eq('follower_id', session.user.id)
+          .eq('follower_id', session.id)
           .eq('following_id', targetUserId)
           .single();
         return !!data;
       },
 
       toggleFollow: async (targetUserId) => {
-        const { data: { session } } = await supabase.auth.getSession();
-        if (!session?.user) return;
+        const session = useAuthStore.getState().session;
+        if (!session?.id) return;
 
         const following = await get().isFollowing(targetUserId);
 
         if (following) {
           await supabase.from('follows')
             .delete()
-            .eq('follower_id', session.user.id)
+            .eq('follower_id', session.id)
             .eq('following_id', targetUserId);
 
           set(state => ({ followingCount: Math.max(0, state.followingCount - 1) }));
         } else {
           await supabase.from('follows')
             .insert({
-              follower_id: session.user.id,
+              follower_id: session.id,
               following_id: targetUserId
             });
 
@@ -804,8 +804,8 @@ export const useUserStore = create<UserState>()(
 
         if (error) return [];
 
-        const { data: { session } } = await supabase.auth.getSession();
-        const me = session?.user?.id;
+        const session = useAuthStore.getState().session;
+        const me = session?.id;
         const ids = data.map(p => p.id);
         const followedSet = new Set<string>();
         if (me && ids.length) {
@@ -838,8 +838,8 @@ export const useUserStore = create<UserState>()(
       },
 
       resetAccount: async () => {
-        const { data: { session } } = await supabase.auth.getSession();
-        if (!session?.user) return;
+        const session = useAuthStore.getState().session;
+        if (!session?.id) return;
 
         // Clear profiles table (optional: just reset stats)
         await supabase.from('profiles').update({
@@ -851,20 +851,20 @@ export const useUserStore = create<UserState>()(
           lessons_completed: 0,
           tests_completed: 0,
           xp_history: {},
-        }).eq('id', session.user.id);
+        }).eq('id', session.id);
 
         // Delete other related data
-        await supabase.from('lesson_progress').delete().eq('user_id', session.user.id);
-        await supabase.from('test_results').delete().eq('user_id', session.user.id);
-        await supabase.from('achievements').delete().eq('user_id', session.user.id);
+        await supabase.from('lesson_progress').delete().eq('user_id', session.id);
+        await supabase.from('test_results').delete().eq('user_id', session.id);
+        await supabase.from('achievements').delete().eq('user_id', session.id);
 
         // Wipe every persisted store via the central registry (see persistKeys.ts)
         // so any future store added there is reset here too.
         clearAllPersistedState();
 
-        // Also clear the Supabase auth session key explicitly.
+        // Also clear the BDApps auth session key explicitly.
         try {
-          localStorage.removeItem('cholosikhi-auth');
+          localStorage.removeItem('cholosikhi_bdapps_session');
         } catch {
           // localStorage may be unavailable; the site reload below will discard
           // everything in-memory anyway.

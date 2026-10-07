@@ -1,6 +1,7 @@
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
 import { supabase, isSupabaseConfigured } from '@/lib/supabase';
+import { useAuthStore } from './authStore';
 
 export interface SettingsState {
   soundEnabled: boolean;
@@ -66,8 +67,8 @@ export const useSettingsStore = create<SettingsState>()(
 
       syncSettings: async () => {
         if (!isSupabaseConfigured) return;
-        const { data: { session } } = await supabase.auth.getSession();
-        if (!session?.user) return;
+        const session = useAuthStore.getState().session;
+        if (!session?.id) return;
 
         const state = get();
         await supabase.from('profiles').update({
@@ -78,19 +79,19 @@ export const useSettingsStore = create<SettingsState>()(
           sound_enabled: state.soundEnabled,
           animations_enabled: state.animationsEnabled,
           has_seen_tutorial: state.hasSeenTutorial,
-        }).eq('id', session.user.id);
+        }).eq('id', session.id);
       },
 
       loadSettings: async () => {
         if (!isSupabaseConfigured) return;
-        const { data: { session } } = await supabase.auth.getSession();
-        if (!session?.user) return;
+        const session = useAuthStore.getState().session;
+        if (!session?.id) return;
 
         const { data: profile } = await supabase
           .from('profiles')
           .select('language, current_course, theme, daily_goal_xp, sound_enabled, animations_enabled, has_seen_tutorial')
-          .eq('id', session.user.id)
-          .single();
+          .eq('id', session.id)
+          .maybeSingle();
 
         if (profile) {
           set({

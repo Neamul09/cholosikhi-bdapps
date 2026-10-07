@@ -2,6 +2,7 @@ import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
 import { supabase } from '@/lib/supabase';
 import { useQuestStore } from './questStore';
+import { useAuthStore } from './authStore';
 import { isCurrentSuperUser } from '@/lib/superUser';
 
 export interface LessonProgress {
@@ -70,10 +71,10 @@ export const useProgressStore = create<ProgressState>()(
         }
 
         // Sync to Supabase
-        const { data: { session } } = await supabase.auth.getSession();
-        if (session?.user) {
+        const session = useAuthStore.getState().session;
+        if (session?.id) {
           const payload = {
-            user_id: session.user.id,
+            user_id: session.id,
             lesson_id: lessonId,
             course_id: courseId,
             score,
@@ -85,7 +86,7 @@ export const useProgressStore = create<ProgressState>()(
           const { data: existing } = await supabase
             .from('lesson_progress')
             .select('id')
-            .eq('user_id', session.user.id)
+            .eq('user_id', session.id)
             .eq('lesson_id', lessonId)
             .maybeSingle();
 
@@ -106,10 +107,10 @@ export const useProgressStore = create<ProgressState>()(
         }));
 
         // Sync to Supabase
-        const { data: { session } } = await supabase.auth.getSession();
-        if (session?.user) {
+        const session = useAuthStore.getState().session;
+        if (session?.id) {
           await supabase.from('test_results').upsert({
-            user_id: session.user.id,
+            user_id: session.id,
             test_id: testId,
             score,
             stars,
@@ -137,14 +138,14 @@ export const useProgressStore = create<ProgressState>()(
       },
 
       loadFromSupabase: async () => {
-        const { data: { session } } = await supabase.auth.getSession();
-        if (!session?.user) return;
+        const session = useAuthStore.getState().session;
+        if (!session?.id) return;
 
         // Load lesson progress
         const { data: progress } = await supabase
           .from('lesson_progress')
           .select('*')
-          .eq('user_id', session.user.id);
+          .eq('user_id', session.id);
 
         if (progress) {
           const progressMap: Record<string, LessonProgress> = {};
@@ -164,7 +165,7 @@ export const useProgressStore = create<ProgressState>()(
         const { data: tests } = await supabase
           .from('test_results')
           .select('*')
-          .eq('user_id', session.user.id);
+          .eq('user_id', session.id);
 
         if (tests) {
           const testMap: Record<string, TestResult> = {};

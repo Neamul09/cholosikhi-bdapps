@@ -2,6 +2,7 @@ import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
 import { supabase, isSupabaseConfigured } from '@/lib/supabase';
 import { useUserStore } from './userStore';
+import { useAuthStore } from './authStore';
 
 export interface Quest {
   id: string;
@@ -84,25 +85,25 @@ export const useQuestStore = create<QuestState>()(
 
       syncQuests: async () => {
         if (!isSupabaseConfigured) return;
-        const { data: { session } } = await supabase.auth.getSession();
-        if (!session?.user) return;
+        const session = useAuthStore.getState().session;
+        if (!session?.id) return;
 
         await supabase.from('profiles').update({
           daily_quests: get().quests,
           quests_last_updated: get().lastUpdated
-        }).eq('id', session.user.id);
+        }).eq('id', session.id);
       },
 
       loadQuests: async () => {
         if (!isSupabaseConfigured) return;
-        const { data: { session } } = await supabase.auth.getSession();
-        if (!session?.user) return;
+        const session = useAuthStore.getState().session;
+        if (!session?.id) return;
 
         const { data: profile } = await supabase
           .from('profiles')
           .select('daily_quests, quests_last_updated')
-          .eq('id', session.user.id)
-          .single();
+          .eq('id', session.id)
+          .maybeSingle();
 
         if (profile && profile.daily_quests) {
           set({ 
