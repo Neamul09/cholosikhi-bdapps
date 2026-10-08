@@ -55,15 +55,15 @@ export function renderMarkdownAndMath(content: string): string {
     }
   }
 
-  // 3. Preserve all existing HTML/MathML tags
+  // 3. Preserve all existing HTML/MathML tags using non-markdown placeholders
   const tagPlaceholders: string[] = [];
   text = text.replace(/<[^>]+>/g, (tag: string) => {
     const idx = tagPlaceholders.length;
     tagPlaceholders.push(tag);
-    return `___HTML_TAG_${idx}___`;
+    return `%%HTML_TAG_${idx}%%`;
   });
 
-  // 4. Extract and render KaTeX formulas to placeholders
+  // 4. Extract and render KaTeX formulas to non-markdown placeholders
   const katexPlaceholders: string[] = [];
 
   // Display mode LaTeX: $$...$$ or \[...\]
@@ -73,7 +73,7 @@ export function renderMarkdownAndMath(content: string): string {
       const rendered = katex.renderToString(math, { displayMode: true, throwOnError: false });
       const idx = katexPlaceholders.length;
       katexPlaceholders.push(rendered);
-      return `___KATEX_HOLDER_${idx}___`;
+      return `%%KATEX_HOLDER_${idx}%%`;
     } catch {
       return `$$${math}$$`;
     }
@@ -86,7 +86,7 @@ export function renderMarkdownAndMath(content: string): string {
       const rendered = katex.renderToString(math, { displayMode: false, throwOnError: false });
       const idx = katexPlaceholders.length;
       katexPlaceholders.push(rendered);
-      return `___KATEX_HOLDER_${idx}___`;
+      return `%%KATEX_HOLDER_${idx}%%`;
     } catch {
       return `$${math}$`;
     }
@@ -148,13 +148,13 @@ export function renderMarkdownAndMath(content: string): string {
     return `<p class="my-1.5 leading-relaxed">${trimmed.replace(/\n/g, '<br/>')}</p>`;
   }).filter(Boolean).join('');
 
-  // 12. Restore KaTeX placeholders
-  text = text.replace(/___KATEX_HOLDER_(\d+)___/g, (_, idx) => {
+  // 12. Restore KaTeX placeholders safely
+  text = text.replace(/%%KATEX_HOLDER_(\d+)%%/g, (_, idx) => {
     return katexPlaceholders[parseInt(idx, 10)] || '';
   });
 
-  // 13. Restore HTML tag placeholders
-  text = text.replace(/___HTML_TAG_(\d+)___/g, (_, idx) => {
+  // 13. Restore HTML tag placeholders safely
+  text = text.replace(/%%HTML_TAG_(\d+)%%/g, (_, idx) => {
     return tagPlaceholders[parseInt(idx, 10)] || '';
   });
 

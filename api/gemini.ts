@@ -29,10 +29,169 @@ const CLOUDFLARE_AI_MODELS = [
 function generateFallbackResponse(userPrompt: string, systemPrompt?: string): string {
   const isBangla = /[\u0980-\u09FF]/.test(userPrompt) || (systemPrompt && /[\u0980-\u09FF]/.test(systemPrompt) && !/[a-zA-Z]{4,}/.test(userPrompt));
   
-  const isSatContext = 
-    Boolean(systemPrompt?.toLowerCase().includes('sat') || systemPrompt?.toLowerCase().includes('college board')) ||
-    /\b(sat|desmos|algebra|quadratic|discriminant|geometry|trigonometry|roots|intercepts?|circle|transitions?|reading|writing|vocab|evidence)\b/i.test(userPrompt) ||
-    /স্যাট|ডেসমস|দ্বিঘাত|নিশ্চায়ক|সমীকরণ/.test(userPrompt);
+  const sysLower = (systemPrompt || '').toLowerCase();
+  const userLower = userPrompt.toLowerCase();
+
+  const isExplicitPythonSys = sysLower.includes('python') || sysLower.includes('programming tutor') || sysLower.includes('cs mentor');
+  const isExplicitSatSys = sysLower.includes('sat') || sysLower.includes('college board');
+
+  let isPythonContext = isExplicitPythonSys;
+  let isSatContext = isExplicitSatSys;
+
+  if (!isExplicitPythonSys && !isExplicitSatSys) {
+    const satScore = (userLower.match(/\b(sat|desmos|algebra|quadratic|discriminant|geometry|trigonometry|roots|vertex|parabola|circle|transitions?|reading|writing|vocab|evidence|college\s*board)\b/g) || []).length +
+      (/স্যাট|ডেসমস|দ্বিঘাত|নিশ্চায়ক|সমীকরণ|বৃত্ত/.test(userPrompt) ? 2 : 0);
+    
+    const pyScore = (userLower.match(/\b(python|coding|programming|code|debug|debugging|syntax|loop|loops|function|functions|def|return|variable|variables|list|dict|array|algorithm|complexity)\b/g) || []).length +
+      (/পাইথন|প্রোগ্রামিং|কোড|লুপ|ফাংশন|ভেরিয়েবল|বাগ|ডিবাগ/.test(userPrompt) ? 2 : 0);
+
+    if (pyScore > satScore) {
+      isPythonContext = true;
+    } else if (satScore > 0) {
+      isSatContext = true;
+    } else {
+      isPythonContext = true;
+    }
+  }
+
+  // --- PYTHON & CODING DOMAIN FALLBACKS ---
+  if (isPythonContext && !isExplicitSatSys) {
+    // Debugging / Errors / Syntax
+    if (/\b(debug|debugging|errors?|bugs?|syntaxerror|nameerror|typeerror|indentation|fix|broken)\b/i.test(userPrompt) || /ভুল|বাগ|ডিবাগ|এরর|সিনট্যাক্স/.test(userPrompt)) {
+      if (isBangla) {
+        return `🔍 **কোড ডিবাগিং (Debugging) ও সাধারণ ভুল সংশোধনের ৩টি সেরা নিয়ম:**
+
+১. **সিনট্যাক্স ও কোলন (Syntax & Colons):**
+   - \`if\`, \`elif\`, \`else\`, \`for\`, \`while\`, \`def\`, \`class\` লাইনের শেষে কোলন (\`:\`) দিয়েছ কিনা লক্ষ্য করো।
+২. **ইনডেন্টেশন (Indentation):**
+   - Python-এ ট্যাব এবং স্পেস মেশানো যাবে না। প্রতিটি ব্লকের জন্য সমান ৪টি স্পেস ব্যবহার করো (\`IndentationError\` এড়াতে)।
+৩. **ভেরিয়েবল নাম ও টাইপ (Variables & Types):**
+   - ছোট-বড় হাতের অক্ষরের অমিল (\`NameError\`) বা সংখ্যার সাথে স্ট্রিং যোগ করার চেষ্টা (\`TypeError\`) হচ্ছে কিনা চেক করো।
+
+💡 *টিপ: তোমার কোডটি এখানে পেস্ট করো, আমি ঠিক কোথায় ভুল আছে দেখিয়ে দেব!*`;
+      }
+
+      return `🔍 **Python Debugging & Common Error Checklist:**
+
+1. **Syntax & Missing Colons (`SyntaxError`):**
+   - Ensure a colon (\`:\`) is at the end of every \`if\`, \`for\`, \`while\`, \`def\`, and \`class\` statement.
+2. **Indentation Consistency (`IndentationError`):**
+   - Never mix tabs and spaces. Use a consistent 4 spaces per indentation level.
+3. **Name & Type Consistency (`NameError` / `TypeError`):**
+   - Verify variable spelling and case-sensitivity.
+   - Avoid adding strings directly to numbers without conversion (use \`str(val)\` or f-strings \`f"{val}"\`).
+
+💡 *Pro Tip: Paste your buggy code snippet here and I will help isolate and fix the bug step-by-step!*`;
+    }
+
+    // Loops / Iteration
+    if (/\b(loops?|while|iteration|iterating|for\s+loop)\b/i.test(userPrompt) || /\bfor\s+\w+\s+in\b/i.test(userPrompt) || /লুপ/.test(userPrompt)) {
+      if (isBangla) {
+        return `💡 **লুপ (Loop) এর মূল ধারণা:**
+
+Python-এ যখন একই কাজ বারবার করতে হয়, তখন আমরা লুপ ব্যবহার করি।
+
+- \`for\` লুপ: নির্দিষ্ট সংখ্যক বার বা সিকোয়েন্সের উপর ঘোরার জন্য:
+\`\`\`python
+for i in range(5):
+    print(f"ধাপ নম্বর: {i}")
+\`\`\`
+- \`while\` লুপ: কোনো শর্ত সত্য থাকা পর্যন্ত চলার জন্য:
+\`\`\`python
+count = 0
+while count < 3:
+    print(count)
+    count += 1
+\`\`\`
+
+তুমি কি কোনো নির্দিষ্ট লুপ বা কোড নিয়ে জানতে চাও?`;
+      }
+
+      return `💡 **Loops in Python:**
+
+Loops let you repeat code efficiently:
+- \`for\` loop: Iterates over ranges, lists, or sequences:
+\`\`\`python
+for i in range(5):
+    print(i)
+\`\`\`
+- \`while\` loop: Executes as long as a condition evaluates to \`True\`:
+\`\`\`python
+count = 0
+while count < 3:
+    print(count)
+    count += 1
+\`\`\`
+
+Do you have a specific problem or loop pattern you'd like to explore?`;
+    }
+
+    // Functions / Methods / Return
+    if (/\b(def|functions?|methods?|parameters?|arguments?|return)\b/i.test(userPrompt) || /ফাংশন/.test(userPrompt)) {
+      if (isBangla) {
+        return `💡 **ফাংশন (Function) কী?**
+
+ফাংশন হলো কোডের একটি রিইউজেবল ব্লক যা নির্দিষ্ট কোনো কাজ সম্পাদন করে।
+
+\`\`\`python
+def greet(name):
+    return f"হ্যালো, {name}!"
+
+print(greet("শিক্ষার্থী"))
+\`\`\`
+
+\`def\` কিওয়ার্ড দিয়ে ফাংশন ডিফাইন করা হয় এবং \`return\` দিয়ে মান ফেরত দেওয়া হয়।`;
+      }
+
+      return `💡 **Python Functions:**
+
+Functions are reusable blocks of code executed when called:
+
+\`\`\`python
+def greet(name):
+    return f"Hello, {name}!"
+
+print(greet("Scholar"))
+\`\`\`
+
+Use \`def\` to define functions and \`return\` to pass back values.`;
+    }
+
+    // Variables & Data Types
+    if (/\b(variables?|data\s*types?|integers?|strings?|boolean|float|lists?|dictionar(?:y|ies))\b/i.test(userPrompt) || /ভেরিয়েবল|ভেরিয়েবল|ডেটা\s*টাইপ|লিস্ট|ডিকশনারি/.test(userPrompt)) {
+      if (isBangla) {
+        return `💡 **ভেরিয়েবল (Variable) ও ডেটা টাইপ:**
+
+ভেরিয়েবল হলো ডেটা জমা রাখার পাত্র বা মেমরি বক্স:
+\`\`\`python
+name = "CholoSikhi"   # str (Text)
+score = 100            # int (Number)
+rating = 4.9          # float (Decimal)
+is_active = True      # bool (Boolean)
+skills = ["Python", "Algorithms"]  # list
+\`\`\`
+Python-এ ডেটা টাইপ নিজে থেকেই নির্ধারিত হয় (Dynamic Typing)।`;
+      }
+
+      return `💡 **Variables & Data Types:**
+
+Variables store values in memory:
+\`\`\`python
+name = "CholoSikhi"   # str
+score = 100           # int
+pi = 3.14159          # float
+is_active = True      # bool
+items = ["Python", "Algorithms"]  # list
+\`\`\``;
+    }
+
+    // Default Python Welcome
+    if (isBangla) {
+      return "👋 আমি **নিনি (Nini)**, চলোশিখির পাইথন এআই টিউটর! প্রোগ্রামিং সমস্যা, কোডিং প্রশ্ন বা অ্যালগরিদম নিয়ে যেকোনো কিছু আমাকে জিজ্ঞাসা করতে পারো!";
+    }
+
+    return "👋 I am **Nini**, your AI Programming Tutor on CholoSikhi! Ask me anything about Python syntax, data structures, algorithms, or debugging!";
+  }
 
   // --- SAT DOMAIN FALLBACKS ---
   if (isSatContext) {
@@ -151,103 +310,7 @@ I specialize in College Board Digital SAT strategies for both Math and Reading &
 Feel free to paste any question or topic you'd like to master!`;
   }
 
-  // --- PYTHON & CODING DOMAIN FALLBACKS ---
-  if (/\b(loops?|while|iteration|iterating)\b/i.test(userPrompt) || /\bfor\s+\w+\s+in\b/i.test(userPrompt) || /\bfor\s+loop\b/i.test(userPrompt) || /লুপ/.test(userPrompt)) {
-    if (isBangla) {
-      return `💡 **লুপ (Loop) এর মূল ধারণা:**
-
-Python-এ যখন একই কাজ বারবার করতে হয়, তখন আমরা লুপ ব্যবহার করি।
-
-- \`for\` লুপ: নির্দিষ্ট সংখ্যক বার বা সিকোয়েন্সের উপর ঘোরার জন্য:
-\`\`\`python
-for i in range(5):
-    print(f"ধাপ নম্বর: {i}")
-\`\`\`
-- \`while\` লুপ: কোনো শর্ত সত্য থাকা পর্যন্ত চলার জন্য:
-\`\`\`python
-count = 0
-while count < 3:
-    print(count)
-    count += 1
-\`\`\`
-
-তুমি কি কোনো নির্দিষ্ট লুপ বা কোড নিয়ে জানতে চাও?`;
-    }
-
-    return `💡 **Loops in Python:**
-
-Loops let you repeat code efficiently:
-- \`for\` loop: Iterates over ranges, lists, or sequences:
-\`\`\`python
-for i in range(5):
-    print(i)
-\`\`\`
-- \`while\` loop: Executes as long as a condition evaluates to \`True\`:
-\`\`\`python
-count = 0
-while count < 3:
-    print(count)
-    count += 1
-\`\`\`
-
-Do you have a specific problem or loop pattern you'd like to explore?`;
-  }
-
-  if (/\b(def|functions?|methods?|parameters?|arguments?|return)\b/i.test(userPrompt) || /ফাংশন/.test(userPrompt)) {
-    if (isBangla) {
-      return `💡 **ফাংশন (Function) কী?**
-
-ফাংশন হলো কোডের একটি রিইউজেবল ব্লক যা নির্দিষ্ট কোনো কাজ সম্পাদন করে।
-
-\`\`\`python
-def greet(name):
-    return f'হ্যালো, {name}!'
-
-print(greet('শিক্ষার্থী'))
-\`\`\`
-
-\`def\` কিওয়ার্ড দিয়ে ফাংশন ডিফাইন করা হয় এবং \`return\` দিয়ে মান ফেরত দেওয়া হয়।`;
-    }
-
-    return `💡 **Python Functions:**
-
-Functions are reusable blocks of code executed when called:
-
-\`\`\`python
-def greet(name):
-    return f"Hello, {name}!"
-
-print(greet("Scholar"))
-\`\`\`
-
-Use \`def\` to define functions and \`return\` to pass back values.`;
-  }
-
-  if (/\b(variables?|data\s*types?|integers?|strings?|boolean|float)\b/i.test(userPrompt) || /ভেরিয়েবল|ভেরিয়েবল|ডেটা\s*টাইপ/.test(userPrompt)) {
-    if (isBangla) {
-      return `💡 **ভেরিয়েবল (Variable) ও ডেটা টাইপ:**
-
-ভেরিয়েবল হলো ডেটা জমা রাখার পাত্র বা মেমরি বক্স:
-\`\`\`python
-name = 'CholoSikhi'   # str (Text)
-score = 100            # int (Number)
-rating = 4.9          # float (Decimal)
-is_active = True      # bool (Boolean)
-\`\`\`
-Python-এ ডেটা টাইপ নিজে থেকেই নির্ধারিত হয় (Dynamic Typing)।`;
-    }
-
-    return `💡 **Variables & Data Types:**
-
-Variables store values in memory:
-\`\`\`python
-name = "CholoSikhi"   # str
-score = 100           # int
-pi = 3.14159          # float
-is_active = True      # bool
-\`\`\``;
-  }
-
+  // Fallback if neither context specifically matched
   if (isBangla) {
     return "👋 আমি **নিনি (Nini)**, চলোশিখির এআই টিউটর! প্রোগ্রামিং সমস্যা, কোডিং প্রশ্ন বা ডিজিটাল SAT প্রস্তুতি নিয়ে যেকোনো কিছু আমাকে জিজ্ঞাসা করতে পারো!";
   }

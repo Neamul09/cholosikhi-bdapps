@@ -52,6 +52,78 @@ function generateLocalPedagogicalResponse(userPrompt: string, isEnglish = true):
     : "👋 আমি **নিনি (Nini)**, চলোশিখির এআই টিউটর! পাইথন প্রোগ্রামিং, কোডিং সমস্যা, লুপ, ফাংশন বা প্রোগ্রামিং সম্পর্কিত যেকোনো প্রশ্ন আমাকে করতে পারো। তোমার কোড বা সমস্যার বিস্তারিত বলো, আমি বুঝিয়ে দেব!";
 }
 
+async function tryDirectCloudflareAI(messages: ChatMessage[], systemPrompt: string): Promise<string | null> {
+  const accountId = import.meta.env.VITE_CLOUDFLARE_ACCOUNT_ID as string | undefined;
+  const apiToken = import.meta.env.VITE_CLOUDFLARE_API_TOKEN as string | undefined;
+  const workerUrl = import.meta.env.VITE_CLOUDFLARE_WORKER_URL as string | undefined;
+
+  const recentMessages = messages.slice(-6);
+
+  if (workerUrl) {
+    try {
+      const response = await fetch(workerUrl, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ messages: recentMessages, systemPrompt }),
+        signal: AbortSignal.timeout(4500),
+      });
+      if (response.ok) {
+        const data = await response.json();
+        const text = data.response || data.result?.response || (typeof data === 'string' ? data : null);
+        if (text) return text;
+      }
+    } catch (e) {
+      console.warn('[aiService] Direct Cloudflare custom worker failed:', e);
+    }
+  }
+
+  if (accountId && apiToken) {
+    const formattedMessages: any[] = [{ role: 'system', content: systemPrompt }];
+    for (const msg of recentMessages) {
+      formattedMessages.push({
+        role: msg.role === 'user' ? 'user' : 'assistant',
+        content: msg.content
+      });
+    }
+
+    const models = [
+      '@cf/meta/llama-3.2-3b-instruct',
+      '@cf/meta/llama-3.1-8b-instruct',
+      '@cf/mistral/mistral-7b-instruct-v0.2',
+    ];
+
+    for (const model of models) {
+      try {
+        const response = await fetch(
+          `https://api.cloudflare.com/client/v4/accounts/${accountId}/ai/run/${model}`,
+          {
+            method: 'POST',
+            headers: {
+              'Authorization': `Bearer ${apiToken}`,
+              'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({
+              messages: formattedMessages,
+              max_tokens: 750,
+            }),
+            signal: AbortSignal.timeout(4500),
+          }
+        );
+
+        if (response.ok) {
+          const data = await response.json();
+          const text = data.result?.response || data.result?.choices?.[0]?.message?.content || data.response;
+          if (text) return text;
+        }
+      } catch (e) {
+        console.warn(`[aiService] Direct Cloudflare AI model ${model} failed:`, e);
+      }
+    }
+  }
+
+  return null;
+}
+
 async function tryDirectGemini(messages: ChatMessage[], systemPrompt: string): Promise<string | null> {
   const clientKey = import.meta.env.VITE_GEMINI_API_KEY as string | undefined;
   if (!clientKey) return null;
@@ -147,6 +219,7 @@ export const chatWithHistory = async (
     enrichedPrompt += `\nUser Preference: Respond in English.`;
   }
 
+  // 1. Try serverless /api/gemini endpoint
   try {
     const response = await fetch(API_URL, {
       method: 'POST',
@@ -163,12 +236,19 @@ export const chatWithHistory = async (
     console.warn('[aiService] /api/gemini history chat failed, falling back:', err);
   }
 
+  // 2. Direct Cloudflare Workers AI client call
+  const cfResponse = await tryDirectCloudflareAI(messages, enrichedPrompt);
+  if (cfResponse) return cfResponse;
+
+  // 3. Direct Gemini client call
   const directResponse = await tryDirectGemini(messages, enrichedPrompt);
   if (directResponse) return directResponse;
 
+  // 4. Direct Pollinations client call
   const pollinationsResponse = await tryDirectPollinations(messages, enrichedPrompt);
   if (pollinationsResponse) return pollinationsResponse;
 
+  // 5. Intelligent local pedagogical response
   const lastUserPrompt = messages.filter(m => m.role === 'user').pop()?.content || '';
   const isBangla = /[\u0980-\u09FF]/.test(lastUserPrompt) || context?.language === 'bn';
   return generateLocalPedagogicalResponse(lastUserPrompt, !isBangla);

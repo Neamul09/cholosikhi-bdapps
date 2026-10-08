@@ -175,6 +175,78 @@ $ax^2 + bx + c = 0$ সমীকরণের জন্য:
     : `🦉 হ্যালো! আমি **নিনি (Nini)**, চলোশিখি ডিজিটাল SAT এর এআই মাস্টার কোচ! SAT Math, ডেসমস (Desmos) ট্রিকস, রিডিং কম্প্রিহেনশন, গ্রামার রুলস বা যেকোনো প্রশ্ন নিয়ে আমাকে জিজ্ঞাসা করো!`;
 }
 
+async function tryDirectCloudflareAI(messages: SatChatMessage[], systemPrompt: string): Promise<string | null> {
+  const accountId = import.meta.env.VITE_CLOUDFLARE_ACCOUNT_ID as string | undefined;
+  const apiToken = import.meta.env.VITE_CLOUDFLARE_API_TOKEN as string | undefined;
+  const workerUrl = import.meta.env.VITE_CLOUDFLARE_WORKER_URL as string | undefined;
+
+  const recentMessages = messages.slice(-6);
+
+  if (workerUrl) {
+    try {
+      const response = await fetch(workerUrl, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ messages: recentMessages, systemPrompt }),
+        signal: AbortSignal.timeout(4500),
+      });
+      if (response.ok) {
+        const data = await response.json();
+        const text = data.response || data.result?.response || (typeof data === 'string' ? data : null);
+        if (text) return text;
+      }
+    } catch (e) {
+      console.warn('[satAiService] Direct Cloudflare custom worker failed:', e);
+    }
+  }
+
+  if (accountId && apiToken) {
+    const formattedMessages: any[] = [{ role: 'system', content: systemPrompt }];
+    for (const msg of recentMessages) {
+      formattedMessages.push({
+        role: msg.role === 'user' ? 'user' : 'assistant',
+        content: msg.content
+      });
+    }
+
+    const models = [
+      '@cf/meta/llama-3.2-3b-instruct',
+      '@cf/meta/llama-3.1-8b-instruct',
+      '@cf/mistral/mistral-7b-instruct-v0.2',
+    ];
+
+    for (const model of models) {
+      try {
+        const response = await fetch(
+          `https://api.cloudflare.com/client/v4/accounts/${accountId}/ai/run/${model}`,
+          {
+            method: 'POST',
+            headers: {
+              'Authorization': `Bearer ${apiToken}`,
+              'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({
+              messages: formattedMessages,
+              max_tokens: 750,
+            }),
+            signal: AbortSignal.timeout(4500),
+          }
+        );
+
+        if (response.ok) {
+          const data = await response.json();
+          const text = data.result?.response || data.result?.choices?.[0]?.message?.content || data.response;
+          if (text) return text;
+        }
+      } catch (e) {
+        console.warn(`[satAiService] Direct Cloudflare AI model ${model} failed:`, e);
+      }
+    }
+  }
+
+  return null;
+}
+
 async function tryDirectGemini(messages: SatChatMessage[], systemPrompt: string): Promise<string | null> {
   const clientKey = import.meta.env.VITE_GEMINI_API_KEY as string | undefined;
   if (!clientKey) return null;
@@ -271,15 +343,19 @@ export const chatWithSatTutor = async (
     console.warn('[satAiService] /api/gemini fetch failed, falling back:', err);
   }
 
-  // 2. Direct client Gemini key (if user configured client key)
+  // 2. Direct Cloudflare Workers AI client call
+  const cfResponse = await tryDirectCloudflareAI(messages, enrichedPrompt);
+  if (cfResponse) return cfResponse;
+
+  // 3. Direct client Gemini key (if user configured client key)
   const directResponse = await tryDirectGemini(messages, enrichedPrompt);
   if (directResponse) return directResponse;
 
-  // 3. Direct client free LLM call to Pollinations
+  // 4. Direct client free LLM call to Pollinations
   const pollinationsResponse = await tryDirectPollinations(messages, enrichedPrompt);
   if (pollinationsResponse) return pollinationsResponse;
 
-  // 4. Offline intelligent SAT pedagogical response
+  // 5. Offline intelligent SAT pedagogical response
   const lastUserPrompt = messages.filter(m => m.role === 'user').pop()?.content || '';
   const isBangla = /[\u0980-\u09FF]/.test(lastUserPrompt) || context?.language === 'bn';
   return generateLocalSatResponse(lastUserPrompt, !isBangla);
