@@ -3,9 +3,10 @@
 -- (sql/04_fix_uuid_to_text_migration.sql)
 --
 -- FIXES:
--- 1. ERROR: 42804: foreign key constraint "profiles_id_fkey" cannot be implemented
--- 2. ERROR: 0A000: cannot alter type of a column used in a policy definition
--- 3. HTTP 400 Bad Request ("invalid input syntax for type uuid: usr_8801878932651")
+-- 1. ERROR: 42703: column "user_id" does not exist in analytics_events
+-- 2. ERROR: 42804: foreign key constraint "profiles_id_fkey" cannot be implemented
+-- 3. ERROR: 0A000: cannot alter type of a column used in a policy definition
+-- 4. HTTP 400 Bad Request ("invalid input syntax for type uuid: usr_8801878932651")
 --
 -- Run this in your Supabase SQL Editor:
 -- https://supabase.com/dashboard/project/ofzuvhjindrlkgjpmffu/sql
@@ -29,7 +30,6 @@ BEGIN
 END $$;
 
 -- 3. Dynamically DROP ALL foreign key constraints in public schema
--- (Using PostgreSQL native pg_constraint catalog to guarantee 100% removal of profiles_id_fkey, etc.)
 DO $$
 DECLARE
     r RECORD;
@@ -44,7 +44,7 @@ BEGIN
     END LOOP;
 END $$;
 
--- 3b. Explicit fallback drops for standard Supabase constraint names
+-- 3b. Explicit fallback drops for any remaining foreign key constraints
 ALTER TABLE IF EXISTS public.profiles DROP CONSTRAINT IF EXISTS profiles_id_fkey CASCADE;
 ALTER TABLE IF EXISTS public.profiles DROP CONSTRAINT IF EXISTS profiles_user_id_fkey CASCADE;
 ALTER TABLE IF EXISTS public.lesson_progress DROP CONSTRAINT IF EXISTS lesson_progress_user_id_fkey CASCADE;
@@ -57,7 +57,6 @@ ALTER TABLE IF EXISTS public.sat_quiz_attempts DROP CONSTRAINT IF EXISTS sat_qui
 ALTER TABLE IF EXISTS public.sat_wrong_answers DROP CONSTRAINT IF EXISTS sat_wrong_answers_user_id_fkey CASCADE;
 ALTER TABLE IF EXISTS public.sat_user_routines DROP CONSTRAINT IF EXISTS sat_user_routines_user_id_fkey CASCADE;
 ALTER TABLE IF EXISTS public.sat_vocab_progress DROP CONSTRAINT IF EXISTS sat_vocab_progress_user_id_fkey CASCADE;
-ALTER TABLE IF EXISTS public.analytics_events DROP CONSTRAINT IF EXISTS analytics_events_user_id_fkey CASCADE;
 
 -- 4. Ensure and Alter all tables to use TEXT for user_id / id
 
@@ -242,14 +241,17 @@ ALTER TABLE public.sat_vocab_progress ALTER COLUMN user_id TYPE TEXT USING user_
 
 -- 4l. analytics_events
 CREATE TABLE IF NOT EXISTS public.analytics_events (
-  id UUID DEFAULT uuid_generate_v4() PRIMARY KEY,
-  event_type TEXT NOT NULL,
-  user_id TEXT,
-  session_id TEXT,
-  event_data JSONB DEFAULT '{}'::jsonb,
-  created_at TIMESTAMPTZ DEFAULT NOW()
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  event_name TEXT NOT NULL,
+  visitor_id TEXT NOT NULL,
+  url TEXT,
+  metadata JSONB DEFAULT '{}'::jsonb,
+  source TEXT DEFAULT 'direct',
+  is_reel BOOLEAN DEFAULT false,
+  user_agent TEXT,
+  ip_country TEXT,
+  created_at TIMESTAMPTZ DEFAULT now()
 );
-ALTER TABLE public.analytics_events ALTER COLUMN user_id TYPE TEXT USING user_id::text;
 
 -- 5. Create Performance Indexes
 CREATE INDEX IF NOT EXISTS idx_lesson_progress_user ON public.lesson_progress (user_id);
@@ -261,7 +263,8 @@ CREATE INDEX IF NOT EXISTS idx_sat_user_progress_user ON public.sat_user_progres
 CREATE INDEX IF NOT EXISTS idx_sat_quiz_attempts_user ON public.sat_quiz_attempts (user_id);
 CREATE INDEX IF NOT EXISTS idx_sat_wrong_answers_user ON public.sat_wrong_answers (user_id, resolved);
 CREATE INDEX IF NOT EXISTS idx_sat_vocab_progress_user ON public.sat_vocab_progress (user_id);
-CREATE INDEX IF NOT EXISTS idx_analytics_events_user ON public.analytics_events (user_id);
+CREATE INDEX IF NOT EXISTS idx_analytics_visitor_id ON public.analytics_events(visitor_id);
+CREATE INDEX IF NOT EXISTS idx_analytics_created_at ON public.analytics_events(created_at DESC);
 
 -- 6. Enable Row Level Security (RLS) & Grant Access for BDApps users
 ALTER TABLE public.bdapps_users ENABLE ROW LEVEL SECURITY;
@@ -277,7 +280,7 @@ ALTER TABLE public.sat_user_routines ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.sat_vocab_progress ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.analytics_events ENABLE ROW LEVEL SECURITY;
 
--- Reset and configure public policies
+-- Re-create public policies
 CREATE POLICY "Allow public all bdapps_users" ON public.bdapps_users FOR ALL USING (true) WITH CHECK (true);
 CREATE POLICY "Allow public all profiles" ON public.profiles FOR ALL USING (true) WITH CHECK (true);
 CREATE POLICY "Allow public all lesson_progress" ON public.lesson_progress FOR ALL USING (true) WITH CHECK (true);
