@@ -2,15 +2,33 @@
 -- CholoSikhi BDApps + SAT Suite Full Migration: Convert UUIDs to TEXT & Enable Public RLS
 -- (sql/04_fix_uuid_to_text_migration.sql)
 --
--- FIXES: 400 Bad Request ("invalid input syntax for type uuid: usr_8801878932651")
+-- FIXES:
+-- 1. ERROR: 0A000: cannot alter type of a column used in a policy definition
+-- 2. 400 Bad Request ("invalid input syntax for type uuid: usr_8801878932651")
+--
 -- Run this ONCE in your Supabase SQL Editor:
--- https://supabase.com/dashboard/project/_/sql
+-- https://supabase.com/dashboard/project/ofzuvhjindrlkgjpmffu/sql
 -- ==============================================================================
 
 -- 1. Enable Required Extensions
 CREATE EXTENSION IF NOT EXISTS "uuid-ossp";
 
--- 2. Drop all foreign key constraints referencing auth.users from public tables
+-- 2. Dynamically DROP ALL existing Row Level Security policies across public tables
+-- (Prevents PostgreSQL error 0A000: cannot alter type of a column used in a policy definition)
+DO $$
+DECLARE
+    pol RECORD;
+BEGIN
+    FOR pol IN (
+        SELECT schemaname, tablename, policyname
+        FROM pg_policies
+        WHERE schemaname = 'public'
+    ) LOOP
+        EXECUTE format('DROP POLICY IF EXISTS %I ON %I.%I CASCADE;', pol.policyname, pol.schemaname, pol.tablename);
+    END LOOP;
+END $$;
+
+-- 3. Dynamically DROP all foreign key constraints referencing auth.users from public tables
 DO $$
 DECLARE
     r RECORD;
@@ -31,9 +49,9 @@ BEGIN
     END LOOP;
 END $$;
 
--- 3. Ensure and Alter all tables to use TEXT for user_id / id
+-- 4. Ensure and Alter all tables to use TEXT for user_id / id
 
--- 3a. bdapps_users
+-- 4a. bdapps_users
 CREATE TABLE IF NOT EXISTS public.bdapps_users (
   id TEXT PRIMARY KEY,
   mobile TEXT UNIQUE NOT NULL,
@@ -45,7 +63,7 @@ CREATE TABLE IF NOT EXISTS public.bdapps_users (
 );
 ALTER TABLE public.bdapps_users ALTER COLUMN id TYPE TEXT USING id::text;
 
--- 3b. profiles
+-- 4b. profiles
 CREATE TABLE IF NOT EXISTS public.profiles (
   id TEXT PRIMARY KEY,
   name TEXT DEFAULT 'Learner',
@@ -87,7 +105,7 @@ CREATE TABLE IF NOT EXISTS public.profiles (
 );
 ALTER TABLE public.profiles ALTER COLUMN id TYPE TEXT USING id::text;
 
--- 3c. lesson_progress
+-- 4c. lesson_progress
 CREATE TABLE IF NOT EXISTS public.lesson_progress (
   id UUID DEFAULT uuid_generate_v4() PRIMARY KEY,
   user_id TEXT NOT NULL,
@@ -101,7 +119,7 @@ CREATE TABLE IF NOT EXISTS public.lesson_progress (
 );
 ALTER TABLE public.lesson_progress ALTER COLUMN user_id TYPE TEXT USING user_id::text;
 
--- 3d. test_results
+-- 4d. test_results
 CREATE TABLE IF NOT EXISTS public.test_results (
   id UUID DEFAULT uuid_generate_v4() PRIMARY KEY,
   user_id TEXT NOT NULL,
@@ -113,7 +131,7 @@ CREATE TABLE IF NOT EXISTS public.test_results (
 );
 ALTER TABLE public.test_results ALTER COLUMN user_id TYPE TEXT USING user_id::text;
 
--- 3e. achievements
+-- 4e. achievements
 CREATE TABLE IF NOT EXISTS public.achievements (
   id UUID DEFAULT uuid_generate_v4() PRIMARY KEY,
   user_id TEXT NOT NULL,
@@ -123,7 +141,7 @@ CREATE TABLE IF NOT EXISTS public.achievements (
 );
 ALTER TABLE public.achievements ALTER COLUMN user_id TYPE TEXT USING user_id::text;
 
--- 3f. follows
+-- 4f. follows
 CREATE TABLE IF NOT EXISTS public.follows (
   id UUID DEFAULT uuid_generate_v4() PRIMARY KEY,
   follower_id TEXT NOT NULL,
@@ -134,7 +152,7 @@ CREATE TABLE IF NOT EXISTS public.follows (
 ALTER TABLE public.follows ALTER COLUMN follower_id TYPE TEXT USING follower_id::text;
 ALTER TABLE public.follows ALTER COLUMN following_id TYPE TEXT USING following_id::text;
 
--- 3g. sat_user_progress
+-- 4g. sat_user_progress
 CREATE TABLE IF NOT EXISTS public.sat_user_progress (
   id UUID DEFAULT uuid_generate_v4() PRIMARY KEY,
   user_id TEXT NOT NULL,
@@ -151,7 +169,7 @@ CREATE TABLE IF NOT EXISTS public.sat_user_progress (
 );
 ALTER TABLE public.sat_user_progress ALTER COLUMN user_id TYPE TEXT USING user_id::text;
 
--- 3h. sat_quiz_attempts
+-- 4h. sat_quiz_attempts
 CREATE TABLE IF NOT EXISTS public.sat_quiz_attempts (
   id UUID DEFAULT uuid_generate_v4() PRIMARY KEY,
   user_id TEXT NOT NULL,
@@ -168,7 +186,7 @@ CREATE TABLE IF NOT EXISTS public.sat_quiz_attempts (
 );
 ALTER TABLE public.sat_quiz_attempts ALTER COLUMN user_id TYPE TEXT USING user_id::text;
 
--- 3i. sat_wrong_answers
+-- 4i. sat_wrong_answers
 CREATE TABLE IF NOT EXISTS public.sat_wrong_answers (
   id UUID DEFAULT uuid_generate_v4() PRIMARY KEY,
   user_id TEXT NOT NULL,
@@ -188,7 +206,7 @@ CREATE TABLE IF NOT EXISTS public.sat_wrong_answers (
 );
 ALTER TABLE public.sat_wrong_answers ALTER COLUMN user_id TYPE TEXT USING user_id::text;
 
--- 3j. sat_user_routines
+-- 4j. sat_user_routines
 CREATE TABLE IF NOT EXISTS public.sat_user_routines (
   id UUID DEFAULT uuid_generate_v4() PRIMARY KEY,
   user_id TEXT NOT NULL,
@@ -201,7 +219,7 @@ CREATE TABLE IF NOT EXISTS public.sat_user_routines (
 );
 ALTER TABLE public.sat_user_routines ALTER COLUMN user_id TYPE TEXT USING user_id::text;
 
--- 3k. sat_vocab_progress
+-- 4k. sat_vocab_progress
 CREATE TABLE IF NOT EXISTS public.sat_vocab_progress (
   id UUID DEFAULT uuid_generate_v4() PRIMARY KEY,
   user_id TEXT NOT NULL,
@@ -212,7 +230,7 @@ CREATE TABLE IF NOT EXISTS public.sat_vocab_progress (
 );
 ALTER TABLE public.sat_vocab_progress ALTER COLUMN user_id TYPE TEXT USING user_id::text;
 
--- 3l. analytics_events
+-- 4l. analytics_events
 CREATE TABLE IF NOT EXISTS public.analytics_events (
   id UUID DEFAULT uuid_generate_v4() PRIMARY KEY,
   event_type TEXT NOT NULL,
@@ -223,7 +241,7 @@ CREATE TABLE IF NOT EXISTS public.analytics_events (
 );
 ALTER TABLE public.analytics_events ALTER COLUMN user_id TYPE TEXT USING user_id::text;
 
--- 4. Create Indexes for High Performance
+-- 5. Create Performance Indexes
 CREATE INDEX IF NOT EXISTS idx_lesson_progress_user ON public.lesson_progress (user_id);
 CREATE INDEX IF NOT EXISTS idx_test_results_user ON public.test_results (user_id);
 CREATE INDEX IF NOT EXISTS idx_achievements_user ON public.achievements (user_id);
@@ -235,7 +253,7 @@ CREATE INDEX IF NOT EXISTS idx_sat_wrong_answers_user ON public.sat_wrong_answer
 CREATE INDEX IF NOT EXISTS idx_sat_vocab_progress_user ON public.sat_vocab_progress (user_id);
 CREATE INDEX IF NOT EXISTS idx_analytics_events_user ON public.analytics_events (user_id);
 
--- 5. Enable Row Level Security (RLS) & Grant Access for BDApps users
+-- 6. Enable Row Level Security (RLS) & Grant Access for BDApps users
 ALTER TABLE public.bdapps_users ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.profiles ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.lesson_progress ENABLE ROW LEVEL SECURITY;
@@ -250,38 +268,15 @@ ALTER TABLE public.sat_vocab_progress ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.analytics_events ENABLE ROW LEVEL SECURITY;
 
 -- Reset and configure public policies
-DROP POLICY IF EXISTS "Allow public all bdapps_users" ON public.bdapps_users;
 CREATE POLICY "Allow public all bdapps_users" ON public.bdapps_users FOR ALL USING (true) WITH CHECK (true);
-
-DROP POLICY IF EXISTS "Allow public all profiles" ON public.profiles;
 CREATE POLICY "Allow public all profiles" ON public.profiles FOR ALL USING (true) WITH CHECK (true);
-
-DROP POLICY IF EXISTS "Allow public all lesson_progress" ON public.lesson_progress;
 CREATE POLICY "Allow public all lesson_progress" ON public.lesson_progress FOR ALL USING (true) WITH CHECK (true);
-
-DROP POLICY IF EXISTS "Allow public all test_results" ON public.test_results;
 CREATE POLICY "Allow public all test_results" ON public.test_results FOR ALL USING (true) WITH CHECK (true);
-
-DROP POLICY IF EXISTS "Allow public all achievements" ON public.achievements;
 CREATE POLICY "Allow public all achievements" ON public.achievements FOR ALL USING (true) WITH CHECK (true);
-
-DROP POLICY IF EXISTS "Allow public all follows" ON public.follows;
 CREATE POLICY "Allow public all follows" ON public.follows FOR ALL USING (true) WITH CHECK (true);
-
-DROP POLICY IF EXISTS "Allow public all sat_user_progress" ON public.sat_user_progress;
 CREATE POLICY "Allow public all sat_user_progress" ON public.sat_user_progress FOR ALL USING (true) WITH CHECK (true);
-
-DROP POLICY IF EXISTS "Allow public all sat_quiz_attempts" ON public.sat_quiz_attempts;
 CREATE POLICY "Allow public all sat_quiz_attempts" ON public.sat_quiz_attempts FOR ALL USING (true) WITH CHECK (true);
-
-DROP POLICY IF EXISTS "Allow public all sat_wrong_answers" ON public.sat_wrong_answers;
 CREATE POLICY "Allow public all sat_wrong_answers" ON public.sat_wrong_answers FOR ALL USING (true) WITH CHECK (true);
-
-DROP POLICY IF EXISTS "Allow public all sat_user_routines" ON public.sat_user_routines;
 CREATE POLICY "Allow public all sat_user_routines" ON public.sat_user_routines FOR ALL USING (true) WITH CHECK (true);
-
-DROP POLICY IF EXISTS "Allow public all sat_vocab_progress" ON public.sat_vocab_progress;
 CREATE POLICY "Allow public all sat_vocab_progress" ON public.sat_vocab_progress FOR ALL USING (true) WITH CHECK (true);
-
-DROP POLICY IF EXISTS "Allow public all analytics_events" ON public.analytics_events;
 CREATE POLICY "Allow public all analytics_events" ON public.analytics_events FOR ALL USING (true) WITH CHECK (true);

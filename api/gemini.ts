@@ -26,11 +26,13 @@ const CLOUDFLARE_AI_MODELS = [
 /**
  * Intelligent domain-aware pedagogical fallback response when external APIs are unavailable.
  */
-function generateFallbackResponse(userPrompt: string, systemPrompt?: string): string {
+function generateFallbackResponse(userPrompt: string, systemPrompt?: string, messages: any[] = []): string {
   const isBangla = /[\u0980-\u09FF]/.test(userPrompt) || (systemPrompt && /[\u0980-\u09FF]/.test(systemPrompt) && !/[a-zA-Z]{4,}/.test(userPrompt));
   
   const sysLower = (systemPrompt || '').toLowerCase();
   const userLower = userPrompt.toLowerCase();
+  const contextHistory = messages.map(m => m.content || '').join(' ').toLowerCase();
+  const combinedText = `${contextHistory} ${userLower}`;
 
   const isExplicitPythonSys = sysLower.includes('python') || sysLower.includes('programming tutor') || sysLower.includes('cs mentor');
   const isExplicitSatSys = sysLower.includes('sat') || sysLower.includes('college board');
@@ -39,11 +41,11 @@ function generateFallbackResponse(userPrompt: string, systemPrompt?: string): st
   let isSatContext = isExplicitSatSys;
 
   if (!isExplicitPythonSys && !isExplicitSatSys) {
-    const satScore = (userLower.match(/\b(sat|desmos|algebra|quadratic|discriminant|geometry|trigonometry|roots|vertex|parabola|circle|transitions?|reading|writing|vocab|evidence|college\s*board)\b/g) || []).length +
-      (/স্যাট|ডেসমস|দ্বিঘাত|নিশ্চায়ক|সমীকরণ|বৃত্ত/.test(userPrompt) ? 2 : 0);
+    const satScore = (combinedText.match(/\b(sat|desmos|algebra|quadratic|discriminant|geometry|trigonometry|roots|vertex|parabola|circle|transitions?|reading|writing|vocab|evidence|college\s*board)\b/g) || []).length +
+      (/স্যাট|ডেসমস|দ্বিঘাত|নিশ্চায়ক|সমীকরণ|বৃত্ত/.test(combinedText) ? 2 : 0);
     
-    const pyScore = (userLower.match(/\b(python|coding|programming|code|debug|debugging|syntax|loop|loops|function|functions|def|return|variable|variables|list|dict|array|algorithm|complexity)\b/g) || []).length +
-      (/পাইথন|প্রোগ্রামিং|কোড|লুপ|ফাংশন|ভেরিয়েবল|বাগ|ডিবাগ/.test(userPrompt) ? 2 : 0);
+    const pyScore = (combinedText.match(/\b(python|coding|programming|code|debug|debugging|syntax|loop|loops|function|functions|def|return|variable|variables|list|dict|array|algorithm|complexity)\b/g) || []).length +
+      (/পাইথন|প্রোগ্রামিং|কোড|লুপ|ফাংশন|ভেরিয়েবল|বাগ|ডিবাগ/.test(combinedText) ? 2 : 0);
 
     if (pyScore > satScore) {
       isPythonContext = true;
@@ -54,10 +56,14 @@ function generateFallbackResponse(userPrompt: string, systemPrompt?: string): st
     }
   }
 
+  const isExampleRequest = 
+    /\b(example|sample|question|problem|practice|show me|give me|test me|exercise|drill)\b/i.test(userPrompt) ||
+    /উদাহরণ|প্রশ্ন|অনুশীলন|স্যাম্পল|প্র্যাকটিস/.test(userPrompt);
+
   // --- PYTHON & CODING DOMAIN FALLBACKS ---
   if (isPythonContext && !isExplicitSatSys) {
     // Debugging / Errors / Syntax
-    if (/\b(debug|debugging|errors?|bugs?|syntaxerror|nameerror|typeerror|indentation|fix|broken)\b/i.test(userPrompt) || /ভুল|বাগ|ডিবাগ|এরর|সিনট্যাক্স/.test(userPrompt)) {
+    if (/\b(debug|debugging|errors?|bugs?|syntaxerror|nameerror|typeerror|indentation|fix|broken)\b/i.test(combinedText) || /ভুল|বাগ|ডিবাগ|এরর|সিনট্যাক্স/.test(combinedText)) {
       if (isBangla) {
         return `🔍 **কোড ডিবাগিং (Debugging) ও সাধারণ ভুল সংশোধনের ৩টি সেরা নিয়ম:**
 
@@ -85,7 +91,7 @@ function generateFallbackResponse(userPrompt: string, systemPrompt?: string): st
     }
 
     // Loops / Iteration
-    if (/\b(loops?|while|iteration|iterating|for\s+loop)\b/i.test(userPrompt) || /\bfor\s+\w+\s+in\b/i.test(userPrompt) || /লুপ/.test(userPrompt)) {
+    if (/\b(loops?|while|iteration|iterating|for\s+loop)\b/i.test(combinedText) || /\bfor\s+\w+\s+in\b/i.test(combinedText) || /লুপ/.test(combinedText)) {
       if (isBangla) {
         return `💡 **লুপ (Loop) এর মূল ধারণা:**
 
@@ -127,7 +133,7 @@ Do you have a specific problem or loop pattern you'd like to explore?`;
     }
 
     // Functions / Methods / Return
-    if (/\b(def|functions?|methods?|parameters?|arguments?|return)\b/i.test(userPrompt) || /ফাংশন/.test(userPrompt)) {
+    if (/\b(def|functions?|methods?|parameters?|arguments?|return)\b/i.test(combinedText) || /ফাংশন/.test(combinedText)) {
       if (isBangla) {
         return `💡 **ফাংশন (Function) কী?**
 
@@ -158,7 +164,7 @@ Use \`def\` to define functions and \`return\` to pass back values.`;
     }
 
     // Variables & Data Types
-    if (/\b(variables?|data\s*types?|integers?|strings?|boolean|float|lists?|dictionar(?:y|ies))\b/i.test(userPrompt) || /ভেরিয়েবল|ভেরিয়েবল|ডেটা\s*টাইপ|লিস্ট|ডিকশনারি/.test(userPrompt)) {
+    if (/\b(variables?|data\s*types?|integers?|strings?|boolean|float|lists?|dictionar(?:y|ies))\b/i.test(combinedText) || /ভেরিয়েবল|ভেরিয়েবল|ডেটা\s*টাইপ|লিস্ট|ডিকশনারি/.test(combinedText)) {
       if (isBangla) {
         return `💡 **ভেরিয়েবল (Variable) ও ডেটা টাইপ:**
 
@@ -195,6 +201,82 @@ items = ["Python", "Algorithms"]  # list
 
   // --- SAT DOMAIN FALLBACKS ---
   if (isSatContext) {
+    // SAT Example Question Follow-up
+    if (isExampleRequest) {
+      if (/\b(quadratic|discriminant|vieta|root|vertex|parabola|b\^2\s*-\s*4ac)\b/i.test(combinedText) || /দ্বিঘাত|নিশ্চায়ক|প্যারাবোলা/.test(combinedText)) {
+        if (isBangla) {
+          return `🎯 **ডিজিটাল SAT স্ট্যান্ডার্ড প্রশ্ন (দ্বিঘাত সমীকরণ ও Vieta's Formula):**
+
+**প্রশ্ন:**
+সমীকরণ $2x^2 - 12x + k = 0$ এর দুটি বাস্তব সমাধান $r_1$ এবং $r_2$। যদি সমাধানদ্বয়ের গুণফল $7$ হয়, তবে মূলদ্বয়ের যোগফল ($r_1 + r_2$) কত?
+
+**A)** $3$  
+**B)** $6$  
+**C)** $7$  
+**D)** $12$  
+
+---
+
+💡 **Vieta's Formula দিয়ে ৫ সেকেন্ডে সমাধান:**
+১. $ax^2 + bx + c = 0$ সমীকরণের জন্য $a = 2$, $b = -12$।
+২. মূলদ্বয়ের যোগফল:
+   $$\text{Sum of roots } (r_1 + r_2) = -\frac{b}{a} = -\frac{-12}{2} = 6$$
+৩. **SAT ট্র্যাপ:** প্রশ্নে গুণফল $7$ দেওয়া হয়েছে বিভ্রান্ত করার জন্য। যোগফল বের করতে $k$-এর মান বের করার কোনো প্রয়োজন নেই!
+
+✅ **সঠিক উত্তর:** **B) 6**`;
+        }
+
+        return `🎯 **Authentic Digital SAT Practice Question (Quadratics & Vieta's Shortcuts):**
+
+**Question:**
+The quadratic equation $2x^2 - 12x + k = 0$ has two real solutions, $r_1$ and $r_2$. If the product of the solutions is $7$, what is the value of the sum of the solutions $(r_1 + r_2)$?
+
+**A)** $3$  
+**B)** $6$  
+**C)** $7$  
+**D)** $12$  
+
+---
+
+💡 **Step-by-Step Vieta Solution (5-Second Shortcut):**
+1. **Identify Coefficients:** In $ax^2 + bx + c = 0$, we have $a = 2$, $b = -12$, and $c = k$.
+2. **Apply Sum of Roots Formula:**
+   $$\text{Sum of roots } (r_1 + r_2) = -\frac{b}{a} = -\frac{-12}{2} = 6$$
+3. **Exam Trap Alert:** The problem gives "product is 7" ($c/a = 7 \implies k = 14$) as a distractor! You do **not** need to find $k$ or solve for the individual roots with the quadratic formula.
+
+✅ **Correct Answer:** **B) 6**
+
+Would you like to try another problem or see the Desmos graphical approach?`;
+      }
+
+      if (/\b(desmos|system|linear|intersection|graph|calculator)\b/i.test(combinedText) || /ডেসমস|সমীকরণ জোট|গ্রাফ/.test(combinedText)) {
+        return isEnglish
+          ? `🎯 **Authentic Digital SAT Practice Question (Systems of Equations):**
+
+**Question:**
+$$\\begin{cases} y = 2x + 5 \\\\ y = x^2 - 4x + 14 \\end{cases}$$
+How many real $(x, y)$ coordinate solutions satisfy the system of equations above?
+
+**A)** Exactly $0$  
+**B)** Exactly $1$  
+**C)** Exactly $2$  
+**D)** Infinitely many  
+
+---
+
+⚡ **Desmos Calculator Strategy (10 Seconds):**
+1. Type \`y = 2x + 5\` on line 1.
+2. Type \`y = x^2 - 4x + 14\` on line 2.
+3. Observe the intersection point: The line is tangent to the parabola at exactly $(3, 11)$.
+
+✅ **Correct Answer:** **B) Exactly 1**`
+          : `🎯 **ডিজিটাল SAT সমীকরণ জোট প্রশ্ন:**
+$$\\begin{cases} y = 2x + 5 \\\\ y = x^2 - 4x + 14 \\end{cases}$$
+প্রদত্ত সমীকরণ জোটের ঠিক ১টি বাস্তব সমাধান বিন্দু রয়েছে $(3, 11)$।
+✅ **সঠিক উত্তর:** **B) ঠিক ১টি**`;
+      }
+    }
+
     // Desmos / Graphing / Systems & Roots
     if (/\b(desmos|graph|roots?|systems?|intersection|intercept|calculator|trick|tricks)\b/i.test(userPrompt) || /ডেসমস|গ্রাফ|রুট|ছেদবিন্দু/.test(userPrompt)) {
       if (isBangla) {
@@ -271,9 +353,9 @@ For $ax^2 + bx + c = 0$:
         return `✍️ **SAT Reading & Writing: ট্রানজিশন (Transitions) স্ট্র্যাটেজি:**
 
 ১. **একই ধারার যুক্তি (Addition/Continuers):** *Furthermore, Moreover, Additionally, In addition*
-২. **কারণ ও ফলাফল (Cause/Effect):** *Therefore, Consequently, As a result, Thus*
-৩. **বিপরীত যুক্তি (Contrast):** *However, Nevertheless, In contrast, On the other hand*
-৪. **উদাহরণ ও বিশদকরণ (Example/Restatement):** *Specifically, For instance, In fact, Indeed*
+2. **কারণ ও ফলাফল (Cause/Effect):** *Therefore, Consequently, As a result, Thus*
+3. **বিপরীত যুক্তি (Contrast):** *However, Nevertheless, In contrast, On the other hand*
+4. **উদাহরণ ও বিশদকরণ (Example/Restatement):** *Specifically, For instance, In fact, Indeed*
 
 🎯 **সমাধানের নিয়ম:**
 ১ম বাক্য ও ২য় বাক্যের পারস্পরিক সম্পর্ক নির্ণয় করো (একই অভিমুখ vs বিপরীত অভিমুখ)। তারপর সঠিক ক্যাটাগরির ট্রানজিশন নির্বাচন করো।`;
@@ -641,7 +723,7 @@ export default async function handler(req: Request) {
     // 5. Intelligent pedagogical fallback if network or all endpoints fail
     if (!textResponse) {
       console.warn('[AI Service] All remote LLMs unreachable; using domain-aware local pedagogical fallback.');
-      textResponse = generateFallbackResponse(lastUserMessage, systemPrompt);
+      textResponse = generateFallbackResponse(lastUserMessage, systemPrompt, messages);
     }
 
     return new Response(JSON.stringify({ response: textResponse }), {

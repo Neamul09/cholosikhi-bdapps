@@ -23,7 +23,162 @@ export interface SatChatMessage {
   content: string;
 }
 
-export function generateLocalSatResponse(userPrompt: string, isEnglish = true): string {
+export function generateLocalSatResponse(
+  userPrompt: string, 
+  isEnglish = true,
+  history: SatChatMessage[] = []
+): string {
+  const contextHistory = history.map(m => m.content).join(' ').toLowerCase();
+  const userLower = userPrompt.toLowerCase();
+  const combinedText = `${contextHistory} ${userLower}`;
+
+  const isExampleRequest = 
+    /\b(example|sample|question|problem|practice|show me|give me|test me|exercise|drill)\b/i.test(userPrompt) ||
+    /উদাহরণ|প্রশ্ন|অনুশীলন|স্যাম্পল|প্র্যাকটিস/.test(userPrompt);
+
+  // --- EXAMPLE QUESTIONS GENERATOR ---
+  if (isExampleRequest) {
+    // 1. Quadratic & Vieta's Formula Example
+    if (/\b(quadratic|discriminant|vieta|root|vertex|parabola|b\^2\s*-\s*4ac)\b/i.test(combinedText) || /দ্বিঘাত|নিশ্চায়ক|প্যারাবোলা/.test(combinedText)) {
+      if (!isEnglish) {
+        return `🎯 **ডিজিটাল SAT স্ট্যান্ডার্ড প্রশ্ন (দ্বিঘাত সমীকরণ ও Vieta's Formula):**
+
+**প্রশ্ন:**
+সমীকরণ $2x^2 - 12x + k = 0$ এর দুটি বাস্তব সমাধান $r_1$ এবং $r_2$। যদি সমাধানদ্বয়ের গুণফল $7$ হয়, তবে মূলদ্বয়ের যোগফল ($r_1 + r_2$) কত?
+
+**A)** $3$  
+**B)** $6$  
+**C)** $7$  
+**D)** $12$  
+
+---
+
+💡 **Vieta's Formula দিয়ে ৫ সেকেন্ডে সমাধান:**
+১. $ax^2 + bx + c = 0$ সমীকরণের জন্য $a = 2$, $b = -12$।
+২. মূলদ্বয়ের যোগফল:
+   $$\text{Sum of roots } (r_1 + r_2) = -\frac{b}{a} = -\frac{-12}{2} = 6$$
+৩. **SAT ট্র্যাপ:** প্রশ্নে গুণফল $7$ দেওয়া হয়েছে বিভ্রান্ত করার জন্য। যোগফল বের করতে $k$-এর মান বের করার কোনো প্রয়োজন নেই!
+
+✅ **সঠিক উত্তর:** **B) 6**`;
+      }
+
+      return `🎯 **Authentic Digital SAT Practice Question (Quadratics & Vieta's Shortcuts):**
+
+**Question:**
+The quadratic equation $2x^2 - 12x + k = 0$ has two real solutions, $r_1$ and $r_2$. If the product of the solutions is $7$, what is the value of the sum of the solutions $(r_1 + r_2)$?
+
+**A)** $3$  
+**B)** $6$  
+**C)** $7$  
+**D)** $12$  
+
+---
+
+💡 **Step-by-Step Vieta Solution (5-Second Shortcut):**
+1. **Identify Coefficients:** In $ax^2 + bx + c = 0$, we have $a = 2$, $b = -12$, and $c = k$.
+2. **Apply Sum of Roots Formula:**
+   $$\text{Sum of roots } (r_1 + r_2) = -\frac{b}{a} = -\frac{-12}{2} = 6$$
+3. **Exam Trap Alert:** The problem gives "product is 7" ($c/a = 7 \implies k = 14$) as a distractor! You do **not** need to find $k$ or solve for the individual roots with the quadratic formula.
+
+✅ **Correct Answer:** **B) 6**
+
+Would you like to try another problem or see the Desmos graphical approach?`;
+    }
+
+    // 2. Desmos / Systems of Equations Example
+    if (/\b(desmos|system|linear|intersection|graph|calculator)\b/i.test(combinedText) || /ডেসমস|সমীকরণ জোট|গ্রাফ/.test(combinedText)) {
+      return isEnglish
+        ? `🎯 **Authentic Digital SAT Practice Question (Systems of Equations):**
+
+**Question:**
+$$\\begin{cases} y = 2x + 5 \\\\ y = x^2 - 4x + 14 \\end{cases}$$
+How many real $(x, y)$ coordinate solutions satisfy the system of equations above?
+
+**A)** Exactly $0$  
+**B)** Exactly $1$  
+**C)** Exactly $2$  
+**D)** Infinitely many  
+
+---
+
+⚡ **Desmos Calculator Strategy (10 Seconds):**
+1. Type \`y = 2x + 5\` on line 1.
+2. Type \`y = x^2 - 4x + 14\` on line 2.
+3. Observe the intersection points: The line touches the parabola at exactly one point $(3, 11)$ (tangent line).
+4. Or algebraically: $x^2 - 6x + 9 = 0 \implies (x - 3)^2 = 0 \implies x = 3$.
+
+✅ **Correct Answer:** **B) Exactly 1**`
+        : `🎯 **ডিজিটাল SAT সমীকরণ জোট প্রশ্ন:**
+
+$$\\begin{cases} y = 2x + 5 \\\\ y = x^2 - 4x + 14 \\end{cases}$$
+প্রদত্ত সমীকরণ জোটের কয়টি বাস্তব $(x, y)$ সমাধান আছে?
+
+**A)** ০টি  
+**B)** ঠিক ১টি  
+**C)** ২টি  
+**D)** অসংখ্য  
+
+⚡ **Desmos ট্রিক:** সমীকরণ দুটি Desmos-এ লিখলেই দেখা যাবে রেখাটি প্যারাবোলাকে ঠিক ১টি বিন্দুতে $(3, 11)$ স্পর্শ করেছে।
+✅ **সঠিক উত্তর:** **B) ঠিক ১টি**`;
+    }
+
+    // 3. Transitions Example
+    if (/\b(transition|however|furthermore|therefore|reading|writing|grammar)\b/i.test(combinedText) || /ট্রানজিশন/.test(combinedText)) {
+      return isEnglish
+        ? `🎯 **Authentic Digital SAT Reading & Writing Question (Transitions):**
+
+**Text:**
+Biologist Dr. Elena Vance initially hypothesized that the cave-dwelling salamanders relied solely on chemical trails for navigation. __________, recent thermal imaging revealed that the species also detects ambient infrared radiation to map subterranean obstacles.
+
+Which choice completes the text with the most logical transition?
+
+**A)** Furthermore,  
+**B)** However,  
+**C)** Consequently,  
+**D)** For example,  
+
+---
+
+💡 **Logic & Elimination:**
+- **Sentence 1:** Salamanders relied *solely* on chemical trails (initial belief).
+- **Sentence 2:** Recent imaging shows they *also* use infrared radiation (contrast with "solely").
+- **Relationship:** Contrast / Contradiction $\\rightarrow$ **However,**
+
+✅ **Correct Answer:** **B) However,**`
+        : `🎯 **SAT Reading & Writing ট্রানজিশন প্রশ্ন:**
+
+প্যাসেজে ১ম বাক্যের প্রাথমিক ধারণার সাথে ২য় বাক্যের নতুন আবিষ্কারের **বিপরীত সম্পর্ক** রয়েছে। তাই সঠিক ট্রানজিশন হবে **However,**।
+✅ **সঠিক উত্তর:** **B) However,**`;
+    }
+
+    // 4. Circle Equation Example
+    if (/\b(circle|radius|center|diameter|geometry)\b/i.test(combinedText) || /বৃত্ত|ব্যাসার্ধ/.test(combinedText)) {
+      return isEnglish
+        ? `🎯 **Authentic Digital SAT Circle Equation Question:**
+
+**Question:**
+The equation $x^2 + y^2 - 8x + 6y = 24$ represents a circle in the xy-plane. What is the radius of the circle?
+
+**A)** $5$  
+**B)** $7$  
+**C)** $\\sqrt{24}$  
+**D)** $49$  
+
+---
+
+💡 **Completing the Square Shortcut:**
+1. Group $x$ and $y$: $(x^2 - 8x + 16) + (y^2 + 6y + 9) = 24 + 16 + 9$
+2. Standard form: $(x - 4)^2 + (y + 3)^2 = 49$
+3. Since $r^2 = 49$, the radius is $r = \\sqrt{49} = 7$.
+
+✅ **Correct Answer:** **B) 7**`
+        : `🎯 **SAT বৃত্তের সমীকরণ প্রশ্ন:**
+$x^2 + y^2 - 8x + 6y = 24$ সমীকরণকে পূর্ণবর্গ করলে পাওয়া যায়: $(x - 4)^2 + (y + 3)^2 = 49 = 7^2$।
+অতএব ব্যাসার্ধ $r = 7$।
+✅ **সঠিক উত্তর:** **B) 7**`;
+    }
+  }
+
   // Desmos, graphing, roots, systems of equations, calculator shortcuts
   if (
     /\b(desmos|graph|roots?|systems?|intersection|intercept|calculator|tricks?)\b/i.test(userPrompt) ||
@@ -358,7 +513,7 @@ export const chatWithSatTutor = async (
   // 5. Offline intelligent SAT pedagogical response
   const lastUserPrompt = messages.filter(m => m.role === 'user').pop()?.content || '';
   const isBangla = /[\u0980-\u09FF]/.test(lastUserPrompt) || context?.language === 'bn';
-  return generateLocalSatResponse(lastUserPrompt, !isBangla);
+  return generateLocalSatResponse(lastUserPrompt, !isBangla, messages);
 };
 
 /**
