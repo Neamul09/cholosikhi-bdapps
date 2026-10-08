@@ -16,6 +16,7 @@ const GROQ_MODELS = [
 ];
 
 const CLOUDFLARE_AI_MODELS = [
+  '@cf/meta/llama-3.2-3b-instruct',
   '@cf/meta/llama-3.1-8b-instruct',
   '@cf/meta/llama-3.1-8b-fast-v2',
   '@cf/meta/llama-3-8b-instruct',
@@ -258,7 +259,8 @@ is_active = True      # bool
  * 1. Google Gemini API with timeout
  */
 async function tryGemini(apiKey: string, messages: any[], systemPrompt?: string): Promise<string | null> {
-  const formattedMessages = messages.map((msg: any) => ({
+  const recentMessages = (messages || []).slice(-6);
+  const formattedMessages = recentMessages.map((msg: any) => ({
     role: msg.role === 'user' ? 'user' : 'model',
     parts: [{ text: msg.content }],
   }));
@@ -267,7 +269,7 @@ async function tryGemini(apiKey: string, messages: any[], systemPrompt?: string)
     contents: formattedMessages,
     generationConfig: {
       temperature: 0.7,
-      maxOutputTokens: 1200,
+      maxOutputTokens: 750,
     }
   };
 
@@ -308,13 +310,15 @@ async function tryCloudflareAI(
   messages: any[] = [],
   systemPrompt?: string
 ): Promise<string | null> {
+  const recentMessages = (messages || []).slice(-6);
+
   // Custom Cloudflare Worker proxy if specified
   if (customWorkerUrl) {
     try {
       const response = await fetch(customWorkerUrl, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ messages, systemPrompt }),
+        body: JSON.stringify({ messages: recentMessages, systemPrompt }),
         signal: AbortSignal.timeout(4500),
       });
       if (response.ok) {
@@ -333,7 +337,7 @@ async function tryCloudflareAI(
     if (systemPrompt) {
       formattedMessages.push({ role: 'system', content: systemPrompt });
     }
-    for (const msg of messages) {
+    for (const msg of recentMessages) {
       formattedMessages.push({
         role: msg.role === 'user' ? 'user' : 'assistant',
         content: msg.content
@@ -351,7 +355,7 @@ async function tryCloudflareAI(
           },
           body: JSON.stringify({
             messages: formattedMessages,
-            max_tokens: 1200,
+            max_tokens: 750,
           }),
           signal: AbortSignal.timeout(4500),
         });
@@ -375,7 +379,7 @@ async function tryCloudflareAI(
           },
           body: JSON.stringify({
             messages: formattedMessages,
-            max_tokens: 1200,
+            max_tokens: 750,
           }),
           signal: AbortSignal.timeout(4500),
         });
@@ -398,11 +402,12 @@ async function tryCloudflareAI(
  * 3. Groq Free Tier API with timeout
  */
 async function tryGroq(groqKey: string, messages: any[], systemPrompt?: string): Promise<string | null> {
+  const recentMessages = (messages || []).slice(-6);
   const formattedMessages: any[] = [];
   if (systemPrompt) {
     formattedMessages.push({ role: 'system', content: systemPrompt });
   }
-  for (const msg of messages) {
+  for (const msg of recentMessages) {
     formattedMessages.push({
       role: msg.role === 'user' ? 'user' : 'assistant',
       content: msg.content
@@ -421,7 +426,7 @@ async function tryGroq(groqKey: string, messages: any[], systemPrompt?: string):
           model,
           messages: formattedMessages,
           temperature: 0.7,
-          max_tokens: 1200,
+          max_tokens: 750,
         }),
         signal: AbortSignal.timeout(4500),
       });
