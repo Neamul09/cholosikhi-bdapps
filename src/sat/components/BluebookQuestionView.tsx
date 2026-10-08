@@ -960,7 +960,7 @@ function AiQuestionBreakdownCard({
   const [isOpen, setIsOpen] = useState(false);
   const [loading, setLoading] = useState(false);
   const [response, setResponse] = useState<string | null>(null);
-  const [lang, setLang] = useState<'bn' | 'en'>('bn');
+  const [lang, setLang] = useState<'bn' | 'en'>('en');
 
   const fetchBreakdown = async (targetLang = lang) => {
     setLoading(true);

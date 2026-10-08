@@ -23,7 +23,7 @@ export default function ScorePredictionCard({
   const [showAiPlan, setShowAiPlan] = useState(false);
   const [aiLoading, setAiLoading] = useState(false);
   const [planContent, setPlanContent] = useState<string | null>(null);
-  const [planLang, setPlanLang] = useState<'bn' | 'en'>('bn');
+  const [planLang, setPlanLang] = useState<'bn' | 'en'>('en');
 
   useEffect(() => {
     animateCounter(scoreRef.current, 1000, prediction.compositeScore, 1400);

@@ -129,10 +129,10 @@ export default function SatAiTutor() {
 
   const suggestions = [
     { label: '📐 Desmos Tricks', prompt: 'Show me the top 3 Desmos calculator tricks for Digital SAT Math systems and roots.' },
-    { label: '🎯 Quadratic Discriminant', prompt: 'Explain the quadratic formula and how discriminant b² - 4ac determines number of solutions with an example.' },
+    { label: '🎯 Quadratic Discriminant', prompt: 'Explain the quadratic formula and how discriminant b² - 4ac determines the number of solutions with an example.' },
     { label: '✍️ SAT Transition Rules', prompt: 'What are the rules for transition words on SAT Reading & Writing (However vs Furthermore vs Therefore)?' },
     { label: '📖 Vocab in Context', prompt: 'How should I approach "Words in Context" questions without memorizing the whole dictionary?' },
-    { label: '🇧🇩 বাংলায় Desmos গাইড', prompt: 'SAT Math এ Desmos ব্যবহার করে দ্রুত সমীকরণ সমাধান করার নিয়ম বাংলায় বুঝিয়ে দাও।' }
+    { label: '⏱️ Module Pacing Strategy', prompt: 'What is the optimal pacing strategy for Digital SAT Module 1 and Module 2?' }
   ];
 
   return (

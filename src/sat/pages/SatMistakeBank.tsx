@@ -32,7 +32,7 @@ export default function SatMistakeBank() {
   const [showAiModal, setShowAiModal] = useState(false);
   const [aiPlan, setAiPlan] = useState<string | null>(null);
   const [isAiLoading, setIsAiLoading] = useState(false);
-  const [aiLang, setAiLang] = useState<'bn' | 'en'>('bn');
+  const [aiLang, setAiLang] = useState<'bn' | 'en'>('en');
 
   useEffect(() => {
     setUserState(loadSatUserState());
