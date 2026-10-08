@@ -17,6 +17,7 @@ const GROQ_MODELS = [
 
 const CLOUDFLARE_AI_MODELS = [
   '@cf/meta/llama-3.1-8b-instruct',
+  '@cf/meta/llama-3.1-8b-fast-v2',
   '@cf/meta/llama-3-8b-instruct',
   '@cf/mistral/mistral-7b-instruct-v0.2',
 ];
@@ -357,7 +358,7 @@ async function tryCloudflareAI(
 
         if (response.ok) {
           const data = await response.json();
-          const text = data.result?.response;
+          const text = data.result?.response || data.result?.choices?.[0]?.message?.content || data.response;
           if (text) return text;
         }
       } catch (e) {
@@ -381,7 +382,7 @@ async function tryCloudflareAI(
 
         if (response.ok) {
           const data = await response.json();
-          const text = data.result?.response;
+          const text = data.result?.response || data.result?.choices?.[0]?.message?.content || data.response;
           if (text) return text;
         }
       } catch (e) {
@@ -534,14 +535,12 @@ export default async function handler(req: Request) {
 
     const cfAccountId = 
       process.env.CLOUDFLARE_ACCOUNT_ID || 
-      process.env.VITE_CLOUDFLARE_ACCOUNT_ID || 
-      'f7e96f492a07821f9b71b65591eee766';
+      process.env.VITE_CLOUDFLARE_ACCOUNT_ID;
 
     const cfApiToken = 
       process.env.CLOUDFLARE_API_TOKEN || 
       process.env.VITE_CLOUDFLARE_API_TOKEN || 
-      process.env.CLOUDFLARE_API_KEY || 
-      'ba1f0ac76db93e320011eef3fd9a70e0d93253da2c16ea520a60e2a7cc6bef9b';
+      process.env.CLOUDFLARE_API_KEY;
 
     const cfWorkerUrl = 
       process.env.CLOUDFLARE_WORKER_URL || 
