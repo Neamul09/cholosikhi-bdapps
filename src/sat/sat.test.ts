@@ -368,6 +368,17 @@ describe('SAT Suite SQA Analysis & Integrity Tests', () => {
       expect(resp).toContain('Reading & Writing Challenge');
       expect(resp).not.toContain('momentary network latency');
     });
+
+    it('should default to English when user asks in English and respond in Bengali only when prompted in Bengali', async () => {
+      const { generateLocalSatResponse } = await import('./services/satAiService');
+      
+      const englishResp = generateLocalSatResponse('what is vieta formula?', true, []);
+      expect(englishResp).toContain('Quadratic');
+      expect(englishResp).not.toContain('দ্বিঘাত');
+
+      const banglaResp = generateLocalSatResponse('দ্বিঘাত সমীকরণ কীভাবে সমাধান করে?', false, []);
+      expect(banglaResp).toContain('দ্বিঘাত');
+    });
   });
 });
 

@@ -262,10 +262,10 @@ $x^2 - 6x + c = 0$ সমীকরণের ঠিক ১টি বাস্ত�
 💡 *প্র্যাকটিস টিপ: ডিজিটাল SAT Math সেকশনে প্রায় ৩০-৪০% প্রশ্ন Desmos গ্রাফিং দিয়ে সরাসরি সমাধান করা সম্ভব!*`;
   }
 
-  // Quadratic equations, discriminant, vertex
+  // Quadratic equations, discriminant, vertex, Vieta
   if (
-    /\b(quadratic|discriminant|vertex|parabola|maximum|minimum)\b/i.test(userPrompt) ||
-    /দ্বিঘাত|নিশ্চায়ক|শীর্ষবিন্দু|প্যারাবোলা/.test(userPrompt)
+    /\b(quadratic|discriminant|vieta|roots?|vertex|parabola|maximum|minimum)\b/i.test(userPrompt) ||
+    /দ্বিঘাত|নিশ্চায়ক|শীর্ষবিন্দু|প্যারাবোলা|ভিয়েতা/.test(userPrompt)
   ) {
     return isEnglish
       ? `📐 **Quadratic Equations & Discriminant Master Rules:**
@@ -557,7 +557,9 @@ export const chatWithSatTutor = async (
 
   // 5. Offline intelligent SAT pedagogical response
   const lastUserPrompt = messages.filter(m => m.role === 'user').pop()?.content || '';
-  const isBangla = /[\u0980-\u09FF]/.test(lastUserPrompt) || context?.language === 'bn';
+  const hasBanglaChars = /[\u0980-\u09FF]/.test(lastUserPrompt);
+  const explicitlyRequestsBangla = /\b(in\s+bangla|in\s+bengali|বাংলায়|বাংলায়)\b/i.test(lastUserPrompt);
+  const isBangla = hasBanglaChars || explicitlyRequestsBangla;
   return generateLocalSatResponse(lastUserPrompt, !isBangla, messages);
 };
 

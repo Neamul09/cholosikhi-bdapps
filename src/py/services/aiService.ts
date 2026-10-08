@@ -23,6 +23,13 @@ export interface ChatMessage {
 }
 
 function generateLocalPedagogicalResponse(userPrompt: string, isEnglish = true): string {
+  // Domain boundary: If user asks SAT questions inside Python Tutor
+  if (/\b(sat|college\s*board|reading\s*&\s*writing|reading\s+and\s+writing)\b/i.test(userPrompt) || /স্যাট/.test(userPrompt)) {
+    return isEnglish
+      ? "👋 I am **Nini**, your AI Programming Tutor! I focus exclusively on Python syntax, data structures, algorithms, and debugging.\n\n💡 *Tip: For Digital SAT Math questions, Desmos shortcuts, and Reading & Writing practice, please head over to the **SAT Suite**!*"
+      : "👋 আমি **নিনি (Nini)**, চলোশিখির পাইথন ও প্রোগ্রামিং এআই টিউটর! আমি মূলত পাইথন কোডিং, অ্যালগরিদম ও বাগ ফিক্সিং নিয়ে সাহায্য করি।\n\n💡 *টিপ: ডিজিটাল SAT প্রস্তুতি ও অনুশীলনের জন্য উপরের মেনু থেকে **SAT Suite** এ যান!*";
+  }
+
   if (/\b(loops?|while|iteration)\b/i.test(userPrompt) || /\bfor\s+\w+\s+in\b/i.test(userPrompt) || /\bfor\s+loop\b/i.test(userPrompt) || /লুপ/.test(userPrompt)) {
     return isEnglish
       ? "💡 **Understanding Loops in Python:**\n\nLoops repeat a block of code efficiently:\n- `for` loop: Iterate over ranges or sequences (e.g. `for i in range(5):`).\n- `while` loop: Runs continuously while a boolean condition remains `True`.\n\nWould you like an example tailored to a specific problem?"
@@ -250,7 +257,9 @@ export const chatWithHistory = async (
 
   // 5. Intelligent local pedagogical response
   const lastUserPrompt = messages.filter(m => m.role === 'user').pop()?.content || '';
-  const isBangla = /[\u0980-\u09FF]/.test(lastUserPrompt) || context?.language === 'bn';
+  const hasBanglaChars = /[\u0980-\u09FF]/.test(lastUserPrompt);
+  const explicitlyRequestsBangla = /\b(in\s+bangla|in\s+bengali|বাংলায়|বাংলায়)\b/i.test(lastUserPrompt);
+  const isBangla = hasBanglaChars || explicitlyRequestsBangla;
   return generateLocalPedagogicalResponse(lastUserPrompt, !isBangla);
 };
 

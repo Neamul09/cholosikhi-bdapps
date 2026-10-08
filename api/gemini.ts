@@ -25,7 +25,10 @@ const CLOUDFLARE_AI_MODELS = [
  * Intelligent domain-aware pedagogical fallback response when external APIs are unavailable.
  */
 function generateFallbackResponse(userPrompt: string, systemPrompt?: string, messages: any[] = []): string {
-  const isBangla = /[\u0980-\u09FF]/.test(userPrompt) || (systemPrompt && /[\u0980-\u09FF]/.test(systemPrompt) && !/[a-zA-Z]{4,}/.test(userPrompt));
+  const hasBanglaChars = /[\u0980-\u09FF]/.test(userPrompt);
+  const explicitlyRequestsBangla = /\b(in\s+bangla|in\s+bengali|বাংলায়|বাংলায়)\b/i.test(userPrompt);
+  const isBangla = hasBanglaChars || explicitlyRequestsBangla;
+  const isEnglish = !isBangla;
   
   const sysLower = (systemPrompt || '').toLowerCase();
   const userLower = userPrompt.toLowerCase();
@@ -60,6 +63,12 @@ function generateFallbackResponse(userPrompt: string, systemPrompt?: string, mes
 
   // --- PYTHON & CODING DOMAIN FALLBACKS ---
   if (isPythonContext && !isExplicitSatSys) {
+    // SAT off-topic question asked in Python tutor
+    if (/\b(sat|college\s*board|reading\s*&\s*writing|reading\s+and\s+writing)\b/i.test(userPrompt) || /স্যাট/.test(userPrompt)) {
+      return isEnglish
+        ? "👋 I am **Nini**, your AI Programming Tutor! I specialize exclusively in Python code, data structures, algorithms, and debugging.\n\n💡 *Tip: For Digital SAT Math, Desmos shortcuts, and Reading & Writing practice, please head over to the **SAT Suite**!*"
+        : "👋 আমি **নিনি (Nini)**, চলোশিখির পাইথন ও প্রোগ্রামিং এআই টিউটর! আমি মূলত পাইথন কোডিং, অ্যালগরিদম ও বাগ ফিক্সিং নিয়ে সাহায্য করি।\n\n💡 *টিপ: ডিজিটাল SAT প্রস্তুতি ও অনুশীলনের জন্য উপরের মেনু থেকে **SAT Suite** এ যান!*";
+    }
     // Debugging / Errors / Syntax
     if (/\b(debug|debugging|errors?|bugs?|syntaxerror|nameerror|typeerror|indentation|fix|broken)\b/i.test(combinedText) || /ভুল|বাগ|ডিবাগ|এরর|সিনট্যাক্স/.test(combinedText)) {
       if (isBangla) {
@@ -385,8 +394,8 @@ $x^2 - 6x + c = 0$ সমীকরণের ঠিক ১টি বাস্ত�
 💡 *Pro Tip: Desmos eliminates algebraic manipulation errors on 35%+ of Module 1 & Module 2 Math questions!*`;
     }
 
-    // Quadratic / Discriminant / Vertex
-    if (/\b(quadratic|discriminant|vertex|parabola|maximum|minimum)\b/i.test(userPrompt) || /দ্বিঘাত|নিশ্চায়ক|প্যারাবোলা/.test(userPrompt)) {
+    // Quadratic / Discriminant / Vertex / Vieta
+    if (/\b(quadratic|discriminant|vieta|roots?|vertex|parabola|maximum|minimum)\b/i.test(userPrompt) || /দ্বিঘাত|নিশ্চায়ক|প্যারাবোলা|ভিয়েতা/.test(userPrompt)) {
       if (isBangla) {
         return `📐 **দ্বিঘাত সমীকরণ ও নিশ্চয়ক (Discriminant) মাস্টার রুল:**
 
@@ -692,24 +701,33 @@ async function tryPollinationsFreeLLM(messages: any[], systemPrompt?: string): P
   return null;
 }
 
-export default async function handler(req: Request) {
-  // Handle CORS preflight
-  if (req.method === 'OPTIONS') {
-    return new Response(null, {
-      headers: {
-        'Access-Control-Allow-Origin': '*',
-        'Access-Control-Allow-Methods': 'POST, OPTIONS',
-        'Access-Control-Allow-Headers': 'Content-Type, Authorization',
-      },
-    });
-  }
-
-  const corsHeaders = {
+export default async function handler(req: any, res?: any) {
+  const corsHeaders: Record<string, string> = {
     'Access-Control-Allow-Origin': '*',
+    'Access-Control-Allow-Methods': 'POST, OPTIONS',
+    'Access-Control-Allow-Headers': 'Content-Type, Authorization',
     'Content-Type': 'application/json',
   };
 
+  const isNode = Boolean(res && typeof res.status === 'function');
+
+  // Handle CORS preflight
+  if (req.method === 'OPTIONS') {
+    if (isNode) {
+      Object.entries(corsHeaders).forEach(([k, v]) => res.setHeader(k, v));
+      return res.status(204).end();
+    }
+    return new Response(null, {
+      status: 204,
+      headers: corsHeaders,
+    });
+  }
+
   if (req.method !== 'POST') {
+    if (isNode) {
+      Object.entries(corsHeaders).forEach(([k, v]) => res.setHeader(k, v));
+      return res.status(405).json({ error: 'Method not allowed' });
+    }
     return new Response(JSON.stringify({ error: 'Method not allowed' }), {
       status: 405,
       headers: corsHeaders,
@@ -721,9 +739,19 @@ export default async function handler(req: Request) {
   let systemPrompt: string | undefined = undefined;
 
   try {
-    const parsed = await req.json();
-    messages = parsed.messages || [];
-    systemPrompt = parsed.systemPrompt;
+    let bodyData: any = {};
+    if (typeof req.json === 'function') {
+      try {
+        bodyData = await req.json();
+      } catch {
+        bodyData = {};
+      }
+    } else if (req.body) {
+      bodyData = typeof req.body === 'string' ? JSON.parse(req.body) : req.body;
+    }
+
+    messages = bodyData.messages || [];
+    systemPrompt = bodyData.systemPrompt;
     lastUserMessage = messages.filter((m: any) => m.role === 'user').pop()?.content || '';
 
     const geminiKey = 
@@ -777,6 +805,11 @@ export default async function handler(req: Request) {
       textResponse = generateFallbackResponse(lastUserMessage, systemPrompt, messages);
     }
 
+    if (isNode) {
+      Object.entries(corsHeaders).forEach(([k, v]) => res.setHeader(k, v));
+      return res.status(200).json({ response: textResponse });
+    }
+
     return new Response(JSON.stringify({ response: textResponse }), {
       status: 200,
       headers: corsHeaders,
@@ -784,6 +817,11 @@ export default async function handler(req: Request) {
   } catch (error) {
     console.error('API Error:', error);
     const fallbackText = generateFallbackResponse(lastUserMessage, systemPrompt, messages);
+    if (isNode) {
+      Object.entries(corsHeaders).forEach(([k, v]) => res.setHeader(k, v));
+      return res.status(200).json({ response: fallbackText });
+    }
+
     return new Response(JSON.stringify({ 
       response: fallbackText 
     }), {
