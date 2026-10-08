@@ -396,27 +396,73 @@ function MainLandingPage() {
             </div>
 
             <div className="w-full lg:w-auto shrink-0 flex flex-col items-center lg:items-end gap-3 text-center lg:text-right">
-              <div className="space-y-1">
-                <div className="text-3xl sm:text-4xl font-black text-emerald-400 tracking-tight">
-                  ৳২.৭৮ <span className="text-xs text-app-fg/60 font-bold uppercase">{language === 'en' ? '/ day (+tax)' : '/ দিন (+ভ্যাট)'}</span>
-                </div>
-                <p className="text-[11px] font-bold text-app-fg/50">
-                  {language === 'en' ? 'Robi & Cirkle DCB · Cancel anytime' : 'রবি ও সার্কেল গ্রাহকদের জন্য · যেকোনো সময় বাতিলযোগ্য'}
-                </p>
-              </div>
+              {user || session ? (
+                <div className="flex flex-col items-center lg:items-end gap-2.5 w-full sm:w-auto">
+                  {/* Logged in status pill */}
+                  <div className="flex items-center gap-2 px-3 py-1.5 rounded-2xl bg-white/10 border border-white/15 text-xs font-bold">
+                    <span className={clsx(
+                      "w-2.5 h-2.5 rounded-full animate-pulse",
+                      isRegistered ? "bg-emerald-400 shadow-[0_0_8px_#34d399]" : isChargePending ? "bg-amber-400 shadow-[0_0_8px_#fbbf24]" : "bg-rose-400"
+                    )} />
+                    <span className="text-app-fg font-black truncate max-w-[140px]">
+                      {displayName}
+                    </span>
+                    <span className="text-[10px] uppercase font-bold text-app-fg/60">
+                      ({user?.mobile || session?.mobile || 'Logged In'})
+                    </span>
+                  </div>
 
-              <button
-                onClick={() => {
-                  play('correct');
-                  trackEvent('cta_click', { cta: 'hero_bdapps_pass_banner' });
-                  navigate('/auth');
-                }}
-                className="w-full sm:w-auto btn-duo btn-duo-green py-4 px-8 text-sm flex items-center justify-center gap-2.5 shadow-[0_0_25px_rgba(16,185,129,0.3)] hover:shadow-[0_0_35px_rgba(16,185,129,0.5)] transition-all"
-              >
-                <ShieldCheck size={18} />
-                <span>{language === 'en' ? 'Get All-Access Pass' : 'অল-অ্যাক্সেস পাস নাও / লগইন'}</span>
-                <ArrowRight size={16} className="group-hover:translate-x-1.5 transition-transform" />
-              </button>
+                  <div className="flex flex-col sm:flex-row items-center gap-2 w-full sm:w-auto">
+                    <button
+                      onClick={() => {
+                        play('correct');
+                        trackEvent('cta_click', { cta: 'hero_logged_in_launch_sat' });
+                        navigate('/sat');
+                      }}
+                      className="w-full sm:w-auto btn-duo btn-duo-green py-3.5 px-6 text-sm flex items-center justify-center gap-2 shadow-[0_0_25px_rgba(16,185,129,0.3)] hover:shadow-[0_0_35px_rgba(16,185,129,0.5)] transition-all"
+                    >
+                      <Target size={16} />
+                      <span>{language === 'en' ? 'Launch SAT Suite' : 'SAT স্যুটে প্রবেশ করো'}</span>
+                      <ArrowRight size={15} />
+                    </button>
+
+                    <button
+                      onClick={() => {
+                        play('tap');
+                        signOut();
+                      }}
+                      className="w-full sm:w-auto py-3.5 px-4 rounded-2xl bg-panel hover:bg-rose-500/15 border border-border-subtle hover:border-rose-500/40 text-xs font-black text-rose-400 transition-all flex items-center justify-center gap-1.5"
+                    >
+                      <LogOut size={14} />
+                      <span>{language === 'en' ? 'Log Out' : 'লগআউট'}</span>
+                    </button>
+                  </div>
+                </div>
+              ) : (
+                <>
+                  <div className="space-y-1">
+                    <div className="text-3xl sm:text-4xl font-black text-emerald-400 tracking-tight">
+                      ৳২.৭৮ <span className="text-xs text-app-fg/60 font-bold uppercase">{language === 'en' ? '/ day (+tax)' : '/ দিন (+ভ্যাট)'}</span>
+                    </div>
+                    <p className="text-[11px] font-bold text-app-fg/50">
+                      {language === 'en' ? 'Robi & Cirkle DCB · Cancel anytime' : 'রবি ও সার্কেল গ্রাহকদের জন্য · যেকোনো সময় বাতিলযোগ্য'}
+                    </p>
+                  </div>
+
+                  <button
+                    onClick={() => {
+                      play('correct');
+                      trackEvent('cta_click', { cta: 'hero_bdapps_pass_banner' });
+                      navigate('/auth');
+                    }}
+                    className="w-full sm:w-auto btn-duo btn-duo-green py-4 px-8 text-sm flex items-center justify-center gap-2.5 shadow-[0_0_25px_rgba(16,185,129,0.3)] hover:shadow-[0_0_35px_rgba(16,185,129,0.5)] transition-all"
+                  >
+                    <ShieldCheck size={18} />
+                    <span>{language === 'en' ? 'Get All-Access Pass' : 'অল-অ্যাক্সেস পাস নাও / লগইন'}</span>
+                    <ArrowRight size={16} className="group-hover:translate-x-1.5 transition-transform" />
+                  </button>
+                </>
+              )}
             </div>
           </div>
         </motion.div>

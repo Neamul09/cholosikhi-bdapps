@@ -1,12 +1,15 @@
 import { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
-  Smartphone, KeyRound, User as UserIcon, Loader2, ArrowRight, AlertCircle,
-  CheckCircle2, ShieldCheck, ArrowLeft, Lock, AlertTriangle
+  Smartphone, KeyRound, Loader2, ArrowRight, AlertCircle,
+  ShieldCheck, ArrowLeft, Lock, AlertTriangle, LogOut, UserX, Target, Code2,
+  User as UserIcon, CheckCircle2
 } from 'lucide-react';
 import { useSettingsStore } from '@/store/settingsStore';
 import { useAuthStore } from '@/store/authStore';
 import { useNavigate, useSearchParams } from 'react-router-dom';
+import clsx from 'clsx';
+import UnsubscribeModal from '../../components/UnsubscribeModal';
 
 type Step = 'MOBILE' | 'SUB_CONFIRM' | 'OTP' | 'REGISTER_PROFILE' | 'LOGIN_PASSWORD';
 
@@ -16,6 +19,11 @@ export default function Auth() {
   const redirectUrl = searchParams.get('redirect') || '/';
   const { language } = useSettingsStore();
   const {
+    user,
+    session,
+    signOut,
+    isSubscribed,
+    subscriptionStatus,
     checkMobileSubscription,
     sendOtp,
     verifyOtp,
@@ -24,6 +32,7 @@ export default function Auth() {
     pendingMobile,
   } = useAuthStore();
 
+  const [showUnsubModal, setShowUnsubModal] = useState(false);
   const [step, setStep] = useState<Step>('MOBILE');
   const [mobileInput, setMobileInput] = useState('');
   const [otpInput, setOtpInput] = useState('');
@@ -34,6 +43,13 @@ export default function Auth() {
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
   const [subStatus, setSubStatus] = useState<string>('');
   const [isSubActive, setIsSubActive] = useState<boolean>(false);
+
+  const isAlreadyLoggedIn = Boolean(user || session);
+  const rawStatus = (subscriptionStatus || session?.subscriptionStatus || 'UNREGISTERED').toUpperCase();
+  const isPaid = (isSubscribed || session?.isSubscribed) && rawStatus === 'REGISTERED';
+  const isChargePending = rawStatus.includes('PENDING') || rawStatus.includes('CHARGE');
+  const displayName = user?.name || session?.name || user?.mobile || session?.mobile || (language === 'bn' ? 'লার্নার' : 'Scholar');
+  const displayMobile = user?.mobile || session?.mobile || user?.email || '';
 
   const resetError = () => setErrorMsg(null);
 
@@ -190,7 +206,7 @@ export default function Auth() {
         className="w-full max-w-md glass rounded-[2.5rem] p-8 border-2 border-blue-500/20 shadow-2xl relative z-10 bg-panel/90 backdrop-blur-xl"
       >
         {/* Back Button */}
-        {step !== 'MOBILE' && (
+        {!isAlreadyLoggedIn && step !== 'MOBILE' && (
           <button
             onClick={() => {
               resetError();
@@ -211,10 +227,14 @@ export default function Auth() {
             className="h-10 w-auto mx-auto mb-3 drop-shadow-md"
           />
           <h2 className="text-xl font-black text-app-fg tracking-tight">
-            bdapps Gateway
+            {isAlreadyLoggedIn
+              ? (language === 'bn' ? 'আপনার অ্যাকাউন্ট' : 'Account Dashboard')
+              : 'bdapps Gateway'}
           </h2>
           <p className="text-xs font-bold text-app-fg-muted mt-1">
-            {language === 'bn' ? 'রবি ও সার্কেল গ্রাহকদের জন্য' : 'Exclusive for Robi & Cirkle Subscribers'}
+            {isAlreadyLoggedIn
+              ? (language === 'bn' ? 'ইতিমধ্যে লগইন আছেন' : 'You are currently signed in')
+              : (language === 'bn' ? 'রবি ও সার্কেল গ্রাহকদের জন্য' : 'Exclusive for Robi & Cirkle Subscribers')}
           </p>
         </div>
 
@@ -230,7 +250,115 @@ export default function Auth() {
           </motion.div>
         )}
 
-        <AnimatePresence mode="wait">
+        {isAlreadyLoggedIn ? (
+          /* ─── ALREADY LOGGED IN VIEW ─── */
+          <div className="space-y-5 text-center animate-fadeIn">
+            <div className="w-16 h-16 rounded-3xl bg-gradient-to-br from-cyan-400 to-blue-600 flex items-center justify-center text-slate-950 font-black text-2xl mx-auto shadow-lg shadow-cyan-500/20">
+              {displayName[0]?.toUpperCase() || 'U'}
+            </div>
+
+            <div className="space-y-1">
+              <span className="text-[10px] font-black uppercase tracking-wider text-blue-400">
+                {language === 'bn' ? 'সক্রিয় অ্যাকাউন্ট' : 'Active Account'}
+              </span>
+              <h3 className="text-2xl font-black text-app-fg tracking-tight">
+                {displayName}
+              </h3>
+              {displayMobile && (
+                <p className="text-xs font-bold text-app-fg/60">
+                  {displayMobile}
+                </p>
+              )}
+            </div>
+
+            {/* Subscription Status Pill */}
+            <div className="p-3.5 rounded-2xl bg-app-bg border border-border-subtle flex items-center justify-between text-xs font-bold">
+              <span className="text-app-fg/60">
+                {language === 'bn' ? 'সাবস্ক্রিপশন স্ট্যাটাস:' : 'Subscription:'}
+              </span>
+              <span className={clsx(
+                "px-2.5 py-1 rounded-full text-[10px] font-black uppercase tracking-wider flex items-center gap-1",
+                isPaid
+                  ? "bg-emerald-500/15 border border-emerald-500/30 text-emerald-400"
+                  : isChargePending
+                  ? "bg-amber-500/15 border border-amber-500/30 text-amber-400"
+                  : "bg-rose-500/15 border border-rose-500/30 text-rose-400"
+              )}>
+                {isPaid ? (
+                  <>
+                    <ShieldCheck size={12} />
+                    <span>{language === 'bn' ? 'সক্রিয় (Registered)' : 'Registered (Active)'}</span>
+                  </>
+                ) : isChargePending ? (
+                  <>
+                    <AlertTriangle size={12} />
+                    <span>{language === 'bn' ? 'চার্জিং পেন্ডিং' : 'Charge Pending'}</span>
+                  </>
+                ) : (
+                  <>
+                    <Lock size={12} />
+                    <span>{language === 'bn' ? 'ইনঅ্যাক্টিভ' : 'Inactive'}</span>
+                  </>
+                )}
+              </span>
+            </div>
+
+            {/* Launch Actions */}
+            <div className="space-y-2.5 pt-1">
+              <button
+                type="button"
+                onClick={() => {
+                  navigate(redirectUrl !== '/' ? redirectUrl : '/sat');
+                }}
+                className="w-full btn-duo btn-duo-green py-3.5 text-xs font-black flex items-center justify-center gap-2"
+              >
+                <Target size={16} />
+                <span>{language === 'bn' ? 'ডিজিটাল SAT স্যুটে যান (/sat)' : 'Continue to Digital SAT (/sat)'}</span>
+                <ArrowRight size={14} />
+              </button>
+
+              <button
+                type="button"
+                onClick={() => {
+                  navigate('/py');
+                }}
+                className="w-full btn-duo btn-duo-blue py-3.5 text-xs font-black flex items-center justify-center gap-2"
+              >
+                <Code2 size={16} />
+                <span>{language === 'bn' ? 'পাইথন ও সি++ একাডেমিতে যান (/py)' : 'Continue to Python Academy (/py)'}</span>
+                <ArrowRight size={14} />
+              </button>
+            </div>
+
+            {/* Sign Out & Switch Account / Unsubscribe Actions */}
+            <div className="pt-4 border-t border-border-subtle/60 flex flex-col sm:flex-row items-center justify-between gap-2.5">
+              <button
+                type="button"
+                onClick={async () => {
+                  await signOut();
+                  setStep('MOBILE');
+                  setMobileInput('');
+                }}
+                className="w-full sm:w-auto py-2.5 px-4 rounded-xl bg-panel hover:bg-rose-500/15 border border-border-subtle hover:border-rose-500/30 text-xs font-black text-rose-400 transition-all flex items-center justify-center gap-1.5"
+              >
+                <LogOut size={14} />
+                <span>{language === 'bn' ? 'লগআউট / সুইচ করুন' : 'Sign Out / Switch'}</span>
+              </button>
+
+              <button
+                type="button"
+                onClick={() => {
+                  setShowUnsubModal(true);
+                }}
+                className="w-full sm:w-auto py-2.5 px-4 rounded-xl text-xs font-bold text-app-fg/50 hover:text-rose-400 hover:bg-white/5 transition-all flex items-center justify-center gap-1.5"
+              >
+                <UserX size={14} />
+                <span>{language === 'bn' ? 'আনসাবস্ক্রাইব' : 'Unsubscribe'}</span>
+              </button>
+            </div>
+          </div>
+        ) : (
+          <AnimatePresence mode="wait">
           {/* STEP 1: Enter Mobile Number */}
           {step === 'MOBILE' && (
             <motion.form
@@ -547,7 +675,14 @@ export default function Auth() {
             </motion.form>
           )}
         </AnimatePresence>
+        )}
       </motion.div>
+
+      {/* bdapps Unsubscribe Confirmation Modal */}
+      <UnsubscribeModal
+        isOpen={showUnsubModal}
+        onClose={() => setShowUnsubModal(false)}
+      />
     </div>
   );
 }
