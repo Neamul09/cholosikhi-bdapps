@@ -16,13 +16,16 @@ import {
 import { clsx } from 'clsx';
 import { play, unlockAudio } from './lib/audio';
 import LegalModal from './components/LegalModal';
+import UnsubscribeModal from './components/UnsubscribeModal';
 import { Analytics } from '@vercel/analytics/react';
 import { initTelemetry, trackEvent } from './lib/telemetry';
+import { useAuthStore } from './py/store/authStore';
 import AdminDashboard from './pages/AdminDashboard';
 import SatApp from './sat/SatApp';
 import PyApp from './py/PyApp';
 import Auth from './py/pages/Auth';
 import TopLoadingBar from './components/TopLoadingBar';
+import { UserX, LogOut } from 'lucide-react';
 
 const FacebookIcon = ({ size = 20 }: { size?: number }) => (
   <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M18 2h-3a5 5 0 0 0-5 5v3H7v4h3v8h4v-8h3l1-4h-4V7a1 1 0 0 1 1-1h3z"/></svg>
@@ -46,11 +49,23 @@ function MainLandingPage() {
   const navigate = useNavigate();
   const [language, setLanguage] = useState<'en' | 'bn'>('bn');
   const [legalModal, setLegalModal] = useState<'privacy' | 'terms' | null>(null);
+  const [showUnsubModal, setShowUnsubModal] = useState(false);
+
+  const { session, user, isSubscribed, subscriptionStatus, signOut, initialize } = useAuthStore();
 
   useEffect(() => {
     document.documentElement.classList.add('dark');
     localStorage.setItem('theme', 'dark');
   }, []);
+
+  useEffect(() => {
+    initialize();
+  }, [initialize]);
+
+  const rawStatus = (subscriptionStatus || session?.subscriptionStatus || 'UNREGISTERED').toUpperCase();
+  const isRegistered = (isSubscribed || session?.isSubscribed) && rawStatus === 'REGISTERED';
+  const isChargePending = rawStatus.includes('PENDING') || rawStatus.includes('CHARGE');
+  const displayName = user?.name || session?.name || user?.mobile || session?.mobile || 'Learner';
 
   const content = {
     en: {
@@ -170,7 +185,7 @@ function MainLandingPage() {
           <CSLogo className="h-11 w-auto" />
         </div>
 
-        <div className="hidden lg:flex items-center gap-8 text-xs font-black uppercase tracking-widest text-app-fg/60">
+        <div className="hidden lg:flex items-center gap-6 text-xs font-black uppercase tracking-widest text-app-fg/60">
           <Link to="/sat" onClick={() => play('tap')} className="text-cyan-400 hover:text-cyan-300 transition-colors flex items-center gap-1.5">
             <span>SAT Suite</span>
             <span className="text-[9px] px-1.5 py-0.5 rounded-md bg-cyan-400/20 text-cyan-400">LIVE</span>
@@ -190,18 +205,68 @@ function MainLandingPage() {
             </button>
           </div>
 
-          <Link
-            to="/auth"
-            onClick={() => play('tap')}
-            className="btn-duo btn-duo-secondary px-4 py-2 text-xs"
-          >
-            <span>{t.navAuth}</span>
-          </Link>
+          {/* User Auth Status or Login Action */}
+          {session || user ? (
+            <div className="flex items-center gap-2.5">
+              {/* Profile Chip & Subscription Badge */}
+              <div className="flex items-center gap-2 px-3 py-1.5 rounded-2xl bg-panel border border-border-subtle shadow-sm">
+                <div className="w-7 h-7 rounded-xl bg-gradient-to-br from-cyan-400 to-blue-600 text-slate-950 font-black text-xs flex items-center justify-center">
+                  {displayName[0]?.toUpperCase() || 'U'}
+                </div>
+                <div className="text-left">
+                  <div className="text-[11px] font-black text-app-fg truncate max-w-[110px]">
+                    {displayName}
+                  </div>
+                  <div className="flex items-center gap-1">
+                    <span className={clsx(
+                      "w-1.5 h-1.5 rounded-full",
+                      isRegistered ? "bg-emerald-400 animate-pulse" : isChargePending ? "bg-amber-400 animate-ping" : "bg-rose-400"
+                    )} />
+                    <span className={clsx(
+                      "text-[9px] font-black uppercase tracking-wider",
+                      isRegistered ? "text-emerald-400" : isChargePending ? "text-amber-400" : "text-rose-400"
+                    )}>
+                      {isRegistered ? 'REGISTERED' : isChargePending ? 'CHARGE PENDING' : 'UNPAID'}
+                    </span>
+                  </div>
+                </div>
+              </div>
+
+              {/* Unsubscribe button */}
+              <button
+                type="button"
+                onClick={() => { play('tap'); setShowUnsubModal(true); }}
+                className="flex items-center gap-1 px-3 py-2 rounded-xl bg-rose-500/10 hover:bg-rose-500/20 border border-rose-500/30 text-rose-400 text-[11px] font-black transition-all shadow-sm"
+                title={language === 'bn' ? 'bdapps সাবস্ক্রিপশন বাতিল করুন' : 'Unsubscribe from bdapps'}
+              >
+                <UserX size={13} />
+                <span>{language === 'bn' ? 'আনসাবস্ক্রাইব' : 'Unsubscribe'}</span>
+              </button>
+
+              {/* Sign out */}
+              <button
+                type="button"
+                onClick={() => { play('tap'); signOut(); }}
+                className="p-2 rounded-xl bg-panel border border-border-subtle hover:bg-white/10 text-app-fg/50 hover:text-rose-400 transition-all"
+                title="Sign Out"
+              >
+                <LogOut size={14} />
+              </button>
+            </div>
+          ) : (
+            <Link
+              to="/auth"
+              onClick={() => play('tap')}
+              className="btn-duo btn-duo-secondary px-4 py-2 text-xs"
+            >
+              <span>{t.navAuth}</span>
+            </Link>
+          )}
 
           <Link
             to="/sat"
             onClick={() => play('tap')}
-            className="btn-duo btn-duo-green px-6 py-2.5 text-xs flex items-center gap-2"
+            className="btn-duo btn-duo-green px-5 py-2.5 text-xs flex items-center gap-2"
           >
             <Target size={15} />
             <span>{t.navLaunch}</span>
@@ -217,13 +282,35 @@ function MainLandingPage() {
           >
             {language === 'en' ? 'BN' : 'EN'}
           </button>
-          <Link
-            to="/auth"
-            onClick={() => play('tap')}
-            className="btn-duo btn-duo-green px-3.5 py-2 text-xs"
-          >
-            লগইন
-          </Link>
+
+          {session || user ? (
+            <div className="flex items-center gap-1.5">
+              <div className="flex items-center gap-1 px-2.5 py-1.5 rounded-xl bg-panel border border-border-subtle text-xs">
+                <span className={clsx(
+                  "w-2 h-2 rounded-full",
+                  isRegistered ? "bg-emerald-400" : isChargePending ? "bg-amber-400" : "bg-rose-400"
+                )} />
+                <span className="text-[10px] font-black truncate max-w-[65px]">
+                  {displayName}
+                </span>
+              </div>
+              <button
+                onClick={() => { play('tap'); setShowUnsubModal(true); }}
+                className="p-2 rounded-xl bg-rose-500/15 border border-rose-500/30 text-rose-400 text-xs font-black"
+                title="Unsubscribe"
+              >
+                <UserX size={14} />
+              </button>
+            </div>
+          ) : (
+            <Link
+              to="/auth"
+              onClick={() => play('tap')}
+              className="btn-duo btn-duo-green px-3.5 py-2 text-xs"
+            >
+              লগইন
+            </Link>
+          )}
         </div>
       </nav>
 
@@ -602,6 +689,11 @@ function MainLandingPage() {
         isOpen={legalModal !== null}
         type={legalModal}
         onClose={() => setLegalModal(null)}
+        language={language}
+      />
+      <UnsubscribeModal
+        isOpen={showUnsubModal}
+        onClose={() => setShowUnsubModal(false)}
         language={language}
       />
       <Analytics />

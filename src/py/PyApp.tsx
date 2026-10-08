@@ -12,6 +12,8 @@ import Toaster from './components/common/Toaster';
 import NiniNotification from './components/common/NiniNotification';
 import SuspensePageLoader from '../components/SuspensePageLoader';
 
+import SubscriptionGuard from '../components/SubscriptionGuard';
+
 // Eager-loaded core pages
 import Home from './pages/Home';
 import Profile from './pages/Profile';
@@ -69,30 +71,37 @@ export default function PyApp() {
           path="/certificate"
           element={
             <Suspense fallback={<SuspensePageLoader />}>
-              {session ? <AppShell><Certificate /></AppShell> : <Certificate />}
+              <SubscriptionGuard suite="py" wrapInAppShell>
+                <Certificate />
+              </SubscriptionGuard>
             </Suspense>
           }
         />
 
         <Route element={<ProtectedRoute />}>
-          <Route path="/session/:lessonId" element={<Suspense fallback={<SuspensePageLoader />}><Session /></Suspense>} />
-          <Route
-            path="/"
-            element={
-              <Suspense fallback={<SuspensePageLoader />}>
-                <AppShell><Home /></AppShell>
-              </Suspense>
-            }
-          />
-          <Route path="/playground" element={<Suspense fallback={<SuspensePageLoader />}><AppShell><CodePlayground /></AppShell></Suspense>} />
-          <Route path="/leaderboard" element={<Suspense fallback={<SuspensePageLoader />}><AppShell><Leaderboard /></AppShell></Suspense>} />
-          <Route path="/achievements" element={<Suspense fallback={<SuspensePageLoader />}><AppShell><Achievements /></AppShell></Suspense>} />
-          <Route path="/certificate/exam" element={<Suspense fallback={<SuspensePageLoader />}><CertificationExam /></Suspense>} />
-          <Route path="/ai-tutor" element={<Suspense fallback={<SuspensePageLoader />}><AppShell><AiTutor /></AppShell></Suspense>} />
-          <Route path="/tutor" element={<Navigate to="/py/ai-tutor" replace />} />
+          {/* Always accessible even when unpaid / pending charge */}
           <Route path="/profile" element={<AppShell><Profile /></AppShell>} />
-          <Route path="/discover" element={<Suspense fallback={<SuspensePageLoader />}><AppShell><Discover /></AppShell></Suspense>} />
-          <Route path="/learn" element={<Navigate to="/py" replace />} />
+          <Route path="/leaderboard" element={<Suspense fallback={<SuspensePageLoader />}><AppShell><Leaderboard /></AppShell></Suspense>} />
+
+          {/* Paid / Active Subscription Protected Routes */}
+          <Route element={<SubscriptionGuard suite="py" wrapInAppShell />}>
+            <Route path="/session/:lessonId" element={<Suspense fallback={<SuspensePageLoader />}><Session /></Suspense>} />
+            <Route
+              path="/"
+              element={
+                <Suspense fallback={<SuspensePageLoader />}>
+                  <AppShell><Home /></AppShell>
+                </Suspense>
+              }
+            />
+            <Route path="/playground" element={<Suspense fallback={<SuspensePageLoader />}><AppShell><CodePlayground /></AppShell></Suspense>} />
+            <Route path="/achievements" element={<Suspense fallback={<SuspensePageLoader />}><AppShell><Achievements /></AppShell></Suspense>} />
+            <Route path="/certificate/exam" element={<Suspense fallback={<SuspensePageLoader />}><CertificationExam /></Suspense>} />
+            <Route path="/ai-tutor" element={<Suspense fallback={<SuspensePageLoader />}><AppShell><AiTutor /></AppShell></Suspense>} />
+            <Route path="/tutor" element={<Navigate to="/py/ai-tutor" replace />} />
+            <Route path="/discover" element={<Suspense fallback={<SuspensePageLoader />}><AppShell><Discover /></AppShell></Suspense>} />
+            <Route path="/learn" element={<Navigate to="/py" replace />} />
+          </Route>
         </Route>
 
         <Route path="*" element={session ? <Navigate to="/py" replace /> : <Navigate to="/auth?redirect=/py" replace />} />

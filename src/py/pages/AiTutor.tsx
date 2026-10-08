@@ -3,7 +3,9 @@ import { motion } from 'framer-motion';
 import { Send, Sparkles, Copy, Check, User, Terminal, Code2, HelpCircle } from 'lucide-react';
 import clsx from 'clsx';
 import { useSettingsStore } from '@/store/settingsStore';
+import { useAuthStore } from '@/store/authStore';
 import { chatWithHistory, type ChatMessage } from '@/services/aiService';
+import { getDailyAiUsage, incrementDailyAiUsage, DAILY_AI_QUERY_LIMIT, type AiUsageStatus } from '../../lib/aiRateLimiter';
 import MarkdownRenderer from '@/components/MarkdownRenderer';
 import { play } from '@/lib/audio';
 
@@ -70,13 +72,24 @@ const MessageContent = ({ content }: { content: string }) => {
 
 export default function AiTutor() {
   const { language } = useSettingsStore();
+  const { user, session } = useAuthStore();
+  const userId = user?.id || session?.id || 'guest';
+
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [input, setInput] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const [copiedIndex, setCopiedIndex] = useState<number | null>(null);
+  const [usage, setUsage] = useState<AiUsageStatus>(() => getDailyAiUsage(userId));
 
   const isBn = language === 'bn';
+
+  useEffect(() => {
+    setUsage(getDailyAiUsage(userId));
+    const handleUsageChange = () => setUsage(getDailyAiUsage(userId));
+    window.addEventListener('cs_ai_usage_updated', handleUsageChange);
+    return () => window.removeEventListener('cs_ai_usage_updated', handleUsageChange);
+  }, [userId]);
 
   useEffect(() => {
     // Initial welcome message (English primary, mentioning Bangla)
@@ -102,6 +115,11 @@ export default function AiTutor() {
     const trimmed = text.trim();
     if (!trimmed || isLoading) return;
 
+    if (usage.isLimitReached) {
+      play('incorrect');
+      return;
+    }
+
     play('tap');
     const userMsg: ChatMessage = { role: 'user', content: trimmed };
     const newMessages = [...messages, userMsg];
@@ -113,6 +131,8 @@ export default function AiTutor() {
     try {
       const response = await chatWithHistory(newMessages, { language });
       setMessages([...newMessages, { role: 'assistant', content: response }]);
+      const updated = incrementDailyAiUsage(userId);
+      setUsage(updated);
       play('correct');
     } catch (error) {
       setMessages([
@@ -178,6 +198,19 @@ export default function AiTutor() {
             <p className="text-xs sm:text-sm text-app-fg/60 font-medium">
               {isBn ? 'পাইথন প্রোগ্রামিং, অ্যালগরিদম ও কোড ডিবাগিং মেন্টর' : 'Interactive Python, algorithms, and debugging mentor'}
             </p>
+          </div>
+        </div>
+
+        {/* Daily Quota Indicator Badge */}
+        <div className="flex items-center gap-2 p-2.5 px-4 rounded-2xl bg-panel border border-border-subtle shrink-0">
+          <Sparkles size={15} className={usage.isLimitReached ? "text-rose-400" : "text-amber-400"} />
+          <div className="text-right">
+            <div className={clsx("text-xs font-black", usage.isLimitReached ? "text-rose-400" : "text-app-fg")}>
+              {usage.remaining} / {DAILY_AI_QUERY_LIMIT} {isBn ? 'প্রশ্ন বাকি' : 'queries left'}
+            </div>
+            <div className="text-[10px] text-app-fg/40 font-bold uppercase">
+              {isBn ? 'দৈনিক লিমিট (রাত ১২টায় রিসেট)' : 'Daily Quota (Midnight Reset)'}
+            </div>
           </div>
         </div>
       </div>
@@ -268,6 +301,20 @@ export default function AiTutor() {
         </div>
       )}
 
+      {/* Daily Limit Reached Warning Banner */}
+      {usage.isLimitReached && (
+        <div className="p-4 rounded-2xl bg-amber-500/10 border-2 border-amber-500/30 flex items-center justify-between gap-3 text-xs font-bold text-amber-300">
+          <div className="flex items-center gap-2.5">
+            <Sparkles size={16} className="text-amber-400 shrink-0" />
+            <span>
+              {isBn
+                ? '⚠️ দৈনিক ২০টি এআই প্রশ্নের কোটা পূর্ণ হয়েছে। রাত ১২টায় আপনার কোটা আবার স্বয়ংক্রিয়ভাবে নবায়ন হবে। ততদিন প্লে-গ্রাউন্ড বা লেসনে কোডিং চালিয়ে যান!'
+                : "⚠️ Daily quota reached (20/20 queries). Your limit will reset at midnight. Continue practicing in Code Playground or lesson modules!"}
+            </span>
+          </div>
+        </div>
+      )}
+
       {/* Message Input */}
       <div className="flex gap-2 shrink-0 pt-1">
         <input
@@ -277,13 +324,18 @@ export default function AiTutor() {
           onKeyDown={(e) => {
             if (e.key === 'Enter') handleSend();
           }}
-          placeholder={isBn ? "নিনিকে পাইথন বা প্রোগ্রামিং সম্পর্কে প্রশ্ন করুন..." : "Ask Nini about Python syntax, loops, data structures, or debugging..."}
-          className="flex-1 bg-app-bg border border-border-subtle rounded-2xl px-5 py-3.5 text-app-fg placeholder:text-app-fg/30 focus:outline-none focus:border-purple-500 font-bold text-sm transition-all"
+          disabled={usage.isLimitReached || isLoading}
+          placeholder={
+            usage.isLimitReached
+              ? (isBn ? 'দৈনিক লিমিট শেষ (রাত ১২টায় রিসেট হবে)' : 'Daily limit reached (Resets at midnight)')
+              : (isBn ? 'নিনিকে পাইথন বা প্রোগ্রামিং সম্পর্কে প্রশ্ন করুন...' : 'Ask Nini about Python syntax, loops, data structures, or debugging...')
+          }
+          className="flex-1 bg-app-bg border border-border-subtle disabled:opacity-50 disabled:cursor-not-allowed rounded-2xl px-5 py-3.5 text-app-fg placeholder:text-app-fg/30 focus:outline-none focus:border-purple-500 font-bold text-sm transition-all"
         />
         <button
           onClick={() => handleSend()}
-          disabled={!input.trim() || isLoading}
-          className="bg-purple-600 hover:bg-purple-500 disabled:opacity-40 text-white px-5 py-3.5 rounded-2xl transition-all shadow-lg shadow-purple-600/30 font-black shrink-0 flex items-center justify-center active:scale-95"
+          disabled={!input.trim() || isLoading || usage.isLimitReached}
+          className="bg-purple-600 hover:bg-purple-500 disabled:opacity-40 disabled:cursor-not-allowed text-white px-5 py-3.5 rounded-2xl transition-all shadow-lg shadow-purple-600/30 font-black shrink-0 flex items-center justify-center active:scale-95"
           title="Send message"
         >
           <Send size={18} />

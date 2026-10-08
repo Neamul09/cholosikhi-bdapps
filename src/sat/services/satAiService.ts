@@ -526,6 +526,19 @@ export const chatWithSatTutor = async (
     enrichedPrompt += `\nUser Preference: Respond in English.`;
   }
 
+  const lastUserPrompt = messages.filter(m => m.role === 'user').pop()?.content || '';
+  const hasBanglaChars = /[\u0980-\u09FF]/.test(lastUserPrompt);
+  const explicitlyRequestsBangla = /\b(in\s+bangla|in\s+bengali|বাংলায়|বাংলায়)\b/i.test(lastUserPrompt);
+  const isBangla = hasBanglaChars || explicitlyRequestsBangla || context?.language === 'bn';
+
+  // Instant Domain Guardrail Pre-Check for SAT AI Tutor
+  const isCodingOffTopic = /\b(python|coding|programming|def\s+\w+|write\s+a\s+program|c\+\+|javascript|html|css|sql|react|django|flask)\b/i.test(lastUserPrompt) || /পাইথন|প্রোগ্রামিং|কোডিং/.test(lastUserPrompt);
+  if (isCodingOffTopic) {
+    return isBangla
+      ? "🦉 আমি **নিনি (Nini)**, চলোশিখি ডিজিটাল SAT এর এআই মাস্টার কোচ! আমি ডিজিটাল SAT Math, ডেসমস (Desmos) ট্রিকস, রিডিং ও গ্রামার নিয়ে সাহায্য করি।\n\n💡 *টিপ: পাইথন ও সি++ কোডিং অনুশীলনের জন্য উপরের মেনু থেকে **Python Academy** এ যান!*"
+      : "🦉 I am **Nini**, your Digital SAT AI Master Coach! I specialize exclusively in College Board SAT Math (Algebra, Geometry, Trigonometry, Desmos) and Reading & Writing.\n\n💡 *Tip: For Python programming and coding tutorials, please head over to the **Python Academy**!*";
+  }
+
   // 1. Try serverless /api/gemini route
   try {
     const response = await fetch(API_URL, {
@@ -556,10 +569,6 @@ export const chatWithSatTutor = async (
   if (pollinationsResponse) return pollinationsResponse;
 
   // 5. Offline intelligent SAT pedagogical response
-  const lastUserPrompt = messages.filter(m => m.role === 'user').pop()?.content || '';
-  const hasBanglaChars = /[\u0980-\u09FF]/.test(lastUserPrompt);
-  const explicitlyRequestsBangla = /\b(in\s+bangla|in\s+bengali|বাংলায়|বাংলায়)\b/i.test(lastUserPrompt);
-  const isBangla = hasBanglaChars || explicitlyRequestsBangla;
   return generateLocalSatResponse(lastUserPrompt, !isBangla, messages);
 };
 

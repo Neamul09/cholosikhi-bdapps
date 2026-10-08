@@ -2,7 +2,9 @@ import { useState, useRef, useEffect } from 'react';
 import { motion } from 'framer-motion';
 import { Send, Sparkles, Copy, Check, User, Calculator, BookOpen, Clock, HelpCircle, Compass } from 'lucide-react';
 import { clsx } from 'clsx';
+import { useAuthStore } from '@/store/authStore';
 import { chatWithSatTutor, type SatChatMessage } from '../services/satAiService';
+import { getDailyAiUsage, incrementDailyAiUsage, DAILY_AI_QUERY_LIMIT, type AiUsageStatus } from '../../lib/aiRateLimiter';
 import MathRenderer from '../components/MathRenderer';
 import { play } from '../../lib/audio';
 
@@ -67,6 +69,9 @@ const SatMessageContent = ({ content }: { content: string }) => {
 };
 
 export default function SatAiTutor() {
+  const { user, session } = useAuthStore();
+  const userId = user?.id || session?.id || 'guest';
+
   const [messages, setMessages] = useState<SatChatMessage[]>([
     {
       role: 'assistant',
@@ -78,7 +83,15 @@ export default function SatAiTutor() {
   const [isLoading, setIsLoading] = useState(false);
   const [activeSection, setActiveSection] = useState<'all' | 'math' | 'rw' | 'strategy'>('all');
   const [copiedIndex, setCopiedIndex] = useState<number | null>(null);
+  const [usage, setUsage] = useState<AiUsageStatus>(() => getDailyAiUsage(userId));
   const messagesEndRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    setUsage(getDailyAiUsage(userId));
+    const handleUsageChange = () => setUsage(getDailyAiUsage(userId));
+    window.addEventListener('cs_ai_usage_updated', handleUsageChange);
+    return () => window.removeEventListener('cs_ai_usage_updated', handleUsageChange);
+  }, [userId]);
 
   const scrollToBottom = () => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
@@ -91,6 +104,11 @@ export default function SatAiTutor() {
   const handleSend = async (text: string = input) => {
     const trimmed = text.trim();
     if (!trimmed || isLoading) return;
+
+    if (usage.isLimitReached) {
+      play('incorrect');
+      return;
+    }
 
     play('tap');
     const userMsg: SatChatMessage = { role: 'user', content: trimmed };
@@ -105,6 +123,8 @@ export default function SatAiTutor() {
         section: activeSection === 'all' ? undefined : activeSection,
       });
       setMessages([...newMessages, { role: 'assistant', content: response }]);
+      const updated = incrementDailyAiUsage(userId);
+      setUsage(updated);
       play('correct');
     } catch (error) {
       setMessages([
@@ -167,34 +187,48 @@ export default function SatAiTutor() {
           </div>
         </div>
 
-        {/* Section Focus Pill Selector */}
-        <div className="flex bg-panel border border-border-subtle p-1 rounded-2xl gap-1 shrink-0 flex-wrap justify-center">
-          {[
-            { id: 'all', label: 'All Topics', icon: Compass },
-            { id: 'math', label: 'Math & Desmos', icon: Calculator },
-            { id: 'rw', label: 'Reading & Writing', icon: BookOpen },
-            { id: 'strategy', label: 'Test Strategy', icon: Clock }
-          ].map((tab) => {
-            const Icon = tab.icon;
-            return (
-              <button
-                key={tab.id}
-                onClick={() => {
-                  play('tap');
-                  setActiveSection(tab.id as any);
-                }}
-                className={clsx(
-                  "flex items-center gap-1.5 px-3 py-1.5 rounded-xl font-black text-xs transition-all",
-                  activeSection === tab.id
-                    ? "bg-blue-500 text-white shadow-md shadow-blue-500/30"
-                    : "text-app-fg/50 hover:text-app-fg hover:bg-white/5"
-                )}
-              >
-                <Icon size={13} />
-                <span>{tab.label}</span>
-              </button>
-            );
-          })}
+        {/* Top Controls: Quota Badge & Section Focus Pill Selector */}
+        <div className="flex flex-col sm:flex-row items-center gap-3 shrink-0">
+          <div className="flex items-center gap-2 p-2 px-3.5 rounded-2xl bg-panel border border-border-subtle shrink-0">
+            <Sparkles size={14} className={usage.isLimitReached ? "text-rose-400" : "text-cyan-400"} />
+            <div className="text-right">
+              <div className={clsx("text-xs font-black", usage.isLimitReached ? "text-rose-400" : "text-app-fg")}>
+                {usage.remaining} / {DAILY_AI_QUERY_LIMIT} left
+              </div>
+              <div className="text-[9px] text-app-fg/40 font-bold uppercase">
+                Daily Limit
+              </div>
+            </div>
+          </div>
+
+          <div className="flex bg-panel border border-border-subtle p-1 rounded-2xl gap-1 shrink-0 flex-wrap justify-center">
+            {[
+              { id: 'all', label: 'All', icon: Compass },
+              { id: 'math', label: 'Math', icon: Calculator },
+              { id: 'rw', label: 'R&W', icon: BookOpen },
+              { id: 'strategy', label: 'Strategy', icon: Clock }
+            ].map((tab) => {
+              const Icon = tab.icon;
+              return (
+                <button
+                  key={tab.id}
+                  onClick={() => {
+                    play('tap');
+                    setActiveSection(tab.id as any);
+                  }}
+                  className={clsx(
+                    "flex items-center gap-1.5 px-3 py-1.5 rounded-xl font-black text-xs transition-all",
+                    activeSection === tab.id
+                      ? "bg-blue-500 text-white shadow-md shadow-blue-500/30"
+                      : "text-app-fg/50 hover:text-app-fg hover:bg-white/5"
+                  )}
+                >
+                  <Icon size={13} />
+                  <span>{tab.label}</span>
+                </button>
+              );
+            })}
+          </div>
         </div>
       </div>
 
@@ -296,6 +330,18 @@ export default function SatAiTutor() {
           </div>
         )}
 
+        {/* Daily Limit Reached Warning Banner */}
+        {usage.isLimitReached && (
+          <div className="p-4 rounded-2xl bg-amber-500/10 border-2 border-amber-500/30 flex items-center justify-between gap-3 text-xs font-bold text-amber-300 mt-3">
+            <div className="flex items-center gap-2.5">
+              <Sparkles size={16} className="text-amber-400 shrink-0" />
+              <span>
+                ⚠️ You've reached your daily quota of 20 SAT AI Tutor queries. Your quota will reset automatically at midnight. Continue mastering questions in Type Mastery and Mistake Bank!
+              </span>
+            </div>
+          </div>
+        )}
+
         {/* ─── Message Input Bar ────────────────────────────────────────── */}
         <div className="pt-4 mt-3 border-t border-border-subtle flex items-center gap-2">
           <input
@@ -305,13 +351,18 @@ export default function SatAiTutor() {
             onKeyDown={(e) => {
               if (e.key === 'Enter') handleSend();
             }}
-            placeholder="Ask Nini about any SAT math problem, Desmos trick, or grammar rule..."
-            className="flex-1 px-5 py-3.5 rounded-2xl bg-app-bg border border-border-subtle font-bold text-sm text-app-fg placeholder:text-app-fg/30 focus:outline-none focus:border-blue-500 transition-all"
+            disabled={usage.isLimitReached || isLoading}
+            placeholder={
+              usage.isLimitReached
+                ? "Daily AI limit reached (Resets at midnight)"
+                : "Ask Nini about any SAT math problem, Desmos trick, or grammar rule..."
+            }
+            className="flex-1 px-5 py-3.5 rounded-2xl bg-app-bg border border-border-subtle disabled:opacity-50 disabled:cursor-not-allowed font-bold text-sm text-app-fg placeholder:text-app-fg/30 focus:outline-none focus:border-blue-500 transition-all"
           />
           <button
             onClick={() => handleSend()}
-            disabled={!input.trim() || isLoading}
-            className="p-3.5 rounded-2xl bg-blue-500 hover:bg-blue-600 disabled:opacity-40 text-white font-black shadow-lg shadow-blue-500/30 transition-all active:scale-95 flex items-center justify-center shrink-0"
+            disabled={!input.trim() || isLoading || usage.isLimitReached}
+            className="p-3.5 rounded-2xl bg-blue-500 hover:bg-blue-600 disabled:opacity-40 disabled:cursor-not-allowed text-white font-black shadow-lg shadow-blue-500/30 transition-all active:scale-95 flex items-center justify-center shrink-0"
             title="Send inquiry"
           >
             <Send size={18} />

@@ -1,10 +1,11 @@
 import React from 'react';
 import { NavLink, useLocation } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Home, Trophy, User, Flame, Heart, Gem, Code, Award, GraduationCap, MessageSquare, Sparkles } from 'lucide-react';
+import { Home, Trophy, User, Flame, Heart, Gem, Code, Award, GraduationCap, MessageSquare, Sparkles, Lock, ShieldCheck, ShieldAlert } from 'lucide-react';
 import { clsx } from 'clsx';
 import { useSettingsStore } from '@/store/settingsStore';
 import { useUserStore } from '@/store/userStore';
+import { useAuthStore } from '@/store/authStore';
 import Tutorial from '@/components/modals/Tutorial';
 import LevelUpModal from '@/components/modals/LevelUpModal';
 import StreakModal from '@/components/modals/StreakModal';
@@ -17,8 +18,11 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
   const location = useLocation();
   const { language, currentCourse } = useSettingsStore();
   const { showLevelUp, setShowLevelUp, showStreak, setShowStreak, hasSeenTutorial, setHasSeenTutorial, achievements, level } = useUserStore();
+  const { user, isSubscribed, subscriptionStatus } = useAuthStore();
   const [shouldShowTutorial, setShouldShowTutorial] = useState(false);
   const [showFeedback, setShowFeedback] = useState(false);
+
+  const isPaid = Boolean(user && isSubscribed && subscriptionStatus === 'REGISTERED');
 
   // Unlock the AudioContext on the user's first interaction (browser autoplay policy).
   // The handler attaches once, fires `unlockAudio()` once, then self-destructs.
@@ -136,6 +140,7 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
             const isActive = item.id === '/py'
               ? location.pathname === '/py' || location.pathname === '/py/'
               : location.pathname.startsWith(item.id);
+            const isItemLocked = !isPaid && item.id !== '/py/leaderboard' && item.id !== '/py/profile';
             return (
               <motion.div
                 key={item.id}
@@ -154,7 +159,10 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
                 >
                   <item.icon size={24} strokeWidth={isActive ? 2.5 : 2} />
                   <span className="hidden md:block uppercase tracking-wider text-xs">{item.label}</span>
-                  {isActive && (
+                  {isItemLocked && (
+                    <Lock size={13} className="hidden md:block text-amber-400 opacity-60 ml-auto" />
+                  )}
+                  {isActive && !isItemLocked && (
                     <motion.div
                       layoutId="nav-indicator"
                       className="hidden md:block ml-auto w-1.5 h-5 rounded-full bg-gradient-to-b from-cyan-400 to-blue-500"
@@ -166,8 +174,43 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
           })}
         </motion.div>
 
-        {/* Desktop bottom: feedback & theme toggle */}
+        {/* Desktop bottom: status, feedback & theme toggle */}
         <div className="hidden md:flex flex-col gap-2 mt-auto pt-4 border-t border-[var(--border-subtle)]">
+          {user && (
+            <div className="px-3 py-2 rounded-xl bg-panel/60 border border-[var(--border-subtle)] flex items-center justify-between text-[11px] font-bold">
+              <span className="text-app-fg/60 truncate max-w-[100px]">
+                {user.mobile || user.name || 'Account'}
+              </span>
+              <span
+                className={clsx(
+                  "px-2 py-0.5 rounded-full text-[10px] font-black uppercase tracking-wider flex items-center gap-1",
+                  isPaid
+                    ? "bg-emerald-500/15 text-emerald-400 border border-emerald-500/30"
+                    : subscriptionStatus === 'INITIAL CHARGING PENDING' || subscriptionStatus === 'INITIAL_CHARGE_PENDING'
+                    ? "bg-amber-500/15 text-amber-400 border border-amber-500/30"
+                    : "bg-rose-500/15 text-rose-400 border border-rose-500/30"
+                )}
+              >
+                {isPaid ? (
+                  <>
+                    <ShieldCheck size={10} />
+                    <span>Registered</span>
+                  </>
+                ) : subscriptionStatus === 'INITIAL CHARGING PENDING' || subscriptionStatus === 'INITIAL_CHARGE_PENDING' ? (
+                  <>
+                    <ShieldAlert size={10} />
+                    <span>Pending</span>
+                  </>
+                ) : (
+                  <>
+                    <Lock size={10} />
+                    <span>Unpaid</span>
+                  </>
+                )}
+              </span>
+            </div>
+          )}
+
           <button
             type="button"
             onClick={() => { setShowFeedback(true); play('tap'); }}

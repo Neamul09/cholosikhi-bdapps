@@ -20,6 +20,7 @@ import SatFeedbackModal from './components/SatFeedbackModal';
 import { loadSatUserState, loadSatUserStateFromCloud } from './lib/satStorage';
 import { useAuthStore } from '@/store/authStore';
 import { useUserStore } from '@/store/userStore';
+import SubscriptionGuard from '../components/SubscriptionGuard';
 import type { SatUserState } from './types';
 
 export default function SatApp() {
@@ -116,19 +117,24 @@ export default function SatApp() {
         )}
       >
         <Routes>
-          <Route path="/" element={<SatDashboard onOpenCustomTest={() => setShowCustomQuizModal(true)} />} />
-          <Route path="/dashboard" element={<SatDashboard onOpenCustomTest={() => setShowCustomQuizModal(true)} />} />
-          <Route path="/quick-practice" element={<SatQuickPracticePage />} />
-          <Route path="/types" element={<SatTypeDrillPage />} />
-          <Route path="/quiz" element={<SatQuizPage />} />
-          <Route path="/hardest" element={<SatHardestVault />} />
-          <Route path="/mistakes" element={<SatMistakeBank />} />
+          {/* Always accessible even when unpaid / pending charge */}
           <Route path="/leaderboard" element={<SatLeaderboard />} />
-          <Route path="/routine" element={<SatRoutinePage />} />
-          <Route path="/vocab" element={<SatVocabPage />} />
-          <Route path="/resources" element={<SatResourcesPage />} />
-          <Route path="/ai-tutor" element={<SatAiTutor />} />
           <Route path="/profile" element={<SatProfilePage />} />
+
+          {/* Paid / Active Subscription Protected Routes */}
+          <Route element={<SubscriptionGuard suite="sat" />}>
+            <Route path="/" element={<SatDashboard onOpenCustomTest={() => setShowCustomQuizModal(true)} />} />
+            <Route path="/dashboard" element={<SatDashboard onOpenCustomTest={() => setShowCustomQuizModal(true)} />} />
+            <Route path="/quick-practice" element={<SatQuickPracticePage />} />
+            <Route path="/types" element={<SatTypeDrillPage />} />
+            <Route path="/quiz" element={<SatQuizPage />} />
+            <Route path="/hardest" element={<SatHardestVault />} />
+            <Route path="/mistakes" element={<SatMistakeBank />} />
+            <Route path="/routine" element={<SatRoutinePage />} />
+            <Route path="/vocab" element={<SatVocabPage />} />
+            <Route path="/resources" element={<SatResourcesPage />} />
+            <Route path="/ai-tutor" element={<SatAiTutor />} />
+          </Route>
           <Route path="*" element={<Navigate to="/sat" replace />} />
         </Routes>
       </main>

@@ -779,8 +779,34 @@ export default async function handler(req: any, res?: any) {
 
     let textResponse: string | null = null;
 
+    const sysLower = (systemPrompt || '').toLowerCase();
+    const isExplicitPythonSys = sysLower.includes('python') || sysLower.includes('programming tutor') || sysLower.includes('cs mentor');
+    const isExplicitSatSys = sysLower.includes('sat') || sysLower.includes('college board');
+
+    // Strict Domain Pre-Check: Python Tutor asked for SAT
+    if (isExplicitPythonSys && !isExplicitSatSys) {
+      const isSatOffTopic = /\b(sat|college\s*board|reading\s*&\s*writing|reading\s+and\s+writing|desmos\s+tricks?)\b/i.test(lastUserMessage) || /স্যাট/.test(lastUserMessage);
+      if (isSatOffTopic) {
+        const isBn = /[\u0980-\u09FF]/.test(lastUserMessage) || /\b(in\s+bangla|in\s+bengali|বাংলায়|বাংলায়)\b/i.test(lastUserMessage);
+        textResponse = isBn
+          ? "👋 আমি **নিনি (Nini)**, চলোশিখির পাইথন ও প্রোগ্রামিং এআই টিউটর! আমি মূলত পাইথন কোডিং, অ্যালগরিদম ও বাগ ফিক্সিং নিয়ে সাহায্য করি।\n\n💡 *টিপ: ডিজিটাল SAT প্রস্তুতি ও অনুশীলনের জন্য উপরের মেনু থেকে **SAT Suite** এ যান!*"
+          : "👋 I am **Nini**, your AI Programming Tutor! I specialize exclusively in Python code, data structures, algorithms, and debugging.\n\n💡 *Tip: For Digital SAT Math, Desmos shortcuts, and Reading & Writing practice, please head over to the **SAT Suite**!*";
+      }
+    }
+
+    // Strict Domain Pre-Check: SAT Coach asked for coding
+    if (isExplicitSatSys && !isExplicitPythonSys && !textResponse) {
+      const isCodingOffTopic = /\b(python|coding|programming|def\s+\w+|write\s+a\s+program|c\+\+|javascript|html|css|sql|react|django|flask)\b/i.test(lastUserMessage) || /পাইথন|প্রোগ্রামিং|কোডিং/.test(lastUserMessage);
+      if (isCodingOffTopic) {
+        const isBn = /[\u0980-\u09FF]/.test(lastUserMessage) || /\b(in\s+bangla|in\s+bengali|বাংলায়|বাংলায়)\b/i.test(lastUserMessage);
+        textResponse = isBn
+          ? "🦉 আমি **নিনি (Nini)**, চলোশিখি ডিজিটাল SAT এর এআই মাস্টার কোচ! আমি ডিজিটাল SAT Math, ডেসমস (Desmos) ট্রিকস, রিডিং ও গ্রামার নিয়ে সাহায্য করি।\n\n💡 *টিপ: পাইথন ও সি++ কোডিং অনুশীলনের জন্য উপরের মেনু থেকে **Python Academy** এ যান!*"
+          : "🦉 I am **Nini**, your Digital SAT AI Master Coach! I specialize exclusively in College Board SAT Math (Algebra, Geometry, Trigonometry, Desmos) and Reading & Writing.\n\n💡 *Tip: For Python programming and coding tutorials, please head over to the **Python Academy**!*";
+      }
+    }
+
     // 1. Try Cloudflare Workers AI if configured (User preference)
-    if (cfWorkerUrl || (cfAccountId && cfApiToken)) {
+    if (!textResponse && (cfWorkerUrl || (cfAccountId && cfApiToken))) {
       textResponse = await tryCloudflareAI(cfAccountId, cfApiToken, cfWorkerUrl, messages, systemPrompt);
     }
 

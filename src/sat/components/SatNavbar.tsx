@@ -19,12 +19,17 @@ import {
   User as UserIcon,
   PanelLeftClose,
   PanelLeftOpen,
-  Sparkles
+  Sparkles,
+  Lock,
+  UserX,
+  ShieldCheck,
+  ShieldAlert
 } from 'lucide-react';
 import { clsx } from 'clsx';
 import { play } from '../../lib/audio';
 import { useAuthStore } from '@/store/authStore';
 import { useUserStore } from '@/store/userStore';
+import UnsubscribeModal from '../../components/UnsubscribeModal';
 
 interface SatNavbarProps {
   xp: number;
@@ -46,8 +51,11 @@ export default function SatNavbar({
   const location = useLocation();
   const navigate = useNavigate();
   const currentPath = location.pathname;
-  const { user, signOut } = useAuthStore();
+  const { user, signOut, isSubscribed, subscriptionStatus } = useAuthStore();
   const userStore = useUserStore();
+  const [showUnsubModal, setShowUnsubModal] = useState(false);
+
+  const isPaid = Boolean(user && isSubscribed && subscriptionStatus === 'REGISTERED');
 
   // Dynamic user name synchronization
   const [localName, setLocalName] = useState(() => {
@@ -239,14 +247,17 @@ export default function SatNavbar({
               to="/sat"
               onClick={(e) => handleNavClick(e, '/sat')}
               className={clsx(
-                "flex items-center gap-3 px-3.5 py-2.5 rounded-2xl font-bold text-xs transition-all",
+                "flex items-center justify-between px-3.5 py-2.5 rounded-2xl font-bold text-xs transition-all",
                 currentPath === '/sat'
                   ? "bg-blue-500/15 border border-blue-500/30 text-blue-400 font-black shadow-sm"
                   : "text-app-fg/70 hover:text-app-fg hover:bg-panel border border-transparent"
               )}
             >
-              <Target size={16} strokeWidth={currentPath === '/sat' ? 2.5 : 2} />
-              <span>Dashboard</span>
+              <div className="flex items-center gap-3">
+                <Target size={16} strokeWidth={currentPath === '/sat' ? 2.5 : 2} />
+                <span>Dashboard</span>
+              </div>
+              {!isPaid && <Lock size={12} className="text-amber-400 opacity-60" />}
             </Link>
 
             {/* 2. Custom Practice Builder */}
@@ -254,10 +265,13 @@ export default function SatNavbar({
               <button
                 type="button"
                 onClick={handleCustomPracticeClick}
-                className="w-full flex items-center gap-3 px-3.5 py-2.5 rounded-2xl font-bold text-xs text-cyan-400 hover:bg-cyan-500/10 border border-transparent transition-all text-left group"
+                className="w-full flex items-center justify-between px-3.5 py-2.5 rounded-2xl font-bold text-xs text-cyan-400 hover:bg-cyan-500/10 border border-transparent transition-all text-left group"
               >
-                <Sliders size={16} className="text-cyan-400 group-hover:rotate-45 transition-transform" />
-                <span>Custom Practice Builder</span>
+                <div className="flex items-center gap-3">
+                  <Sliders size={16} className="text-cyan-400 group-hover:rotate-45 transition-transform" />
+                  <span>Custom Practice Builder</span>
+                </div>
+                {!isPaid && <Lock size={12} className="text-amber-400 opacity-60" />}
               </button>
             )}
 
@@ -266,14 +280,17 @@ export default function SatNavbar({
               to="/sat/types"
               onClick={(e) => handleNavClick(e, '/sat/types')}
               className={clsx(
-                "flex items-center gap-3 px-3.5 py-2.5 rounded-2xl font-bold text-xs transition-all",
+                "flex items-center justify-between px-3.5 py-2.5 rounded-2xl font-bold text-xs transition-all",
                 currentPath.startsWith('/sat/types')
                   ? "bg-blue-500/15 border border-blue-500/30 text-blue-400 font-black shadow-sm"
                   : "text-app-fg/70 hover:text-app-fg hover:bg-panel border border-transparent"
               )}
             >
-              <BookOpen size={16} strokeWidth={currentPath.startsWith('/sat/types') ? 2.5 : 2} />
-              <span>Type Mastery</span>
+              <div className="flex items-center gap-3">
+                <BookOpen size={16} strokeWidth={currentPath.startsWith('/sat/types') ? 2.5 : 2} />
+                <span>Type Mastery</span>
+              </div>
+              {!isPaid && <Lock size={12} className="text-amber-400 opacity-60" />}
             </Link>
 
             {/* 4. Mistake Bank (Glowing Red, matches theme) */}
@@ -281,18 +298,23 @@ export default function SatNavbar({
               to="/sat/mistakes"
               onClick={(e) => handleNavClick(e, '/sat/mistakes')}
               className={clsx(
-                "relative flex items-center gap-3 px-3.5 py-2.5 rounded-2xl font-black text-xs transition-all overflow-hidden",
+                "relative flex items-center justify-between px-3.5 py-2.5 rounded-2xl font-black text-xs transition-all overflow-hidden",
                 currentPath.startsWith('/sat/mistakes')
                   ? "bg-rose-500/20 border border-rose-500/60 text-rose-300 shadow-[0_0_16px_rgba(244,63,94,0.45)]"
                   : "text-rose-400 bg-rose-500/[0.08] hover:bg-rose-500/15 border border-rose-500/25 hover:border-rose-500/40 shadow-[0_0_10px_rgba(244,63,94,0.2)] hover:shadow-[0_0_16px_rgba(244,63,94,0.35)]"
               )}
             >
-              <AlertTriangle size={16} className="text-rose-400 drop-shadow-[0_0_6px_rgba(244,63,94,0.6)]" strokeWidth={2.5} />
-              <span className="tracking-tight">Mistake Bank</span>
-              <span className="relative flex h-2 w-2 ml-auto">
-                <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-rose-400 opacity-75"></span>
-                <span className="relative inline-flex rounded-full h-2 w-2 bg-rose-500 shadow-[0_0_8px_#f43f5e]"></span>
-              </span>
+              <div className="flex items-center gap-3">
+                <AlertTriangle size={16} className="text-rose-400 drop-shadow-[0_0_6px_rgba(244,63,94,0.6)]" strokeWidth={2.5} />
+                <span className="tracking-tight">Mistake Bank</span>
+              </div>
+              <div className="flex items-center gap-2">
+                {!isPaid && <Lock size={12} className="text-amber-400 opacity-60" />}
+                <span className="relative flex h-2 w-2">
+                  <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-rose-400 opacity-75"></span>
+                  <span className="relative inline-flex rounded-full h-2 w-2 bg-rose-500 shadow-[0_0_8px_#f43f5e]"></span>
+                </span>
+              </div>
             </Link>
 
             {/* 5. Hardest Vault */}
@@ -300,14 +322,17 @@ export default function SatNavbar({
               to="/sat/hardest"
               onClick={(e) => handleNavClick(e, '/sat/hardest')}
               className={clsx(
-                "flex items-center gap-3 px-3.5 py-2.5 rounded-2xl font-bold text-xs transition-all",
+                "flex items-center justify-between px-3.5 py-2.5 rounded-2xl font-bold text-xs transition-all",
                 currentPath.startsWith('/sat/hardest')
                   ? "bg-pink-500/15 border border-pink-500/40 text-pink-400 font-black shadow-sm"
                   : "text-pink-400 hover:bg-pink-500/10 border border-transparent"
               )}
             >
-              <Skull size={16} strokeWidth={currentPath.startsWith('/sat/hardest') ? 2.5 : 2} />
-              <span>Hardest Vault</span>
+              <div className="flex items-center gap-3">
+                <Skull size={16} strokeWidth={currentPath.startsWith('/sat/hardest') ? 2.5 : 2} />
+                <span>Hardest Vault</span>
+              </div>
+              {!isPaid && <Lock size={12} className="text-amber-400 opacity-60" />}
             </Link>
 
             {/* 6. Quick Practice */}
@@ -315,14 +340,17 @@ export default function SatNavbar({
               to="/sat/quick-practice"
               onClick={(e) => handleNavClick(e, '/sat/quick-practice')}
               className={clsx(
-                "flex items-center gap-3 px-3.5 py-2.5 rounded-2xl font-bold text-xs transition-all",
+                "flex items-center justify-between px-3.5 py-2.5 rounded-2xl font-bold text-xs transition-all",
                 currentPath.startsWith('/sat/quick-practice')
                   ? "bg-blue-500/15 border border-blue-500/30 text-blue-400 font-black shadow-sm"
                   : "text-app-fg/70 hover:text-app-fg hover:bg-panel border border-transparent"
               )}
             >
-              <Zap size={16} strokeWidth={currentPath.startsWith('/sat/quick-practice') ? 2.5 : 2} />
-              <span>Quick Practice</span>
+              <div className="flex items-center gap-3">
+                <Zap size={16} strokeWidth={currentPath.startsWith('/sat/quick-practice') ? 2.5 : 2} />
+                <span>Quick Practice</span>
+              </div>
+              {!isPaid && <Lock size={12} className="text-amber-400 opacity-60" />}
             </Link>
           </div>
 
@@ -334,6 +362,7 @@ export default function SatNavbar({
             {masteryLinks.map((item) => {
               const Icon = item.icon;
               const isActive = currentPath === item.path || currentPath.startsWith(item.path);
+              const isItemLocked = !isPaid && item.path !== '/sat/profile' && item.path !== '/sat/leaderboard';
               return (
                 <Link
                   key={item.path}
@@ -352,11 +381,14 @@ export default function SatNavbar({
                     <Icon size={16} strokeWidth={isActive ? 2.5 : 2} className={item.isAi ? "text-cyan-400 animate-pulse" : ""} />
                     <span>{item.label}</span>
                   </div>
-                  {item.isAi && (
-                    <span className="px-1.5 py-0.5 rounded-md bg-gradient-to-r from-blue-500 to-cyan-400 text-white font-black text-[9px] uppercase tracking-wider shadow-sm">
-                      AI 24/7
-                    </span>
-                  )}
+                  <div className="flex items-center gap-1.5">
+                    {item.isAi && (
+                      <span className="px-1.5 py-0.5 rounded-md bg-gradient-to-r from-blue-500 to-cyan-400 text-white font-black text-[9px] uppercase tracking-wider shadow-sm">
+                        AI 24/7
+                      </span>
+                    )}
+                    {isItemLocked && <Lock size={12} className="text-amber-400 opacity-60" />}
+                  </div>
                 </Link>
               );
             })}
@@ -368,33 +400,76 @@ export default function SatNavbar({
           {/* User Account / Profile Card */}
           <div>
             {user ? (
-              <div className="p-2.5 rounded-2xl bg-panel border border-border-subtle flex items-center justify-between gap-2 shadow-sm group hover:border-blue-500/40 transition-colors">
-                <Link
-                  to="/sat/profile"
-                  onClick={(e) => handleNavClick(e, '/sat/profile')}
-                  className="flex items-center gap-2 overflow-hidden flex-1"
-                  title="View Your SAT Profile"
-                >
-                  <div className="w-8 h-8 rounded-full bg-gradient-to-br from-cyan-400 to-blue-600 flex items-center justify-center text-slate-950 font-black text-xs shrink-0 shadow-sm group-hover:scale-105 transition-transform">
-                    {displayName[0]?.toUpperCase() || 'U'}
-                  </div>
-                  <div className="truncate">
-                    <p className="text-xs font-black text-app-fg truncate group-hover:text-blue-400 transition-colors">
-                      {displayName}
-                    </p>
-                    <p className="text-[10px] text-app-fg/50 truncate font-semibold">
-                      {user.email || user.mobile}
-                    </p>
-                  </div>
-                </Link>
-                <button
-                  type="button"
-                  onClick={() => { play('tap'); signOut(); }}
-                  className="p-1.5 rounded-xl hover:bg-white/10 text-app-fg/50 hover:text-rose-400 transition-colors"
-                  title="Sign Out"
-                >
-                  <LogOut size={14} />
-                </button>
+              <div className="p-2.5 rounded-2xl bg-panel border border-border-subtle flex flex-col gap-2 shadow-sm group hover:border-blue-500/40 transition-colors">
+                <div className="flex items-center justify-between gap-2">
+                  <Link
+                    to="/sat/profile"
+                    onClick={(e) => handleNavClick(e, '/sat/profile')}
+                    className="flex items-center gap-2 overflow-hidden flex-1"
+                    title="View Your SAT Profile"
+                  >
+                    <div className="w-8 h-8 rounded-full bg-gradient-to-br from-cyan-400 to-blue-600 flex items-center justify-center text-slate-950 font-black text-xs shrink-0 shadow-sm group-hover:scale-105 transition-transform">
+                      {displayName[0]?.toUpperCase() || 'U'}
+                    </div>
+                    <div className="truncate">
+                      <p className="text-xs font-black text-app-fg truncate group-hover:text-blue-400 transition-colors">
+                        {displayName}
+                      </p>
+                      <p className="text-[10px] text-app-fg/50 truncate font-semibold">
+                        {user.email || user.mobile}
+                      </p>
+                    </div>
+                  </Link>
+                  <button
+                    type="button"
+                    onClick={() => { play('tap'); signOut(); }}
+                    className="p-1.5 rounded-xl hover:bg-white/10 text-app-fg/50 hover:text-rose-400 transition-colors"
+                    title="Sign Out"
+                  >
+                    <LogOut size={14} />
+                  </button>
+                </div>
+
+                {/* Subscription Status Badge & Unsubscribe Trigger */}
+                <div className="flex items-center justify-between pt-1 border-t border-border-subtle/50 text-[10px]">
+                  <span
+                    className={clsx(
+                      "px-2 py-0.5 rounded-full font-black uppercase tracking-wider flex items-center gap-1",
+                      isPaid
+                        ? "bg-emerald-500/15 border border-emerald-500/30 text-emerald-400"
+                        : subscriptionStatus === 'INITIAL CHARGING PENDING' || subscriptionStatus === 'INITIAL_CHARGE_PENDING'
+                        ? "bg-amber-500/15 border border-amber-500/30 text-amber-400"
+                        : "bg-rose-500/15 border border-rose-500/30 text-rose-400"
+                    )}
+                  >
+                    {isPaid ? (
+                      <>
+                        <ShieldCheck size={10} />
+                        <span>Registered</span>
+                      </>
+                    ) : subscriptionStatus === 'INITIAL CHARGING PENDING' || subscriptionStatus === 'INITIAL_CHARGE_PENDING' ? (
+                      <>
+                        <ShieldAlert size={10} />
+                        <span>Pending</span>
+                      </>
+                    ) : (
+                      <>
+                        <Lock size={10} />
+                        <span>Unpaid</span>
+                      </>
+                    )}
+                  </span>
+
+                  <button
+                    type="button"
+                    onClick={() => { play('tap'); setShowUnsubModal(true); }}
+                    className="text-[10px] font-bold text-app-fg/40 hover:text-rose-400 transition-colors flex items-center gap-1"
+                    title="Unsubscribe from bdapps"
+                  >
+                    <UserX size={11} />
+                    <span>Unsubscribe</span>
+                  </button>
+                </div>
               </div>
             ) : (
               <Link
@@ -581,6 +656,12 @@ export default function SatNavbar({
           </div>
         </div>
       )}
+
+      {/* bdapps Unsubscribe Confirmation Modal */}
+      <UnsubscribeModal
+        isOpen={showUnsubModal}
+        onClose={() => setShowUnsubModal(false)}
+      />
     </>
   );
 }

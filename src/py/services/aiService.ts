@@ -226,6 +226,19 @@ export const chatWithHistory = async (
     enrichedPrompt += `\nUser Preference: Respond in English.`;
   }
 
+  const lastUserPrompt = messages.filter(m => m.role === 'user').pop()?.content || '';
+  const hasBanglaChars = /[\u0980-\u09FF]/.test(lastUserPrompt);
+  const explicitlyRequestsBangla = /\b(in\s+bangla|in\s+bengali|বাংলায়|বাংলায়)\b/i.test(lastUserPrompt);
+  const isBangla = hasBanglaChars || explicitlyRequestsBangla || context?.language === 'bn';
+
+  // Instant Domain Guardrail Pre-Check for Python AI Tutor
+  const isSatOffTopic = /\b(sat|college\s*board|reading\s*&\s*writing|reading\s+and\s+writing|desmos\s+tricks?)\b/i.test(lastUserPrompt) || /স্যাট/.test(lastUserPrompt);
+  if (isSatOffTopic) {
+    return isBangla
+      ? "👋 আমি **নিনি (Nini)**, চলোশিখির পাইথন ও প্রোগ্রামিং এআই টিউটর! আমি মূলত পাইথন কোডিং, অ্যালগরিদম ও বাগ ফিক্সিং নিয়ে সাহায্য করি।\n\n💡 *টিপ: ডিজিটাল SAT প্রস্তুতি ও অনুশীলনের জন্য উপরের মেনু থেকে **SAT Suite** এ যান!*"
+      : "👋 I am **Nini**, your AI Programming Tutor! I focus exclusively on Python code, data structures, algorithms, and debugging.\n\n💡 *Tip: For Digital SAT Math questions, Desmos shortcuts, and Reading & Writing practice, please head over to the **SAT Suite**!*";
+  }
+
   // 1. Try serverless /api/gemini endpoint
   try {
     const response = await fetch(API_URL, {
@@ -256,10 +269,6 @@ export const chatWithHistory = async (
   if (pollinationsResponse) return pollinationsResponse;
 
   // 5. Intelligent local pedagogical response
-  const lastUserPrompt = messages.filter(m => m.role === 'user').pop()?.content || '';
-  const hasBanglaChars = /[\u0980-\u09FF]/.test(lastUserPrompt);
-  const explicitlyRequestsBangla = /\b(in\s+bangla|in\s+bengali|বাংলায়|বাংলায়)\b/i.test(lastUserPrompt);
-  const isBangla = hasBanglaChars || explicitlyRequestsBangla;
   return generateLocalPedagogicalResponse(lastUserPrompt, !isBangla);
 };
 

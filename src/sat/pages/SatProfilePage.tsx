@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
+import { useNavigate } from 'react-router-dom';
 import {
   Mail,
   Calendar,
@@ -8,17 +8,18 @@ import {
   Zap,
   Award,
   AlertTriangle,
-  Skull,
   LogOut,
   Edit2,
   Check,
   X,
   BookOpen,
-  ArrowRight,
-  TrendingUp
+  TrendingUp,
+  UserX,
+  ShieldCheck
 } from 'lucide-react';
 import { useAuthStore } from '@/store/authStore';
 import { useUserStore } from '@/store/userStore';
+import UnsubscribeModal from '../../components/UnsubscribeModal';
 import { loadSatUserState } from '../lib/satStorage';
 import { calculatePredictedScore } from '../lib/scorePredictor';
 import { MICRO_TYPES } from '../data/microtypes';
@@ -26,7 +27,7 @@ import { supabase } from '../../lib/supabase';
 import { play } from '../../lib/audio';
 
 export default function SatProfilePage() {
-  const { user, signOut, session, setSession } = useAuthStore();
+  const { user, signOut, session, setSession, subscriptionStatus, isSubscribed } = useAuthStore();
   const userStore = useUserStore();
   const navigate = useNavigate();
   const [userState] = useState(() => loadSatUserState());
@@ -49,6 +50,7 @@ export default function SatProfilePage() {
   const [isEditingName, setIsEditingName] = useState(false);
   const [isSavingName, setIsSavingName] = useState(false);
   const [saveSuccess, setSaveSuccess] = useState(false);
+  const [showUnsubModal, setShowUnsubModal] = useState(false);
 
   // Sync fullName when external user state resolves
   useEffect(() => {
@@ -360,62 +362,64 @@ export default function SatProfilePage() {
         </div>
       </div>
 
-      {/* ─── Direct Navigation Hub ──────────────────────────────────── */}
-      <div className="p-6 sm:p-8 rounded-[3rem] bg-panel border border-border-subtle space-y-4">
-        <h3 className="text-base font-black text-app-fg">Direct Shortcuts</h3>
-        <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-          <Link
-            to="/sat/types"
-            onClick={() => play('tap')}
-            className="p-4 rounded-2xl bg-app-bg border border-border-subtle hover:border-blue-500/40 hover:bg-white/5 transition-all flex items-center justify-between group"
-          >
-            <div className="flex items-center gap-3">
-              <div className="w-10 h-10 rounded-xl bg-blue-500/10 border border-blue-500/20 text-blue-400 flex items-center justify-center">
-                <BookOpen size={18} />
-              </div>
-              <div>
-                <h4 className="text-xs font-black text-app-fg group-hover:text-blue-400 transition-colors">Type Mastery Drill</h4>
-                <p className="text-[10px] text-app-fg/50 font-bold">Step through all {MICRO_TYPES.length} archetypes</p>
-              </div>
-            </div>
-            <ArrowRight size={16} className="text-app-fg/30 group-hover:text-blue-400 group-hover:translate-x-1 transition-all" />
-          </Link>
+      {/* ─── Account & Subscription Settings Section ────────────────── */}
+      <div className="p-6 sm:p-8 rounded-[3rem] bg-panel border-2 border-border-subtle space-y-6">
+        <div className="flex items-center justify-between">
+          <div className="space-y-1">
+            <h3 className="text-lg font-black text-app-fg flex items-center gap-2">
+              <ShieldCheck size={20} className="text-emerald-400" />
+              <span>bdapps Subscription & Account Status</span>
+            </h3>
+            <p className="text-xs font-semibold text-app-fg/50">
+              Direct Carrier Billing status and subscription management (৳2.78/day)
+            </p>
+          </div>
 
-          <Link
-            to="/sat/mistakes"
-            onClick={() => play('tap')}
-            className="p-4 rounded-2xl bg-app-bg border border-border-subtle hover:border-rose-500/40 hover:bg-white/5 transition-all flex items-center justify-between group"
-          >
-            <div className="flex items-center gap-3">
-              <div className="w-10 h-10 rounded-xl bg-rose-500/10 border border-rose-500/20 text-rose-400 flex items-center justify-center">
-                <AlertTriangle size={18} />
-              </div>
-              <div>
-                <h4 className="text-xs font-black text-app-fg group-hover:text-rose-400 transition-colors">Review Mistake Bank</h4>
-                <p className="text-[10px] text-app-fg/50 font-bold">{unresolvedMistakes} questions logged</p>
-              </div>
-            </div>
-            <ArrowRight size={16} className="text-app-fg/30 group-hover:text-rose-400 group-hover:translate-x-1 transition-all" />
-          </Link>
+          <span className="px-3.5 py-1.5 rounded-full bg-emerald-500/15 border border-emerald-500/30 text-emerald-400 font-black text-xs uppercase tracking-wider">
+            {subscriptionStatus || (isSubscribed ? 'REGISTERED' : 'UNREGISTERED')}
+          </span>
+        </div>
 
-          <Link
-            to="/sat/hardest"
-            onClick={() => play('tap')}
-            className="p-4 rounded-2xl bg-app-bg border border-border-subtle hover:border-pink-500/40 hover:bg-white/5 transition-all flex items-center justify-between group"
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 pt-1">
+          <div className="p-4 rounded-2xl bg-app-bg border border-border-subtle text-xs space-y-1">
+            <span className="text-[10px] font-black uppercase text-app-fg/40">Subscribed Mobile</span>
+            <div className="font-mono font-bold text-cyan-400 text-sm">{user?.mobile || session?.mobile || 'Not linked'}</div>
+          </div>
+          <div className="p-4 rounded-2xl bg-app-bg border border-border-subtle text-xs space-y-1">
+            <span className="text-[10px] font-black uppercase text-app-fg/40">Billing Model</span>
+            <div className="font-bold text-app-fg text-sm">৳২.৭৮ / দিন (রবি ও সার্কেল DCB)</div>
+          </div>
+        </div>
+
+        {/* Danger Zone: Unsubscribe */}
+        <div className="p-5 rounded-2xl bg-rose-500/5 border border-rose-500/20 flex flex-col sm:flex-row items-center justify-between gap-4">
+          <div className="space-y-1 text-center sm:text-left">
+            <h4 className="text-xs font-black text-rose-400 uppercase tracking-wider flex items-center gap-1.5 justify-center sm:justify-start">
+              <AlertTriangle size={14} />
+              <span>Cancel Subscription</span>
+            </h4>
+            <p className="text-[11px] text-app-fg/60 font-semibold max-w-md">
+              Canceling stops daily charging (৳2.78/day) and locks premium SAT & Python modules.
+            </p>
+          </div>
+
+          <button
+            type="button"
+            onClick={() => { play('tap'); setShowUnsubModal(true); }}
+            className="w-full sm:w-auto px-5 py-2.5 rounded-xl bg-rose-500/15 hover:bg-rose-500/25 border border-rose-500/30 text-rose-400 text-xs font-black transition-all flex items-center justify-center gap-2"
           >
-            <div className="flex items-center gap-3">
-              <div className="w-10 h-10 rounded-xl bg-pink-500/10 border border-pink-500/20 text-pink-400 flex items-center justify-center">
-                <Skull size={18} />
-              </div>
-              <div>
-                <h4 className="text-xs font-black text-app-fg group-hover:text-pink-400 transition-colors">Hardest 800-Vault</h4>
-                <p className="text-[10px] text-app-fg/50 font-bold">Hardest 99th-percentile items</p>
-              </div>
-            </div>
-            <ArrowRight size={16} className="text-app-fg/30 group-hover:text-pink-400 group-hover:translate-x-1 transition-all" />
-          </Link>
+            <UserX size={15} />
+            <span>Unsubscribe bdapps</span>
+          </button>
         </div>
       </div>
+
+      {/* Unsubscribe Warning Modal */}
+      <UnsubscribeModal
+        isOpen={showUnsubModal}
+        onClose={() => setShowUnsubModal(false)}
+        language="en"
+      />
     </div>
   );
 }
