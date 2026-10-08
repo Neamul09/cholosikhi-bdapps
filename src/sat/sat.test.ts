@@ -331,5 +331,34 @@ describe('SAT Suite SQA Analysis & Integrity Tests', () => {
       }
     });
   });
+
+  describe('MathRenderer & KaTeX Formatting Integrity', () => {
+    it('should correctly render LaTeX math without tab/formfeed escape corruptions', async () => {
+      const { renderMarkdownAndMath } = await import('./components/MathRenderer');
+      const { generateLocalSatResponse } = await import('./services/satAiService');
+
+      // Test Vieta's formula response
+      const vietaResp = generateLocalSatResponse('can you show me an example question?', true, [
+        { role: 'user', content: 'what is vieta formula?' },
+        { role: 'assistant', content: 'Vieta formulas give sum and product of roots.' }
+      ]);
+
+      expect(vietaResp).not.toContain('\text{');
+      expect(vietaResp).not.toContain('\frac{');
+      // Should contain valid LaTeX commands
+      expect(vietaResp).toContain('\\text{Sum of roots');
+      expect(vietaResp).toContain('-\\frac{b}{a}');
+
+      // Render through KaTeX
+      const rendered = renderMarkdownAndMath(vietaResp);
+      expect(rendered).toContain('katex');
+      expect(rendered).toContain('class="mfrac"');
+      expect(rendered).toContain('class="mord text"');
+      // Must not have KaTeX parse errors (red error tags)
+      expect(rendered).not.toContain('katex-error');
+      expect(rendered).not.toContain('color:#cc0000');
+    });
+  });
 });
+
 

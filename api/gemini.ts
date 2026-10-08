@@ -220,7 +220,7 @@ items = ["Python", "Algorithms"]  # list
 💡 **Vieta's Formula দিয়ে ৫ সেকেন্ডে সমাধান:**
 ১. $ax^2 + bx + c = 0$ সমীকরণের জন্য $a = 2$, $b = -12$।
 ২. মূলদ্বয়ের যোগফল:
-   $$\text{Sum of roots } (r_1 + r_2) = -\frac{b}{a} = -\frac{-12}{2} = 6$$
+   $$\\text{Sum of roots } (r_1 + r_2) = -\\frac{b}{a} = -\\frac{-12}{2} = 6$$
 ৩. **SAT ট্র্যাপ:** প্রশ্নে গুণফল $7$ দেওয়া হয়েছে বিভ্রান্ত করার জন্য। যোগফল বের করতে $k$-এর মান বের করার কোনো প্রয়োজন নেই!
 
 ✅ **সঠিক উত্তর:** **B) 6**`;
@@ -241,8 +241,8 @@ The quadratic equation $2x^2 - 12x + k = 0$ has two real solutions, $r_1$ and $r
 💡 **Step-by-Step Vieta Solution (5-Second Shortcut):**
 1. **Identify Coefficients:** In $ax^2 + bx + c = 0$, we have $a = 2$, $b = -12$, and $c = k$.
 2. **Apply Sum of Roots Formula:**
-   $$\text{Sum of roots } (r_1 + r_2) = -\frac{b}{a} = -\frac{-12}{2} = 6$$
-3. **Exam Trap Alert:** The problem gives "product is 7" ($c/a = 7 \implies k = 14$) as a distractor! You do **not** need to find $k$ or solve for the individual roots with the quadratic formula.
+   $$\\text{Sum of roots } (r_1 + r_2) = -\\frac{b}{a} = -\\frac{-12}{2} = 6$$
+3. **Exam Trap Alert:** The problem gives "product is 7" ($c/a = 7 \\implies k = 14$) as a distractor! You do **not** need to find $k$ or solve for the individual roots with the quadratic formula.
 
 ✅ **Correct Answer:** **B) 6**
 
