@@ -16,7 +16,10 @@ import {
   ArrowLeft,
   Video,
   ChevronDown,
-  ChevronUp
+  ChevronUp,
+  Bot,
+  Loader2,
+  RefreshCw
 } from 'lucide-react';
 import { clsx } from 'clsx';
 import type { SatQuestion, BestResource, SatVocabItem } from '../types';
@@ -27,6 +30,7 @@ import ReferenceSheetModal from './ReferenceSheetModal';
 import { MICRO_TYPE_MAP } from '../data/microtypes';
 import { VOCAB_DATA } from '../data/vocabData';
 import { getQuestionStatus } from '../lib/satStorage';
+import { explainSatQuestion } from '../services/satAiService';
 import { play } from '../../lib/audio';
 import { animateShake, animateSuccessPulse } from '../lib/animations';
 
@@ -802,7 +806,14 @@ function PostSubmitReview({
         </div>
       </div>
 
-      {/* 2. Micro-Type Archetype & Theory Breakdown */}
+      {/* 2. Nini AI Socratic Question Breakdown & Traps */}
+      <AiQuestionBreakdownCard
+        question={question}
+        userAnswer={userAnswer}
+        isCorrect={isCorrect}
+      />
+
+      {/* 3. Micro-Type Archetype & Theory Breakdown */}
       {microTypeInfo && (
         <div className="glass p-6 rounded-2xl border border-blue-500/30 space-y-4">
           <div className="flex items-center justify-between">
@@ -836,7 +847,7 @@ function PostSubmitReview({
         </div>
       )}
 
-      {/* 3. Specific Question Vocabulary Detected */}
+      {/* 4. Specific Question Vocabulary Detected */}
       {questionVocab.length > 0 && (
         <div className="glass p-5 rounded-2xl border border-violet-500/30 space-y-3">
           <div className="flex items-center justify-between">
@@ -888,7 +899,7 @@ function PostSubmitReview({
         </div>
       )}
 
-      {/* 4. Curated Video & Text Resources (Guaranteed 100% working links) */}
+      {/* 5. Curated Video & Text Resources (Guaranteed 100% working links) */}
       {microTypeInfo?.bestResources && microTypeInfo.bestResources.length > 0 && (
         <div className="glass p-6 rounded-2xl border border-border-subtle space-y-3">
           <h4 className="text-xs font-black uppercase tracking-wider text-app-fg/50 flex items-center gap-2">
@@ -918,7 +929,7 @@ function PostSubmitReview({
         </div>
       )}
 
-      {/* 5. Official College Board Rationale & Step-by-Step Explanation */}
+      {/* 6. Official College Board Rationale & Step-by-Step Explanation */}
       {question.rationale && (
         <div className="glass p-6 rounded-2xl border border-border-subtle space-y-3">
           <div className="flex items-center gap-2 text-xs font-black text-app-fg/50 uppercase tracking-wider">
@@ -928,6 +939,130 @@ function PostSubmitReview({
           <div className="text-xs sm:text-sm font-medium text-app-fg/80 leading-relaxed font-hind sat-question-content">
             <MathRenderer content={question.rationale} />
           </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Sub-component: Nini AI Socratic Question Breakdown
+// ─────────────────────────────────────────────────────────────────────────────
+function AiQuestionBreakdownCard({
+  question,
+  userAnswer,
+  isCorrect: _isCorrect,
+}: {
+  question: SatQuestion;
+  userAnswer?: string;
+  isCorrect: boolean;
+}) {
+  const [isOpen, setIsOpen] = useState(false);
+  const [loading, setLoading] = useState(false);
+  const [response, setResponse] = useState<string | null>(null);
+  const [lang, setLang] = useState<'bn' | 'en'>('bn');
+
+  const fetchBreakdown = async (targetLang = lang) => {
+    setLoading(true);
+    setIsOpen(true);
+    try {
+      const res = await explainSatQuestion(question, userAnswer, targetLang === 'en');
+      setResponse(res);
+    } catch (e) {
+      console.error(e);
+      setResponse('Failed to generate AI breakdown. Please try again.');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleToggleLang = (newLang: 'bn' | 'en') => {
+    setLang(newLang);
+    if (isOpen) {
+      fetchBreakdown(newLang);
+    }
+  };
+
+  return (
+    <div className="glass p-6 rounded-2xl border border-indigo-500/30 space-y-4 relative overflow-hidden">
+      <div className="flex flex-wrap items-center justify-between gap-3">
+        <div className="flex items-center gap-2.5">
+          <div className="w-8 h-8 rounded-xl bg-indigo-500/20 text-indigo-400 flex items-center justify-center border border-indigo-500/30">
+            <Bot size={18} />
+          </div>
+          <div>
+            <h4 className="text-sm font-black text-app-fg flex items-center gap-1.5">
+              <span>Nini AI Socratic Coach</span>
+              <span className="text-[10px] px-2 py-0.5 rounded-full bg-indigo-500/20 text-indigo-400 font-bold border border-indigo-500/30">
+                Free AI
+              </span>
+            </h4>
+            <p className="text-[11px] text-app-fg/60 font-medium">
+              Step-by-step logic, trap exposure & 15-second shortcut
+            </p>
+          </div>
+        </div>
+
+        <div className="flex items-center gap-2">
+          {/* Language toggle */}
+          <div className="flex items-center bg-app-bg/80 rounded-xl p-0.5 border border-border-subtle text-[11px] font-bold">
+            <button
+              onClick={() => handleToggleLang('bn')}
+              className={clsx(
+                "px-2.5 py-1 rounded-lg transition-all",
+                lang === 'bn' ? "bg-indigo-600 text-white shadow-sm" : "text-app-fg/60 hover:text-app-fg"
+              )}
+            >
+              বাংলা
+            </button>
+            <button
+              onClick={() => handleToggleLang('en')}
+              className={clsx(
+                "px-2.5 py-1 rounded-lg transition-all",
+                lang === 'en' ? "bg-indigo-600 text-white shadow-sm" : "text-app-fg/60 hover:text-app-fg"
+              )}
+            >
+              English
+            </button>
+          </div>
+
+          {!isOpen ? (
+            <button
+              onClick={() => { play('tap'); fetchBreakdown(); }}
+              className="px-4 py-2 rounded-xl bg-gradient-to-r from-indigo-500 to-purple-600 hover:from-indigo-600 hover:to-purple-700 text-white font-black text-xs transition-all shadow-md flex items-center gap-1.5"
+            >
+              <Sparkles size={13} />
+              <span>Ask Nini AI</span>
+            </button>
+          ) : (
+            <button
+              onClick={() => { play('tap'); fetchBreakdown(); }}
+              disabled={loading}
+              className="p-2 rounded-xl bg-panel hover:bg-white/10 border border-border-subtle text-app-fg/70 hover:text-app-fg transition-all"
+              title="Regenerate explanation"
+            >
+              <RefreshCw size={14} className={clsx(loading && "animate-spin")} />
+            </button>
+          )}
+        </div>
+      </div>
+
+      {isOpen && (
+        <div className="pt-3 border-t border-border-subtle space-y-3 animate-fadeIn">
+          {loading ? (
+            <div className="p-8 flex flex-col items-center justify-center gap-3 text-center">
+              <div className="w-10 h-10 rounded-2xl bg-indigo-500/10 border border-indigo-500/30 flex items-center justify-center text-indigo-400 animate-pulse">
+                <Loader2 size={22} className="animate-spin" />
+              </div>
+              <p className="text-xs font-bold text-app-fg/70">
+                Nini is analyzing question structure, trap archetypes, and Desmos shortcuts...
+              </p>
+            </div>
+          ) : response ? (
+            <div className="p-4 rounded-xl bg-app-bg/70 border border-border-subtle/80 font-hind text-xs sm:text-sm text-app-fg leading-relaxed sat-question-content space-y-3">
+              <MathRenderer content={response} />
+            </div>
+          ) : null}
         </div>
       )}
     </div>

@@ -209,6 +209,36 @@ async function tryDirectGemini(messages: SatChatMessage[], systemPrompt: string)
   return null;
 }
 
+async function tryDirectPollinations(messages: SatChatMessage[], systemPrompt: string): Promise<string | null> {
+  try {
+    const formattedMessages: any[] = [{ role: 'system', content: systemPrompt }];
+    for (const msg of messages) {
+      formattedMessages.push({
+        role: msg.role === 'user' ? 'user' : 'assistant',
+        content: msg.content
+      });
+    }
+
+    const response = await fetch('https://text.pollinations.ai/openai', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        messages: formattedMessages,
+        model: 'openai',
+        seed: 42,
+      }),
+    });
+
+    if (response.ok) {
+      const data = await response.json();
+      return data.choices?.[0]?.message?.content || null;
+    }
+  } catch (err) {
+    console.warn('[satAiService] Direct Pollinations fallback failed:', err);
+  }
+  return null;
+}
+
 export const chatWithSatTutor = async (
   messages: SatChatMessage[],
   context?: { language?: string; section?: string; currentScore?: number }
@@ -218,6 +248,7 @@ export const chatWithSatTutor = async (
     enrichedPrompt += `\nActive Focus: ${context.section} section. Target Score: ${context.currentScore || 1500}+.`;
   }
 
+  // 1. Try serverless /api/gemini route (which supports Gemini, Groq, and Pollinations)
   try {
     const response = await fetch(API_URL, {
       method: 'POST',
@@ -233,11 +264,126 @@ export const chatWithSatTutor = async (
     console.warn('[satAiService] /api/gemini fetch failed, falling back:', err);
   }
 
-  // Fallback 1: Direct client Gemini key
+  // 2. Direct client Gemini key (if user configured client key)
   const directResponse = await tryDirectGemini(messages, enrichedPrompt);
   if (directResponse) return directResponse;
 
-  // Fallback 2: Offline intelligent SAT pedagogical response
+  // 3. Direct client free LLM call to Pollinations
+  const pollinationsResponse = await tryDirectPollinations(messages, enrichedPrompt);
+  if (pollinationsResponse) return pollinationsResponse;
+
+  // 4. Offline intelligent SAT pedagogical response
   const lastUserPrompt = messages.filter(m => m.role === 'user').pop()?.content || '';
   return generateLocalSatResponse(lastUserPrompt, context?.language === 'en');
 };
+
+/**
+ * Explains a specific SAT question in-depth with Socratic steps, trap analysis, and Desmos shortcuts.
+ */
+export async function explainSatQuestion(
+  question: {
+    stem: string;
+    stimulus?: string;
+    options?: { id: string; content: string }[];
+    correctAnswers: string[];
+    microType?: string;
+    skill?: string;
+    test?: string;
+  },
+  userAnswer?: string,
+  isEnglish = false
+): Promise<string> {
+  const optionsText = question.options?.map(o => `${o.id}) ${o.content}`).join('\n') || '';
+  const langText = isEnglish ? "Respond in English with clear Markdown and LaTeX math." : "বাংলায় সহজ ভাষায় বুঝিয়ে বলো, সঙ্গে Markdown ও LaTeX Math ব্যবহার করো।";
+  
+  const prompt = `Break down this Digital SAT question:
+Passage/Stimulus: ${question.stimulus || 'N/A'}
+Question: ${question.stem}
+Choices:
+${optionsText}
+Correct Answer: ${question.correctAnswers.join(', ')}
+${userAnswer ? `Student Selected: ${userAnswer}` : ''}
+Micro-Type / Skill: ${question.microType || question.skill || 'General SAT'}
+
+Please provide:
+1. 🎯 Socratic Step-by-Step Logic
+2. 💡 Why the correct answer is correct
+3. ⚠️ Why the student's answer/wrong choices are traps
+4. ⚡ 15-second shortcut or Desmos graphing method (if Math)
+
+${langText}`;
+
+  return chatWithSatTutor([{ role: 'user', content: prompt }], { language: isEnglish ? 'en' : 'bn' });
+}
+
+/**
+ * Analyzes a student's mistake bank and creates a customized study remediation plan.
+ */
+export async function generateMistakeRemediationPlan(
+  mistakes: { microType: string; skill: string; section: string; errorReason?: string }[],
+  isEnglish = false
+): Promise<string> {
+  const summary = mistakes.slice(0, 10).map((m, i) => `${i + 1}. [${m.section}] ${m.skill} (${m.microType}) - Reason: ${m.errorReason || 'Unspecified'}`).join('\n');
+  const langText = isEnglish ? "Respond in English." : "বাংলায় গুছিয়ে বলো।";
+
+  const prompt = `A student has recorded the following recent mistakes on Digital SAT practice:
+${summary}
+Total Mistakes in Bank: ${mistakes.length}
+
+Generate a concise, high-impact 3-step Remediation & Review Plan:
+1. Identify the student's #1 weakest concept pattern.
+2. Provide specific tactical rules & Desmos/Grammar shortcuts to fix it immediately.
+3. Suggest a 3-day targeted drill schedule.
+
+${langText}`;
+
+  return chatWithSatTutor([{ role: 'user', content: prompt }], { language: isEnglish ? 'en' : 'bn' });
+}
+
+/**
+ * Generates an AI score acceleration plan from current estimated score to target.
+ */
+export async function generateScoreBoosterPlan(
+  currentScore: number,
+  targetScore: number,
+  mathScore: number,
+  rwScore: number,
+  isEnglish = false
+): Promise<string> {
+  const langText = isEnglish ? "Respond in English with formatting." : "বাংলায় অনুপ্রেরণামূলকভাবে বুঝিয়ে দাও।";
+
+  const prompt = `Student Current Scaled Score: ${currentScore} / 1600 (Math: ${mathScore}, Reading/Writing: ${rwScore}).
+Target Score: ${targetScore} / 1600.
+
+Provide an AI Score Acceleration Blueprint:
+1. High-Yield Math topics to jump +50 points (Algebra, Quadratics, Desmos, Geometry).
+2. High-Yield Reading & Writing strategies to jump +50 points (Transitions, Boundaries, Rhetorical synthesis).
+3. Exact pacing strategy for Digital SAT Module 1 and Module 2.
+
+${langText}`;
+
+  return chatWithSatTutor([{ role: 'user', content: prompt }], { language: isEnglish ? 'en' : 'bn' });
+}
+
+/**
+ * Generates context sentences and memory mnemonics for SAT vocabulary words.
+ */
+export async function generateVocabMnemonic(
+  word: string,
+  definition: string,
+  isEnglish = false
+): Promise<string> {
+  const langText = isEnglish ? "Provide the response in English." : "বাংলায় সহজে মনে রাখার টিপস ও অর্থ দাও।";
+
+  const prompt = `SAT Vocabulary Word: "${word}"
+Definition: ${definition}
+
+Please provide:
+1. 💡 An easy-to-remember Mnemonic / Memory Hook (বাংলা বা ইংরেজি সহজ ট্রিক).
+2. 🏛️ An authentic College Board Digital SAT style sentence using this word.
+3. 🎯 3 high-frequency Synonyms and 1 Antonym.
+
+${langText}`;
+
+  return chatWithSatTutor([{ role: 'user', content: prompt }], { language: isEnglish ? 'en' : 'bn' });
+}

@@ -26,6 +26,8 @@ export type EventName =
   | 'level_up'
   | 'streak_increment'
   | 'code_run'
+  | 'ai_code_review'
+  | 'ai_tutor_chat'
   | 'shop_purchase'
   | 'exam_start'
   | 'exam_complete'

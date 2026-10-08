@@ -70,6 +70,36 @@ async function tryDirectGemini(messages: ChatMessage[], systemPrompt: string): P
   return null;
 }
 
+async function tryDirectPollinations(messages: ChatMessage[], systemPrompt: string): Promise<string | null> {
+  try {
+    const formattedMessages: any[] = [{ role: 'system', content: systemPrompt }];
+    for (const msg of messages) {
+      formattedMessages.push({
+        role: msg.role === 'user' ? 'user' : 'assistant',
+        content: msg.content
+      });
+    }
+
+    const response = await fetch('https://text.pollinations.ai/openai', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        messages: formattedMessages,
+        model: 'openai',
+        seed: 42,
+      }),
+    });
+
+    if (response.ok) {
+      const data = await response.json();
+      return data.choices?.[0]?.message?.content || null;
+    }
+  } catch (err) {
+    console.warn('[aiService] Direct Pollinations call failed:', err);
+  }
+  return null;
+}
+
 export const chatWithAiTutor = async (
   message: string, 
   context?: { course?: string; lesson?: string; language?: string }
@@ -102,7 +132,11 @@ export const chatWithAiTutor = async (
   const directResponse = await tryDirectGemini(messages, SYSTEM_PROMPT);
   if (directResponse) return directResponse;
 
-  // 2. Intelligent local pedagogical response
+  // 2. Try direct Pollinations free open endpoint
+  const pollinationsResponse = await tryDirectPollinations(messages, SYSTEM_PROMPT);
+  if (pollinationsResponse) return pollinationsResponse;
+
+  // 3. Intelligent local pedagogical response
   return generateLocalPedagogicalResponse(message, context?.language === 'en');
 };
 
@@ -141,6 +175,9 @@ export const getAiHint = async (
   const directResponse = await tryDirectGemini(messages, SYSTEM_PROMPT);
   if (directResponse) return directResponse;
 
+  const pollinationsResponse = await tryDirectPollinations(messages, SYSTEM_PROMPT);
+  if (pollinationsResponse) return pollinationsResponse;
+
   return language === 'en'
     ? `💡 Hint: Break the problem down step-by-step. Remember that ${question.includes('loop') ? 'loops repeat actions while conditions are met.' : 'syntax requires exact matching.'}`
     : `💡 সংকেত: সমস্যাটি ছোট ছোট ধাপে ভাগ করে নাও। প্রশ্নের মূল শর্তটি লক্ষ্য করো এবং ইনপুট-আউটপুট টাইপ মিলিয়ে দেখো।`;
@@ -177,9 +214,37 @@ export const reviewCode = async (
   const directResponse = await tryDirectGemini(messages, SYSTEM_PROMPT);
   if (directResponse) return directResponse;
 
+  const pollinationsResponse = await tryDirectPollinations(messages, SYSTEM_PROMPT);
+  if (pollinationsResponse) return pollinationsResponse;
+
   return language === 'en'
     ? "✅ Code Review:\n1. Syntax structure is clean.\n2. Ensure indentation follows 4 spaces.\n3. Test edge cases with varied inputs."
     : "✅ কোড পর্যালোচনা:\n১. কোডের মূল গঠন চমৎকার হয়েছে।\n২. ইনডেন্টেশন এবং ভেরিয়েবলের সঠিক নাম ব্যবহারের দিকে খেয়াল রাখো।\n৩. ভিন্ন ভিন্ন ইনপুট দিয়ে কোডটি টেস্ট করো।";
+};
+
+export const explainCode = async (
+  code: string,
+  language: string = 'bn'
+): Promise<string> => {
+  const prompt = language === 'en'
+    ? `Analyze and explain this code:
+\`\`\`
+${code}
+\`\`\`
+Please explain:
+1. What this code does line-by-line in plain terms.
+2. Time & Space Complexity analysis.
+3. Edge cases to be aware of or potential improvements.`
+    : `এই কোডটি বিস্তারিত বিশ্লেষণ ও ব্যাখ্যা করো:
+\`\`\`
+${code}
+\`\`\`
+অনুগ্রহ করে বুঝিয়ে বলো:
+১. প্রতিটি লাইন সহজ বাংলায় কী কাজ করছে।
+২. টাইম ও স্পেস কমপ্লেক্সিটি (Time & Space Complexity)।
+৩. কোনো সম্ভাব্য বাগ বা পারফরম্যান্স অপটিমাইজেশন টিপস।`;
+
+  return chatWithAiTutor(prompt, { language });
 };
 
 export const chatWithHistory = async (
@@ -203,6 +268,9 @@ export const chatWithHistory = async (
 
   const directResponse = await tryDirectGemini(messages, SYSTEM_PROMPT);
   if (directResponse) return directResponse;
+
+  const pollinationsResponse = await tryDirectPollinations(messages, SYSTEM_PROMPT);
+  if (pollinationsResponse) return pollinationsResponse;
 
   const lastUserPrompt = messages.filter(m => m.role === 'user').pop()?.content || '';
   return generateLocalPedagogicalResponse(lastUserPrompt, context?.language === 'en');

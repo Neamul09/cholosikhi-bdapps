@@ -1,8 +1,11 @@
 import { useState } from 'react';
-import { X, Search, BookOpen, Star, Sparkles, Check } from 'lucide-react';
+import { X, Search, BookOpen, Star, Sparkles, Check, Bot, Loader2, RefreshCw } from 'lucide-react';
+import { clsx } from 'clsx';
 import { SAT_VOCAB_LIST } from '../data/vocabData';
 import type { SatVocabItem } from '../types';
 import { updateVocabMastery } from '../lib/satStorage';
+import { generateVocabMnemonic } from '../services/satAiService';
+import MathRenderer from './MathRenderer';
 import { play } from '../../lib/audio';
 
 interface VocabInspectorProps {
@@ -19,6 +22,8 @@ export default function VocabInspector({ isOpen, onClose, initialWord = '' }: Vo
     return SAT_VOCAB_LIST.find(v => v.word.toLowerCase() === clean) || SAT_VOCAB_LIST[0];
   });
   const [savedSuccess, setSavedSuccess] = useState(false);
+  const [aiMnemonic, setAiMnemonic] = useState<string | null>(null);
+  const [isAiLoading, setIsAiLoading] = useState(false);
 
   if (!isOpen) return null;
 
@@ -31,6 +36,22 @@ export default function VocabInspector({ isOpen, onClose, initialWord = '' }: Vo
     play('tap');
     setSelectedWord(item);
     setSavedSuccess(false);
+    setAiMnemonic(null);
+  };
+
+  const handleGenerateAiMnemonic = async () => {
+    if (!selectedWord) return;
+    play('tap');
+    setIsAiLoading(true);
+    try {
+      const result = await generateVocabMnemonic(selectedWord.word, selectedWord.definition);
+      setAiMnemonic(result);
+    } catch (e) {
+      console.error(e);
+      setAiMnemonic('Could not generate mnemonic. Please try again.');
+    } finally {
+      setIsAiLoading(false);
+    }
   };
 
   const handleSaveToVault = (status: 'learning' | 'familiar' | 'mastered') => {
@@ -163,6 +184,54 @@ export default function VocabInspector({ isOpen, onClose, initialWord = '' }: Vo
                       </span>
                     ))}
                   </div>
+                </div>
+
+                {/* Nini AI Mnemonic & Memory Hook Generator */}
+                <div className="p-4 rounded-2xl bg-indigo-500/10 border border-indigo-500/30 space-y-3">
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-2">
+                      <div className="w-6 h-6 rounded-lg bg-indigo-500/20 text-indigo-400 flex items-center justify-center">
+                        <Bot size={14} />
+                      </div>
+                      <span className="text-xs font-black text-app-fg">Nini AI Mnemonic & SAT Usage</span>
+                    </div>
+
+                    {!aiMnemonic ? (
+                      <button
+                        onClick={handleGenerateAiMnemonic}
+                        disabled={isAiLoading}
+                        className="px-3 py-1.5 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white font-black text-xs transition-all shadow-sm flex items-center gap-1.5"
+                      >
+                        <Sparkles size={12} />
+                        <span>Generate Mnemonic</span>
+                        <span className="text-[9px] px-1 rounded bg-white/20">Free</span>
+                      </button>
+                    ) : (
+                      <button
+                        onClick={handleGenerateAiMnemonic}
+                        disabled={isAiLoading}
+                        className="p-1.5 rounded-lg bg-panel hover:bg-white/10 text-app-fg/60 hover:text-app-fg transition-all"
+                        title="Regenerate"
+                      >
+                        <RefreshCw size={13} className={clsx(isAiLoading && "animate-spin")} />
+                      </button>
+                    )}
+                  </div>
+
+                  {isAiLoading ? (
+                    <div className="p-4 flex items-center justify-center gap-2 text-xs font-bold text-indigo-400">
+                      <Loader2 size={16} className="animate-spin" />
+                      <span>Generating memory hook and SAT context...</span>
+                    </div>
+                  ) : aiMnemonic ? (
+                    <div className="p-3 rounded-xl bg-app-bg/80 border border-border-subtle font-hind text-xs text-app-fg leading-relaxed sat-question-content space-y-2">
+                      <MathRenderer content={aiMnemonic} />
+                    </div>
+                  ) : (
+                    <p className="text-[11px] text-app-fg/60 font-medium">
+                      Generate easy Bangla & English memory tricks to never forget this SAT word!
+                    </p>
+                  )}
                 </div>
               </div>
             ) : (

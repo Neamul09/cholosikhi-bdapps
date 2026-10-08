@@ -1,11 +1,12 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
 import { useLocation } from 'react-router-dom';
-import { Play, RotateCcw, Copy, Code, Terminal, Sparkles, ChevronDown, AlertTriangle, Network, AlignLeft, Boxes, Layers, Type } from 'lucide-react';
+import { Play, RotateCcw, Copy, Code, Terminal, Sparkles, ChevronDown, AlertTriangle, Network, AlignLeft, Boxes, Layers, Type, Bot, Loader2, RefreshCw } from 'lucide-react';
 import { clsx } from 'clsx';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useSettingsStore } from '@/store/settingsStore';
 import { runPythonWebAssembly } from '@/lib/pyodide';
 import { trackEvent } from '@/lib/analytics';
+import { explainCode } from '@/services/aiService';
 import {
   SortingVisualizer,
   TreeVisualizer,
@@ -202,8 +203,29 @@ export default function CodePlayground() {
   const [isError, setIsError] = useState(false);
   const [resetOpen, setResetOpen] = useState(false);
   const [copied, setCopied] = useState(false);
+  const [consoleView, setConsoleView] = useState<'terminal' | 'ai'>('terminal');
+  const [isAiReviewing, setIsAiReviewing] = useState(false);
+  const [aiFeedback, setAiFeedback] = useState<string | null>(null);
 
   const tr = t[uiLang];
+
+  const handleAiCodeReview = useCallback(async () => {
+    if (!code.trim()) return;
+    trackEvent('ai_code_review', { lang: selectedLang.id });
+    setConsoleView('ai');
+    setIsAiReviewing(true);
+    setAiFeedback(uiLang === 'en' ? '🤖 Nini is analyzing your code syntax, complexity, and logic...' : '🤖 নিনি আপনার কোডের গঠন, টাইম কমপ্লেক্সিটি ও লজিক পর্যালোচনা করছে...');
+
+    try {
+      const feedback = await explainCode(code, uiLang);
+      setAiFeedback(feedback);
+    } catch (err) {
+      console.error(err);
+      setAiFeedback(uiLang === 'en' ? 'Failed to generate AI code review. Please try again.' : 'এআই কোড পর্যালোচনা পেতে সমস্যা হয়েছে। আবার চেষ্টা করুন।');
+    } finally {
+      setIsAiReviewing(false);
+    }
+  }, [code, selectedLang.id, uiLang]);
 
   // Close dropdown on outside click/tap (works on mobile)
   useEffect(() => {
@@ -222,6 +244,7 @@ export default function CodePlayground() {
 
   const runCode = useCallback(async () => {
     trackEvent('code_run', { lang: selectedLang.id });
+    setConsoleView('terminal');
     setIsRunning(true);
     setIsError(false);
     setOutput(tr.running);
@@ -402,6 +425,20 @@ export default function CodePlayground() {
             </div>
 
             <button
+              onClick={handleAiCodeReview}
+              disabled={isAiReviewing || !code.trim()}
+              className="flex items-center gap-2 px-4 py-2 bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-700 hover:to-indigo-700 text-white rounded-xl font-black text-xs shadow-lg shadow-purple-500/20 hover:scale-105 active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed transition-all"
+            >
+              {isAiReviewing ? (
+                <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+              ) : (
+                <Bot size={16} />
+              )}
+              <span>Nini AI Review</span>
+              <span className="text-[9px] px-1.5 py-0.5 rounded bg-white/20 font-bold">Free</span>
+            </button>
+
+            <button
               onClick={runCode}
               disabled={isRunning}
               aria-label={tr.run}
@@ -487,26 +524,86 @@ export default function CodePlayground() {
           </div>
         </div>
 
-        {/* Console Area */}
+        {/* Console / AI Feedback Area */}
         <div className="flex flex-col bg-[#0d1117] border-2 border-white/5 rounded-3xl overflow-hidden shadow-2xl">
-          <div className="px-6 py-3 bg-white/5 border-b border-white/10 flex items-center gap-2">
-            <Terminal size={16} className="text-emerald-500" />
-            <span className="text-xs font-black text-white/40 uppercase tracking-widest">
-              {tr.console}
-            </span>
+          <div className="px-4 py-2 bg-white/5 border-b border-white/10 flex items-center justify-between">
+            <div className="flex items-center gap-2">
+              <button
+                onClick={() => setConsoleView('terminal')}
+                className={clsx(
+                  "px-3 py-1.5 rounded-xl text-xs font-black tracking-wider flex items-center gap-1.5 transition-all",
+                  consoleView === 'terminal'
+                    ? "bg-white/10 text-white shadow-sm"
+                    : "text-white/40 hover:text-white"
+                )}
+              >
+                <Terminal size={14} className="text-emerald-400" />
+                <span>{tr.console}</span>
+              </button>
+              <button
+                onClick={() => setConsoleView('ai')}
+                className={clsx(
+                  "px-3 py-1.5 rounded-xl text-xs font-black tracking-wider flex items-center gap-1.5 transition-all",
+                  consoleView === 'ai'
+                    ? "bg-purple-600/30 text-purple-300 border border-purple-500/30"
+                    : "text-white/40 hover:text-purple-300"
+                )}
+              >
+                <Bot size={14} className="text-purple-400" />
+                <span>NINI AI REVIEW</span>
+                {aiFeedback && <span className="w-1.5 h-1.5 rounded-full bg-purple-400" />}
+              </button>
+            </div>
+
+            {consoleView === 'ai' && (
+              <button
+                onClick={handleAiCodeReview}
+                disabled={isAiReviewing || !code.trim()}
+                className="p-1.5 rounded-lg hover:bg-white/10 text-white/50 hover:text-white transition-all text-xs"
+                title="Re-run review"
+              >
+                <RefreshCw size={13} className={clsx(isAiReviewing && "animate-spin")} />
+              </button>
+            )}
           </div>
+
           <div
             aria-live="polite"
             aria-atomic="true"
-            className={clsx(
-              "flex-1 p-6 font-mono text-sm overflow-y-auto custom-scrollbar whitespace-pre-wrap",
-              isError ? "text-rose-400" : "text-emerald-400"
-            )}
+            className="flex-1 p-6 font-mono text-sm overflow-y-auto custom-scrollbar"
           >
-            {output || (
-              <span className="text-white/20 italic">
-                {tr.empty}
-              </span>
+            {consoleView === 'terminal' ? (
+              <div className={clsx("whitespace-pre-wrap", isError ? "text-rose-400" : "text-emerald-400")}>
+                {output || (
+                  <span className="text-white/20 italic">
+                    {tr.empty}
+                  </span>
+                )}
+              </div>
+            ) : (
+              <div className="space-y-4 font-sans text-white/90">
+                {isAiReviewing ? (
+                  <div className="flex flex-col items-center justify-center py-12 gap-3 text-center">
+                    <Loader2 size={24} className="animate-spin text-purple-400" />
+                    <p className="text-xs text-white/60 font-bold">
+                      {uiLang === 'en' ? 'Nini AI is reviewing your code structure, complexity, and edge cases...' : 'নিনি এআই কোড পর্যালোচনা ও অপটিমাইজেশন প্রস্তুত করছে...'}
+                    </p>
+                  </div>
+                ) : aiFeedback ? (
+                  <div className="text-sm font-medium leading-relaxed whitespace-pre-wrap">
+                    {aiFeedback}
+                  </div>
+                ) : (
+                  <div className="text-center py-12 text-white/40 space-y-3">
+                    <Bot size={32} className="mx-auto text-purple-400/50" />
+                    <p className="text-xs font-bold">
+                      {uiLang === 'en'
+                        ? 'Click "Nini AI Review" to analyze time complexity, find bugs, and get optimization suggestions!'
+                        : '"Nini AI Review" বাটনে ক্লিক করে কোডের টাইম কমপ্লেক্সিটি, বাগ ও অপটিমাইজেশন টিপস জেনে নিন!'}
+                    </p>
+                  </div>
+                )}
+              </div>
             )}
           </div>
         </div>

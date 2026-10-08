@@ -237,6 +237,120 @@ is_active = True      # bool
   return "👋 I am **Nini**, your AI Tutor on CholoSikhi! Ask me anything about Python programming, algorithms, debugging, or Digital SAT strategies!";
 }
 
+async function tryGemini(apiKey: string, messages: any[], systemPrompt?: string): Promise<string | null> {
+  const formattedMessages = messages.map((msg: any) => ({
+    role: msg.role === 'user' ? 'user' : 'model',
+    parts: [{ text: msg.content }],
+  }));
+
+  const requestBody: any = {
+    contents: formattedMessages,
+    generationConfig: {
+      temperature: 0.7,
+      maxOutputTokens: 1200,
+    }
+  };
+
+  if (systemPrompt) {
+    requestBody.systemInstruction = {
+      parts: [{ text: systemPrompt }]
+    };
+  }
+
+  for (const model of MODELS) {
+    try {
+      const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${apiKey}`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(requestBody),
+      });
+
+      if (response.ok) {
+        const data = await response.json();
+        const text = data.candidates?.[0]?.content?.parts?.[0]?.text;
+        if (text) return text;
+      }
+    } catch (e) {
+      console.warn(`[Gemini API] Error calling model ${model}:`, e);
+    }
+  }
+  return null;
+}
+
+async function tryGroq(groqKey: string, messages: any[], systemPrompt?: string): Promise<string | null> {
+  try {
+    const formattedMessages: any[] = [];
+    if (systemPrompt) {
+      formattedMessages.push({ role: 'system', content: systemPrompt });
+    }
+    for (const msg of messages) {
+      formattedMessages.push({
+        role: msg.role === 'user' ? 'user' : 'assistant',
+        content: msg.content
+      });
+    }
+
+    const response = await fetch('https://api.groq.com/openai/v1/chat/completions', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${groqKey}`,
+      },
+      body: JSON.stringify({
+        model: 'llama-3.3-70b-versatile',
+        messages: formattedMessages,
+        temperature: 0.7,
+        max_tokens: 1200,
+      }),
+    });
+
+    if (response.ok) {
+      const data = await response.json();
+      const text = data.choices?.[0]?.message?.content;
+      if (text) return text;
+    }
+  } catch (e) {
+    console.warn('[Groq API] Call failed:', e);
+  }
+  return null;
+}
+
+async function tryPollinationsFreeLLM(messages: any[], systemPrompt?: string): Promise<string | null> {
+  try {
+    const formattedMessages: any[] = [];
+    if (systemPrompt) {
+      formattedMessages.push({ role: 'system', content: systemPrompt });
+    }
+    for (const msg of messages) {
+      formattedMessages.push({
+        role: msg.role === 'user' ? 'user' : 'assistant',
+        content: msg.content
+      });
+    }
+
+    const response = await fetch('https://text.pollinations.ai/openai', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        messages: formattedMessages,
+        model: 'openai',
+        seed: 42,
+      }),
+    });
+
+    if (response.ok) {
+      const data = await response.json();
+      const text = data.choices?.[0]?.message?.content;
+      if (text) return text;
+    }
+  } catch (e) {
+    console.warn('[Pollinations Free LLM] Call failed:', e);
+  }
+  return null;
+}
+
 export default async function handler(req: Request) {
   // Handle CORS preflight
   if (req.method === 'OPTIONS') {
@@ -264,71 +378,38 @@ export default async function handler(req: Request) {
   try {
     const { messages, systemPrompt } = await req.json();
 
-    const apiKey = 
+    const geminiKey = 
       process.env.GEMINI_API_KEY || 
       process.env.VITE_GEMINI_API_KEY || 
       process.env.GOOGLE_API_KEY || 
       process.env.VITE_GOOGLE_API_KEY;
 
+    const groqKey = 
+      process.env.GROQ_API_KEY || 
+      process.env.VITE_GROQ_API_KEY;
+
     const lastUserMessage = messages?.filter((m: any) => m.role === 'user').pop()?.content || '';
 
-    if (!apiKey) {
-      console.warn('[Gemini API] No GEMINI_API_KEY set on server; using intelligent fallback.');
-      return new Response(JSON.stringify({ response: generateFallbackResponse(lastUserMessage, systemPrompt) }), {
-        status: 200,
-        headers: corsHeaders,
-      });
+    let textResponse: string | null = null;
+
+    // 1. Try Gemini API if key is available
+    if (geminiKey) {
+      textResponse = await tryGemini(geminiKey, messages, systemPrompt);
     }
 
-    // Format messages for Gemini API
-    const formattedMessages = messages.map((msg: any) => ({
-      role: msg.role === 'user' ? 'user' : 'model',
-      parts: [{ text: msg.content }],
-    }));
-
-    const requestBody: any = {
-      contents: formattedMessages,
-      generationConfig: {
-        temperature: 0.7,
-        maxOutputTokens: 1200,
-      }
-    };
-
-    if (systemPrompt) {
-      requestBody.systemInstruction = {
-        parts: [{ text: systemPrompt }]
-      };
+    // 2. Try Groq Free Tier if Gemini wasn't available or failed
+    if (!textResponse && groqKey) {
+      textResponse = await tryGroq(groqKey, messages, systemPrompt);
     }
 
-    let textResponse = '';
-    let lastError: any = null;
-
-    // Try models in cascade order
-    for (const model of MODELS) {
-      try {
-        const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${apiKey}`, {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-          },
-          body: JSON.stringify(requestBody),
-        });
-
-        if (response.ok) {
-          const data = await response.json();
-          textResponse = data.candidates?.[0]?.content?.parts?.[0]?.text || '';
-          if (textResponse) break;
-        } else {
-          lastError = await response.text();
-          console.warn(`[Gemini API] Model ${model} failed (${response.status}):`, lastError);
-        }
-      } catch (callErr) {
-        lastError = callErr;
-      }
-    }
-
+    // 3. Try Free Open LLM Gateway (Pollinations OpenAI Endpoint — 100% free, zero key required)
     if (!textResponse) {
-      console.warn('[Gemini API] All models returned empty or failed. Using fallback response. Last error:', lastError);
+      textResponse = await tryPollinationsFreeLLM(messages, systemPrompt);
+    }
+
+    // 4. Intelligent pedagogical fallback if network or all endpoints fail
+    if (!textResponse) {
+      console.warn('[AI Service] All remote LLMs unreachable; using domain-aware local pedagogical fallback.');
       textResponse = generateFallbackResponse(lastUserMessage, systemPrompt);
     }
 
