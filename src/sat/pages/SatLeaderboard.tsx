@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo, useCallback } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import {
   Trophy,
   Zap,
@@ -11,71 +11,12 @@ import {
   X
 } from 'lucide-react';
 import { clsx } from 'clsx';
-import { loadSatUserState } from '../lib/satStorage';
-import { calculatePredictedScore } from '../lib/scorePredictor';
 import { useAuthStore } from '@/store/authStore';
 import { useUserStore } from '@/store/userStore';
-import { supabase, isSupabaseConfigured } from '../../lib/supabase';
-import type { SatLeaderboardUser, QuestionAttemptLog } from '../types';
+import IconAvatar from '@/components/common/IconAvatar';
+import { fetchSatLeaderboard, searchSatScholars } from '../lib/satLeaderboardService';
+import type { SatLeaderboardUser } from '../types';
 import { play } from '../../lib/audio';
-
-const BENCHMARK_COHORT: SatLeaderboardUser[] = [
-  {
-    id: 'u-bench-1',
-    name: 'Tanvir Hossain',
-    avatar: 'scholar',
-    xp: 2450,
-    solvedCount: 168,
-    accuracy: 94,
-    predictedScore: 1560,
-    league: 'diamond',
-    rank: 1
-  },
-  {
-    id: 'u-bench-2',
-    name: 'Nafisa Rahman',
-    avatar: 'astronaut',
-    xp: 2180,
-    solvedCount: 142,
-    accuracy: 91,
-    predictedScore: 1530,
-    league: 'diamond',
-    rank: 2
-  },
-  {
-    id: 'u-bench-3',
-    name: 'Farhan Kabir',
-    avatar: 'robot',
-    xp: 1920,
-    solvedCount: 125,
-    accuracy: 88,
-    predictedScore: 1490,
-    league: 'diamond',
-    rank: 3
-  },
-  {
-    id: 'u-bench-4',
-    name: 'Ayesha Siddiqua',
-    avatar: 'code',
-    xp: 1750,
-    solvedCount: 110,
-    accuracy: 85,
-    predictedScore: 1460,
-    league: 'diamond',
-    rank: 4
-  },
-  {
-    id: 'u-bench-5',
-    name: 'Zubair Ahmed',
-    avatar: 'cat',
-    xp: 1390,
-    solvedCount: 88,
-    accuracy: 82,
-    predictedScore: 1410,
-    league: 'diamond',
-    rank: 5
-  }
-];
 
 export default function SatLeaderboard() {
   const [timeframe, setTimeframe] = useState<'weekly' | 'allTime'>('weekly');
@@ -84,324 +25,66 @@ export default function SatLeaderboard() {
   const [searchResults, setSearchResults] = useState<SatLeaderboardUser[]>([]);
   const [isSearching, setIsSearching] = useState(false);
 
-  const [cloudUsers, setCloudUsers] = useState<SatLeaderboardUser[]>([]);
-  const [followingIds, setFollowingIds] = useState<Set<string>>(new Set());
+  const [scholars, setScholars] = useState<SatLeaderboardUser[]>([]);
   const [isLoading, setIsLoading] = useState(true);
 
-  const { session, user } = useAuthStore();
+  const { user } = useAuthStore();
   const userStore = useUserStore();
-  const [localName, setLocalName] = useState(() => {
-    return (
-      (typeof window !== 'undefined'
-        ? localStorage.getItem('cs_sat_user_name') || localStorage.getItem('cholosikhi_user_name')
-        : '') || ''
-    );
-  });
 
-  useEffect(() => {
-    const handleNameChange = (e: Event) => {
-      const customEvent = e as CustomEvent<{ name?: string }>;
-      if (customEvent?.detail?.name) {
-        setLocalName(customEvent.detail.name);
-      }
-    };
-    window.addEventListener('cs_user_name_changed', handleNameChange);
-    return () => window.removeEventListener('cs_user_name_changed', handleNameChange);
-  }, []);
-
-  const currentUserId = session?.id || user?.id;
-  const currentUserName =
-    session?.name ||
-    user?.name ||
-    userStore.name ||
-    localName ||
-    'Digital SAT Scholar';
-
-  const userState = loadSatUserState();
-  const prediction = calculatePredictedScore(userState.attempts);
-  const totalAttempts = userState.attempts.length;
-  const correctAttempts = userState.attempts.filter((a) => a.isCorrect).length;
-  const userAccuracy = totalAttempts > 0 ? Math.round((correctAttempts / totalAttempts) * 100) : 86;
-
-  // Fetch real profiles and follows from Supabase
-  const fetchLeaderboardData = useCallback(async () => {
-    if (!isSupabaseConfigured) {
-      setCloudUsers([]);
-      setIsLoading(false);
-      return;
-    }
-
+  const loadData = useCallback(async () => {
+    setIsLoading(true);
     try {
-      setIsLoading(true);
-
-      // 1. Fetch who current user follows
-      let followedSet = new Set<string>();
-      if (currentUserId) {
-        const { data: followsData } = await supabase
-          .from('follows')
-          .select('following_id')
-          .eq('follower_id', currentUserId);
-
-        if (followsData) {
-          followedSet = new Set(followsData.map((f) => f.following_id));
-          setFollowingIds(followedSet);
-        }
-      }
-
-      // 2. Fetch SAT active students from sat_user_routines
-      let routinesQuery = supabase
-        .from('sat_user_routines')
-        .select('user_id, target_score, weekly_hours, daily_tasks, updated_at');
-
-      if (viewScope === 'friends' && currentUserId) {
-        const friendIds = Array.from(followedSet);
-        friendIds.push(currentUserId);
-        routinesQuery = routinesQuery.in('user_id', friendIds);
-      }
-
-      const { data: routines, error } = await routinesQuery
-        .order('updated_at', { ascending: false })
-        .limit(50);
-
-      if (error) {
-        console.warn('[SatLeaderboard] Supabase fetch error:', error);
-        setCloudUsers([]);
-      } else if (routines && routines.length > 0) {
-        const userIds = routines.map((r) => r.user_id);
-        const { data: profiles } = await supabase
-          .from('profiles')
-          .select('id, name, avatar, avatar_url')
-          .in('id', userIds);
-
-        const profileMap = new Map((profiles || []).map((p) => [p.id, p]));
-
-        const mappedUsers: SatLeaderboardUser[] = routines.map((r) => {
-          interface RoutineStorePayload {
-            id?: string;
-            xp?: number;
-            streak?: number;
-            attempts?: QuestionAttemptLog[];
-          }
-          let attempts: QuestionAttemptLog[] = [];
-          let userXp = 0;
-          if (Array.isArray(r.daily_tasks)) {
-            const store = (r.daily_tasks as RoutineStorePayload[]).find((t) => t && t.id === '__sat_attempts_store__');
-            if (store) {
-              attempts = store.attempts || [];
-              userXp = Number(store.xp) || 0;
-            }
-          }
-
-          const p = profileMap.get(r.user_id);
-          const solvedCount = attempts.length;
-          const correctCount = attempts.filter((a) => a.isCorrect).length;
-          const acc = solvedCount > 0 ? Math.round((correctCount / solvedCount) * 100) : 85;
-          const scorePrediction = calculatePredictedScore(attempts);
-          const userScore = solvedCount > 0 ? scorePrediction.compositeScore : (r.target_score || 1420);
-          const finalXp = userXp > 0 ? userXp : Math.max(120, solvedCount * 15);
-
-          return {
-            id: r.user_id,
-            name: p?.name || 'Digital SAT Scholar',
-            avatar: p?.avatar || 'scholar',
-            avatarUrl: p?.avatar_url || undefined,
-            xp: finalXp,
-            solvedCount: Math.max(1, solvedCount),
-            accuracy: acc,
-            predictedScore: userScore,
-            league: 'diamond',
-            rank: 1,
-            isCurrentUser: r.user_id === currentUserId,
-            isFollowing: followedSet.has(r.user_id)
-          };
-        });
-
-        setCloudUsers(mappedUsers);
-      } else {
-        setCloudUsers([]);
-      }
+      const data = await fetchSatLeaderboard({
+        scope: viewScope,
+        timeframe,
+        limit: 50
+      });
+      setScholars(data);
     } catch (err) {
-      console.debug('[SatLeaderboard] Error fetching leaderboard:', err);
-      setCloudUsers([]);
+      console.debug('[SatLeaderboard] fetch error:', err);
     } finally {
       setIsLoading(false);
     }
-  }, [currentUserId, viewScope]);
+  }, [viewScope, timeframe]);
 
   useEffect(() => {
-    fetchLeaderboardData();
-  }, [fetchLeaderboardData]);
+    loadData();
+  }, [loadData]);
 
-  // Real-time student search in Supabase (filtered for SAT scholars)
+  // Real-time student search in SAT
   useEffect(() => {
-    let cancelled = false;
-    const executeSearch = async () => {
-      const q = searchQuery.trim();
-      if (q.length < 2) {
-        setSearchResults([]);
-        setIsSearching(false);
-        return;
-      }
+    const q = searchQuery.trim();
+    if (q.length < 2) {
+      setSearchResults([]);
+      setIsSearching(false);
+      return;
+    }
 
-      if (!isSupabaseConfigured) {
-        // Local benchmark search fallback
-        const matches = BENCHMARK_COHORT.filter((u) => u.name.toLowerCase().includes(q.toLowerCase()));
-        setSearchResults(matches);
-        return;
-      }
-
-      setIsSearching(true);
+    setIsSearching(true);
+    const timer = setTimeout(async () => {
       try {
-        const { data: matches, error } = await supabase
-          .from('profiles')
-          .select('id, name, avatar, avatar_url')
-          .ilike('name', `%${q}%`)
-          .limit(10);
-
-        if (!cancelled && !error && matches && matches.length > 0) {
-          const matchIds = matches.map((m) => m.id);
-          const { data: routines } = await supabase
-            .from('sat_user_routines')
-            .select('user_id, target_score, daily_tasks')
-            .in('user_id', matchIds);
-
-          const routineMap = new Map((routines || []).map((r) => [r.user_id, r]));
-
-          const results: SatLeaderboardUser[] = matches
-            .filter((p) => routineMap.has(p.id) || p.id === currentUserId)
-            .map((p) => {
-              const r = routineMap.get(p.id);
-              interface RoutineStorePayload {
-                id?: string;
-                xp?: number;
-                streak?: number;
-                attempts?: QuestionAttemptLog[];
-              }
-              let attempts: QuestionAttemptLog[] = [];
-              let userXp = 120;
-              if (r && Array.isArray(r.daily_tasks)) {
-                const store = (r.daily_tasks as RoutineStorePayload[]).find((t) => t && t.id === '__sat_attempts_store__');
-                if (store) {
-                  attempts = store.attempts || [];
-                  userXp = Number(store.xp) || attempts.length * 15 || 120;
-                }
-              }
-              const totalAtts = attempts.length;
-              const correctAtts = attempts.filter((a) => a.isCorrect).length;
-              const acc = totalAtts > 0 ? Math.round((correctAtts / totalAtts) * 100) : 85;
-              const score = totalAtts > 0 ? calculatePredictedScore(attempts).compositeScore : (r?.target_score || 1420);
-
-              return {
-                id: p.id,
-                name: p.name || 'Digital SAT Scholar',
-                avatar: p.avatar || 'scholar',
-                avatarUrl: p.avatar_url || undefined,
-                xp: userXp,
-                solvedCount: Math.max(1, totalAtts),
-                accuracy: acc,
-                predictedScore: score,
-                league: 'diamond',
-                rank: 1,
-                isCurrentUser: p.id === currentUserId,
-                isFollowing: followingIds.has(p.id)
-              };
-            });
-
-          setSearchResults(results);
-        } else if (!cancelled) {
-          setSearchResults([]);
-        }
-      } catch {
-        if (!cancelled) setSearchResults([]);
+        const matches = await searchSatScholars(q);
+        setSearchResults(matches);
       } finally {
-        if (!cancelled) setIsSearching(false);
+        setIsSearching(false);
       }
-    };
+    }, 250);
 
-    const timer = setTimeout(executeSearch, 300);
-    return () => {
-      cancelled = true;
-      clearTimeout(timer);
-    };
-  }, [searchQuery, currentUserId, followingIds]);
+    return () => clearTimeout(timer);
+  }, [searchQuery]);
 
   // Toggle follow action
   const handleToggleFollow = async (targetUserId: string) => {
     play('tap');
-    if (!currentUserId || !isSupabaseConfigured) return;
-
-    const isCurrentlyFollowing = followingIds.has(targetUserId);
-
-    // Optimistic UI update
-    setFollowingIds((prev) => {
-      const next = new Set(prev);
-      if (isCurrentlyFollowing) {
-        next.delete(targetUserId);
-      } else {
-        next.add(targetUserId);
-      }
-      return next;
-    });
-
-    try {
-      if (isCurrentlyFollowing) {
-        await supabase
-          .from('follows')
-          .delete()
-          .eq('follower_id', currentUserId)
-          .eq('following_id', targetUserId);
-      } else {
-        await supabase
-          .from('follows')
-          .insert({ follower_id: currentUserId, following_id: targetUserId });
-      }
-    } catch (err) {
-      console.warn('[SatLeaderboard] Toggle follow error:', err);
+    await userStore.toggleFollow(targetUserId);
+    // Refresh current leaderboard & search results
+    loadData();
+    const q = searchQuery.trim();
+    if (q.length >= 2) {
+      const matches = await searchSatScholars(q);
+      setSearchResults(matches);
     }
   };
-
-  // Compile final leaderboard list
-  const displayList = useMemo(() => {
-    const effectiveId = currentUserId || 'u-local-scholar';
-    const currentUserXp = userState.xp > 0 ? userState.xp : 2650;
-
-    const currentUserEntry: SatLeaderboardUser = {
-      id: effectiveId,
-      name: `${currentUserName} (You)`,
-      avatar: 'hero',
-      xp: currentUserXp,
-      solvedCount: totalAttempts > 0 ? totalAttempts : Math.max(25, Math.round(currentUserXp / 12)),
-      accuracy: userAccuracy,
-      predictedScore: prediction.compositeScore || 1420,
-      league: 'diamond',
-      rank: 1,
-      isCurrentUser: true
-    };
-
-    let list: SatLeaderboardUser[];
-
-    if (cloudUsers.length > 0) {
-      // If current user is in cloudUsers, update their data with live local stats
-      const existsInCloud = cloudUsers.some((u) => u.id === effectiveId);
-      if (existsInCloud) {
-        list = cloudUsers.map((u) => (u.id === effectiveId ? currentUserEntry : u));
-      } else {
-        list = [...cloudUsers, currentUserEntry];
-      }
-    } else {
-      // Fallback with benchmark cohort
-      list = [...BENCHMARK_COHORT, currentUserEntry];
-    }
-
-    // Sort by XP descending
-    list.sort((a, b) => b.xp - a.xp);
-    list.forEach((u, i) => {
-      u.rank = i + 1;
-      u.isFollowing = followingIds.has(u.id);
-    });
-
-    return list;
-  }, [cloudUsers, currentUserId, userState.xp, currentUserName, totalAttempts, userAccuracy, prediction.compositeScore, followingIds]);
 
   return (
     <div className="max-w-4xl mx-auto space-y-8 pb-20">
@@ -535,8 +218,12 @@ export default function SatLeaderboard() {
                   className="flex items-center justify-between p-2.5 rounded-xl bg-panel/60 hover:bg-panel border border-border-subtle transition"
                 >
                   <div className="flex items-center gap-3">
-                    <div className="w-8 h-8 rounded-full bg-blue-500/20 border border-blue-500/30 flex items-center justify-center font-black text-xs text-blue-400">
-                      {scholar.name[0]?.toUpperCase() || 'S'}
+                    <div className="w-8 h-8 rounded-full bg-blue-500/20 border border-blue-500/30 flex items-center justify-center font-black text-xs text-blue-400 overflow-hidden">
+                      {scholar.avatarUrl ? (
+                        <img src={scholar.avatarUrl} alt={scholar.name} className="w-full h-full object-cover" />
+                      ) : (
+                        <IconAvatar name={scholar.avatar} size={16} />
+                      )}
                     </div>
                     <div>
                       <h5 className="font-black text-xs text-app-fg">{scholar.name}</h5>
@@ -546,17 +233,17 @@ export default function SatLeaderboard() {
                     </div>
                   </div>
 
-                  {!scholar.isCurrentUser && (
+                  {!scholar.isCurrentUser && user?.id && (
                     <button
                       onClick={() => handleToggleFollow(scholar.id)}
                       className={clsx(
                         "px-3 py-1.5 rounded-xl text-xs font-black transition flex items-center gap-1",
-                        followingIds.has(scholar.id)
+                        scholar.isFollowing
                           ? "bg-emerald-500/20 text-emerald-400 border border-emerald-500/30"
                           : "bg-blue-500 hover:bg-blue-600 text-white shadow-md shadow-blue-500/20"
                       )}
                     >
-                      {followingIds.has(scholar.id) ? (
+                      {scholar.isFollowing ? (
                         <>
                           <UserCheck size={13} />
                           <span>Following</span>
@@ -585,7 +272,7 @@ export default function SatLeaderboard() {
               Loading Live Scholar Rankings...
             </p>
           </div>
-        ) : displayList.length === 0 ? (
+        ) : scholars.length === 0 ? (
           <div className="p-16 text-center space-y-3">
             <Users size={36} className="text-app-fg/30 mx-auto" />
             <h4 className="text-base font-black text-app-fg">No friends in your leaderboard yet</h4>
@@ -594,7 +281,7 @@ export default function SatLeaderboard() {
             </p>
           </div>
         ) : (
-          displayList.map((scholar) => {
+          scholars.map((scholar) => {
             const isTop3 = scholar.rank <= 3;
             const rankColors = {
               1: 'bg-amber-400 text-slate-950 border-amber-300 font-black shadow-lg shadow-amber-400/20',
@@ -604,7 +291,7 @@ export default function SatLeaderboard() {
 
             return (
               <div
-                key={scholar.id}
+                key={`${scholar.id}-${scholar.rank}`}
                 className={clsx(
                   "p-4 sm:p-5 rounded-2xl border transition-all flex items-center justify-between gap-4",
                   scholar.isCurrentUser
@@ -624,6 +311,14 @@ export default function SatLeaderboard() {
                   >
                     {scholar.rank}
                   </span>
+
+                  <div className="w-10 h-10 rounded-full bg-blue-500/10 flex items-center justify-center text-blue-400 overflow-hidden shrink-0 border border-blue-500/20">
+                    {scholar.avatarUrl ? (
+                      <img src={scholar.avatarUrl} alt={scholar.name} className="w-full h-full object-cover" />
+                    ) : (
+                      <IconAvatar name={scholar.avatar} size={20} />
+                    )}
+                  </div>
 
                   <div className="min-w-0">
                     <div className="flex items-center gap-2 flex-wrap">
@@ -651,18 +346,18 @@ export default function SatLeaderboard() {
 
                 {/* Follow Button, Predicted Score & XP */}
                 <div className="flex items-center gap-3 sm:gap-6 shrink-0 text-right">
-                  {!scholar.isCurrentUser && currentUserId && (
+                  {!scholar.isCurrentUser && user?.id && (
                     <button
                       onClick={() => handleToggleFollow(scholar.id)}
-                      title={followingIds.has(scholar.id) ? "Unfollow friend" : "Follow friend"}
+                      title={scholar.isFollowing ? "Unfollow friend" : "Follow friend"}
                       className={clsx(
                         "hidden sm:flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-bold transition",
-                        followingIds.has(scholar.id)
+                        scholar.isFollowing
                           ? "bg-emerald-500/10 border border-emerald-500/30 text-emerald-400 hover:bg-rose-500/10 hover:text-rose-400 hover:border-rose-500/30"
                           : "bg-panel border border-border-subtle text-app-fg/70 hover:bg-blue-500 hover:text-white"
                       )}
                     >
-                      {followingIds.has(scholar.id) ? (
+                      {scholar.isFollowing ? (
                         <>
                           <UserCheck size={13} />
                           <span>Following</span>

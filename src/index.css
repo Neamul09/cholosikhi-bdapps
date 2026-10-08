@@ -275,9 +275,27 @@ table {
   filter: grayscale(1);
 }
 
-/* SVG and Figure handling for College Board Diagrams */
+/* ─── KaTeX Core & Reset ─────────────────────────── */
+.katex {
+  font-size: 1.05em;
+  text-rendering: auto;
+}
+
+.katex-display {
+  overflow-x: auto;
+  overflow-y: hidden;
+  padding: 0.25em 0;
+}
+
+/* Ensure Tailwind base preflight does not restrict KaTeX internal SVGs */
+.katex svg {
+  max-width: none !important;
+  max-height: none !important;
+}
+
+/* SVG and Figure handling for College Board Diagrams (excludes KaTeX SVGs) */
 .sat-question-content figure,
-.sat-question-content svg {
+.sat-question-content > svg:not([class*="katex"]):not(.katex svg) {
   background-color: #ffffff !important;
   color: #0f172a !important;
   border-radius: 1rem;
@@ -288,7 +306,7 @@ table {
   border: 1px solid #cbd5e1;
   display: block;
 }
-.sat-question-content figure svg {
+.sat-question-content figure svg:not([class*="katex"]):not(.katex svg) {
   margin: 0 auto;
   box-shadow: none;
   border: none;

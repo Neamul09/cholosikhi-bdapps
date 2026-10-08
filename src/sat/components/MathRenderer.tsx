@@ -5,6 +5,7 @@ import { clsx } from 'clsx';
 interface MathRendererProps {
   content: string;
   isSerif?: boolean;
+  inline?: boolean;
   className?: string;
   onClickWord?: (word: string) => void;
 }
@@ -164,6 +165,7 @@ export function renderMarkdownAndMath(content: string): string {
 export default function MathRenderer({
   content,
   isSerif = false,
+  inline = false,
   className,
   onClickWord
 }: MathRendererProps) {
@@ -172,7 +174,7 @@ export default function MathRenderer({
   }, [content]);
 
   // Handle word clicking if vocabulary inspector callback is provided
-  const handleClick = (e: React.MouseEvent<HTMLDivElement>) => {
+  const handleClick = (e: React.MouseEvent<HTMLElement>) => {
     if (!onClickWord) return;
     const target = e.target as HTMLElement;
     const selection = window.getSelection()?.toString().trim();
@@ -186,6 +188,20 @@ export default function MathRenderer({
       onClickWord(text.replace(/[^\w]/g, ''));
     }
   };
+
+  if (inline) {
+    return (
+      <span
+        onClick={handleClick}
+        className={clsx(
+          "inline text-app-fg select-text sat-question-content",
+          isSerif ? "font-bluebook-serif" : "font-bluebook-sans",
+          className
+        )}
+        dangerouslySetInnerHTML={{ __html: processedHtml }}
+      />
+    );
+  }
 
   return (
     <div
