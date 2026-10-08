@@ -3,10 +3,11 @@
 -- (sql/04_fix_uuid_to_text_migration.sql)
 --
 -- FIXES:
--- 1. ERROR: 0A000: cannot alter type of a column used in a policy definition
--- 2. 400 Bad Request ("invalid input syntax for type uuid: usr_8801878932651")
+-- 1. ERROR: 42804: foreign key constraint "profiles_id_fkey" cannot be implemented
+-- 2. ERROR: 0A000: cannot alter type of a column used in a policy definition
+-- 3. HTTP 400 Bad Request ("invalid input syntax for type uuid: usr_8801878932651")
 --
--- Run this ONCE in your Supabase SQL Editor:
+-- Run this in your Supabase SQL Editor:
 -- https://supabase.com/dashboard/project/ofzuvhjindrlkgjpmffu/sql
 -- ==============================================================================
 
@@ -14,7 +15,6 @@
 CREATE EXTENSION IF NOT EXISTS "uuid-ossp";
 
 -- 2. Dynamically DROP ALL existing Row Level Security policies across public tables
--- (Prevents PostgreSQL error 0A000: cannot alter type of a column used in a policy definition)
 DO $$
 DECLARE
     pol RECORD;
@@ -28,26 +28,36 @@ BEGIN
     END LOOP;
 END $$;
 
--- 3. Dynamically DROP all foreign key constraints referencing auth.users from public tables
+-- 3. Dynamically DROP ALL foreign key constraints in public schema
+-- (Using PostgreSQL native pg_constraint catalog to guarantee 100% removal of profiles_id_fkey, etc.)
 DO $$
 DECLARE
     r RECORD;
 BEGIN
     FOR r IN (
-        SELECT tc.table_schema, tc.table_name, tc.constraint_name
-        FROM information_schema.table_constraints tc
-        JOIN information_schema.constraint_column_usage ccu
-          ON tc.constraint_name = ccu.constraint_name
-          AND tc.table_schema = ccu.table_schema
-        WHERE tc.table_schema = 'public'
-          AND tc.constraint_type = 'FOREIGN KEY'
-          AND ccu.table_name = 'users'
-          AND ccu.table_schema = 'auth'
+        SELECT conname, conrelid::regclass::text AS tablename
+        FROM pg_constraint
+        WHERE contype = 'f'
+          AND connamespace = 'public'::regnamespace
     ) LOOP
-        EXECUTE 'ALTER TABLE ' || quote_ident(r.table_schema) || '.' || quote_ident(r.table_name) ||
-                ' DROP CONSTRAINT IF EXISTS ' || quote_ident(r.constraint_name) || ' CASCADE;';
+        EXECUTE format('ALTER TABLE %s DROP CONSTRAINT IF EXISTS %I CASCADE;', r.tablename, r.conname);
     END LOOP;
 END $$;
+
+-- 3b. Explicit fallback drops for standard Supabase constraint names
+ALTER TABLE IF EXISTS public.profiles DROP CONSTRAINT IF EXISTS profiles_id_fkey CASCADE;
+ALTER TABLE IF EXISTS public.profiles DROP CONSTRAINT IF EXISTS profiles_user_id_fkey CASCADE;
+ALTER TABLE IF EXISTS public.lesson_progress DROP CONSTRAINT IF EXISTS lesson_progress_user_id_fkey CASCADE;
+ALTER TABLE IF EXISTS public.test_results DROP CONSTRAINT IF EXISTS test_results_user_id_fkey CASCADE;
+ALTER TABLE IF EXISTS public.achievements DROP CONSTRAINT IF EXISTS achievements_user_id_fkey CASCADE;
+ALTER TABLE IF EXISTS public.follows DROP CONSTRAINT IF EXISTS follows_follower_id_fkey CASCADE;
+ALTER TABLE IF EXISTS public.follows DROP CONSTRAINT IF EXISTS follows_following_id_fkey CASCADE;
+ALTER TABLE IF EXISTS public.sat_user_progress DROP CONSTRAINT IF EXISTS sat_user_progress_user_id_fkey CASCADE;
+ALTER TABLE IF EXISTS public.sat_quiz_attempts DROP CONSTRAINT IF EXISTS sat_quiz_attempts_user_id_fkey CASCADE;
+ALTER TABLE IF EXISTS public.sat_wrong_answers DROP CONSTRAINT IF EXISTS sat_wrong_answers_user_id_fkey CASCADE;
+ALTER TABLE IF EXISTS public.sat_user_routines DROP CONSTRAINT IF EXISTS sat_user_routines_user_id_fkey CASCADE;
+ALTER TABLE IF EXISTS public.sat_vocab_progress DROP CONSTRAINT IF EXISTS sat_vocab_progress_user_id_fkey CASCADE;
+ALTER TABLE IF EXISTS public.analytics_events DROP CONSTRAINT IF EXISTS analytics_events_user_id_fkey CASCADE;
 
 -- 4. Ensure and Alter all tables to use TEXT for user_id / id
 
