@@ -1,13 +1,28 @@
 const API_URL = '/api/gemini';
 
-const SYSTEM_PROMPT = `You are 'নিনি' (Nini), the friendly AI coding tutor of CholoSikhi Academy. You teach programming in Bengali (Bangla) primarily but can also respond in English. You are encouraging, patient, and explain things with real-world Bengali examples. Keep responses concise and focused on programming concepts.`;
+export const PYTHON_SYSTEM_PROMPT = `You are 'Nini' (নিনি), the AI Programming Tutor and CS Mentor of CholoSikhi Academy.
+
+PRIMARY LANGUAGE & TONE:
+- Primary Language: English. Explain programming concepts, syntax, and logic in clear, structured English by default.
+- If the learner writes to you in Bengali (বাংলা) or explicitly asks for Bengali, respond fluently and naturally in Bengali.
+- Tone: Encouraging, patient, precise, and practical.
+
+STRICT DOMAIN GUARDRAILS & SCOPE:
+- You are STRICTLY RESTRICTED to Python programming, computer science principles, syntax, data structures, algorithms, debugging, code review, and software development fundamentals.
+- If the user asks anything outside programming or computer science (for example: SAT exam questions, general news, entertainment, non-coding school subjects, or unrelated tasks), you MUST politely and concisely decline:
+  "I am Nini, dedicated exclusively to teaching Python and programming. Let's focus on code, algorithms, syntax, or debugging! What coding challenge are you working on?"
+
+PEDAGOGY & STYLE:
+- When explaining code, use formatted Markdown code blocks (\`\`\`python ... \`\`\`).
+- Highlight time and space complexity, syntax nuances, and common beginner traps (e.g. 0-indexing, off-by-one errors, indentation, mutable default arguments).
+- Keep answers actionable, engaging, and formatted with clear bullet points and bold key terms.`;
 
 export interface ChatMessage {
   role: 'user' | 'assistant';
   content: string;
 }
 
-function generateLocalPedagogicalResponse(userPrompt: string, isEnglish = false): string {
+function generateLocalPedagogicalResponse(userPrompt: string, isEnglish = true): string {
   if (/\b(loops?|while|iteration)\b/i.test(userPrompt) || /\bfor\s+\w+\s+in\b/i.test(userPrompt) || /\bfor\s+loop\b/i.test(userPrompt) || /লুপ/.test(userPrompt)) {
     return isEnglish
       ? "💡 **Understanding Loops in Python:**\n\nLoops repeat a block of code efficiently:\n- `for` loop: Iterate over ranges or sequences (e.g. `for i in range(5):`).\n- `while` loop: Runs continuously while a boolean condition remains `True`.\n\nWould you like an example tailored to a specific problem?"
@@ -57,6 +72,7 @@ async function tryDirectGemini(messages: ChatMessage[], systemPrompt: string): P
           systemInstruction: { parts: [{ text: systemPrompt }] },
           generationConfig: { temperature: 0.7, maxOutputTokens: 1024 }
         }),
+        signal: AbortSignal.timeout(4500),
       }
     );
 
@@ -88,6 +104,7 @@ async function tryDirectPollinations(messages: ChatMessage[], systemPrompt: stri
         model: 'openai',
         seed: 42,
       }),
+      signal: AbortSignal.timeout(4500),
     });
 
     if (response.ok) {
@@ -113,149 +130,29 @@ export const chatWithAiTutor = async (
     { role: 'user', content: message + contextStr }
   ];
 
-  try {
-    const response = await fetch(API_URL, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ messages, systemPrompt: SYSTEM_PROMPT }),
-    });
-
-    if (response.ok) {
-      const data = await response.json();
-      if (data?.response) return data.response;
-    }
-  } catch (err) {
-    console.warn('[aiService] /api/gemini fetch failed, attempting client fallback:', err);
-  }
-
-  // 1. Try direct Gemini API with client key
-  const directResponse = await tryDirectGemini(messages, SYSTEM_PROMPT);
-  if (directResponse) return directResponse;
-
-  // 2. Try direct Pollinations free open endpoint
-  const pollinationsResponse = await tryDirectPollinations(messages, SYSTEM_PROMPT);
-  if (pollinationsResponse) return pollinationsResponse;
-
-  // 3. Intelligent local pedagogical response
-  return generateLocalPedagogicalResponse(message, context?.language === 'en');
-};
-
-export const getAiHint = async (
-  question: string, 
-  userAnswer?: string, 
-  language: string = 'bn'
-): Promise<string> => {
-  let message = `Provide a hint for this programming question: "${question}".`;
-  if (userAnswer) {
-    message += `\nThe user has tried: "${userAnswer}". Tell them what they might be doing wrong, but DO NOT give the direct answer.`;
-  }
-  if (language === 'en') {
-    message += `\nPlease provide the hint in English.`;
-  } else {
-    message += `\nPlease provide the hint in Bengali.`;
-  }
-
-  const messages: ChatMessage[] = [{ role: 'user', content: message }];
-
-  try {
-    const response = await fetch(API_URL, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ messages, systemPrompt: SYSTEM_PROMPT }),
-    });
-
-    if (response.ok) {
-      const data = await response.json();
-      if (data?.response) return data.response;
-    }
-  } catch (err) {
-    console.warn('[aiService] /api/gemini hint failed:', err);
-  }
-
-  const directResponse = await tryDirectGemini(messages, SYSTEM_PROMPT);
-  if (directResponse) return directResponse;
-
-  const pollinationsResponse = await tryDirectPollinations(messages, SYSTEM_PROMPT);
-  if (pollinationsResponse) return pollinationsResponse;
-
-  return language === 'en'
-    ? `💡 Hint: Break the problem down step-by-step. Remember that ${question.includes('loop') ? 'loops repeat actions while conditions are met.' : 'syntax requires exact matching.'}`
-    : `💡 সংকেত: সমস্যাটি ছোট ছোট ধাপে ভাগ করে নাও। প্রশ্নের মূল শর্তটি লক্ষ্য করো এবং ইনপুট-আউটপুট টাইপ মিলিয়ে দেখো।`;
-};
-
-export const reviewCode = async (
-  code: string, 
-  language: string = 'bn'
-): Promise<string> => {
-  let message = `Please review the following code and provide feedback:\n\n\`\`\`\n${code}\n\`\`\``;
-  if (language === 'en') {
-    message += `\nPlease provide the review in English.`;
-  } else {
-    message += `\nPlease provide the review in Bengali.`;
-  }
-
-  const messages: ChatMessage[] = [{ role: 'user', content: message }];
-
-  try {
-    const response = await fetch(API_URL, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ messages, systemPrompt: SYSTEM_PROMPT }),
-    });
-
-    if (response.ok) {
-      const data = await response.json();
-      if (data?.response) return data.response;
-    }
-  } catch (err) {
-    console.warn('[aiService] /api/gemini review failed:', err);
-  }
-
-  const directResponse = await tryDirectGemini(messages, SYSTEM_PROMPT);
-  if (directResponse) return directResponse;
-
-  const pollinationsResponse = await tryDirectPollinations(messages, SYSTEM_PROMPT);
-  if (pollinationsResponse) return pollinationsResponse;
-
-  return language === 'en'
-    ? "✅ Code Review:\n1. Syntax structure is clean.\n2. Ensure indentation follows 4 spaces.\n3. Test edge cases with varied inputs."
-    : "✅ কোড পর্যালোচনা:\n১. কোডের মূল গঠন চমৎকার হয়েছে।\n২. ইনডেন্টেশন এবং ভেরিয়েবলের সঠিক নাম ব্যবহারের দিকে খেয়াল রাখো।\n৩. ভিন্ন ভিন্ন ইনপুট দিয়ে কোডটি টেস্ট করো।";
-};
-
-export const explainCode = async (
-  code: string,
-  language: string = 'bn'
-): Promise<string> => {
-  const prompt = language === 'en'
-    ? `Analyze and explain this code:
-\`\`\`
-${code}
-\`\`\`
-Please explain:
-1. What this code does line-by-line in plain terms.
-2. Time & Space Complexity analysis.
-3. Edge cases to be aware of or potential improvements.`
-    : `এই কোডটি বিস্তারিত বিশ্লেষণ ও ব্যাখ্যা করো:
-\`\`\`
-${code}
-\`\`\`
-অনুগ্রহ করে বুঝিয়ে বলো:
-১. প্রতিটি লাইন সহজ বাংলায় কী কাজ করছে।
-২. টাইম ও স্পেস কমপ্লেক্সিটি (Time & Space Complexity)।
-৩. কোনো সম্ভাব্য বাগ বা পারফরম্যান্স অপটিমাইজেশন টিপস।`;
-
-  return chatWithAiTutor(prompt, { language });
+  return chatWithHistory(messages, context);
 };
 
 export const chatWithHistory = async (
   messages: ChatMessage[],
-  context?: { language?: string }
+  context?: { language?: string; course?: string; lesson?: string }
 ): Promise<string> => {
+  let enrichedPrompt = PYTHON_SYSTEM_PROMPT;
+  if (context?.course || context?.lesson) {
+    enrichedPrompt += `\nCurrent Active Course: ${context.course || 'Python Track'}, Lesson: ${context.lesson || 'Practice'}.`;
+  }
+  if (context?.language === 'bn') {
+    enrichedPrompt += `\nUser Preference: Respond in Bengali (বাংলা).`;
+  } else {
+    enrichedPrompt += `\nUser Preference: Respond in English.`;
+  }
+
   try {
     const response = await fetch(API_URL, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ messages, systemPrompt: SYSTEM_PROMPT }),
+      body: JSON.stringify({ messages, systemPrompt: enrichedPrompt }),
+      signal: AbortSignal.timeout(5500),
     });
 
     if (response.ok) {
@@ -266,12 +163,72 @@ export const chatWithHistory = async (
     console.warn('[aiService] /api/gemini history chat failed, falling back:', err);
   }
 
-  const directResponse = await tryDirectGemini(messages, SYSTEM_PROMPT);
+  const directResponse = await tryDirectGemini(messages, enrichedPrompt);
   if (directResponse) return directResponse;
 
-  const pollinationsResponse = await tryDirectPollinations(messages, SYSTEM_PROMPT);
+  const pollinationsResponse = await tryDirectPollinations(messages, enrichedPrompt);
   if (pollinationsResponse) return pollinationsResponse;
 
   const lastUserPrompt = messages.filter(m => m.role === 'user').pop()?.content || '';
-  return generateLocalPedagogicalResponse(lastUserPrompt, context?.language === 'en');
+  const isBangla = /[\u0980-\u09FF]/.test(lastUserPrompt) || context?.language === 'bn';
+  return generateLocalPedagogicalResponse(lastUserPrompt, !isBangla);
+};
+
+export const getAiHint = async (
+  question: string, 
+  userAnswer?: string, 
+  language: string = 'en'
+): Promise<string> => {
+  let message = `Provide a hint for this programming question: "${question}".`;
+  if (userAnswer) {
+    message += `\nThe user has tried: "${userAnswer}". Tell them what they might be doing wrong, but DO NOT give the direct answer.`;
+  }
+  if (language === 'bn') {
+    message += `\nPlease provide the hint in Bengali.`;
+  } else {
+    message += `\nPlease provide the hint in English.`;
+  }
+
+  const messages: ChatMessage[] = [{ role: 'user', content: message }];
+  return chatWithHistory(messages, { language });
+};
+
+export const reviewCode = async (
+  code: string, 
+  language: string = 'en'
+): Promise<string> => {
+  let message = `Please review the following code and provide feedback:\n\n\`\`\`\n${code}\n\`\`\``;
+  if (language === 'bn') {
+    message += `\nPlease provide the review in Bengali.`;
+  } else {
+    message += `\nPlease provide the review in English.`;
+  }
+
+  const messages: ChatMessage[] = [{ role: 'user', content: message }];
+  return chatWithHistory(messages, { language });
+};
+
+export const explainCode = async (
+  code: string,
+  language: string = 'en'
+): Promise<string> => {
+  const prompt = language === 'bn'
+    ? `এই কোডটি বিস্তারিত বিশ্লেষণ ও ব্যাখ্যা করো:
+\`\`\`
+${code}
+\`\`\`
+অনুগ্রহ করে বুঝিয়ে বলো:
+১. প্রতিটি লাইন সহজ বাংলায় কী কাজ করছে।
+২. টাইম ও স্পেস কমপ্লেক্সিটি (Time & Space Complexity)।
+৩. কোনো সম্ভাব্য বাগ বা পারফরম্যান্স অপটিমাইজেশন টিপস।`
+    : `Analyze and explain this code:
+\`\`\`
+${code}
+\`\`\`
+Please explain:
+1. What this code does line-by-line in plain terms.
+2. Time & Space Complexity analysis.
+3. Edge cases to be aware of or potential improvements.`;
+
+  return chatWithHistory([{ role: 'user', content: prompt }], { language });
 };

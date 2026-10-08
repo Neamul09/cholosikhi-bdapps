@@ -7,6 +7,7 @@ import { useSettingsStore } from '@/store/settingsStore';
 import { runPythonWebAssembly } from '@/lib/pyodide';
 import { trackEvent } from '@/lib/analytics';
 import { explainCode } from '@/services/aiService';
+import MarkdownRenderer from '@/components/MarkdownRenderer';
 import {
   SortingVisualizer,
   TreeVisualizer,
@@ -590,8 +591,8 @@ export default function CodePlayground() {
                     </p>
                   </div>
                 ) : aiFeedback ? (
-                  <div className="text-sm font-medium leading-relaxed whitespace-pre-wrap">
-                    {aiFeedback}
+                  <div className="p-3 rounded-2xl bg-black/30 border border-white/5">
+                    <MarkdownRenderer content={aiFeedback} />
                   </div>
                 ) : (
                   <div className="text-center py-12 text-white/40 space-y-3">

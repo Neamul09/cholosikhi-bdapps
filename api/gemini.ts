@@ -2,12 +2,28 @@ export const config = {
   runtime: 'edge',
 };
 
-const MODELS = [
+const GEMINI_MODELS = [
   'gemini-2.0-flash',
   'gemini-1.5-flash',
+  'gemini-1.5-flash-8b',
   'gemini-1.5-pro',
 ];
 
+const GROQ_MODELS = [
+  'llama-3.3-70b-versatile',
+  'llama-3.1-8b-instant',
+  'gemma2-9b-it',
+];
+
+const CLOUDFLARE_AI_MODELS = [
+  '@cf/meta/llama-3.1-8b-instruct',
+  '@cf/meta/llama-3-8b-instruct',
+  '@cf/mistral/mistral-7b-instruct-v0.2',
+];
+
+/**
+ * Intelligent domain-aware pedagogical fallback response when external APIs are unavailable.
+ */
 function generateFallbackResponse(userPrompt: string, systemPrompt?: string): string {
   const isBangla = /[\u0980-\u09FF]/.test(userPrompt) || (systemPrompt && /[\u0980-\u09FF]/.test(systemPrompt) && !/[a-zA-Z]{4,}/.test(userPrompt));
   
@@ -237,6 +253,9 @@ is_active = True      # bool
   return "👋 I am **Nini**, your AI Tutor on CholoSikhi! Ask me anything about Python programming, algorithms, debugging, or Digital SAT strategies!";
 }
 
+/**
+ * 1. Google Gemini API with timeout
+ */
 async function tryGemini(apiKey: string, messages: any[], systemPrompt?: string): Promise<string | null> {
   const formattedMessages = messages.map((msg: any) => ({
     role: msg.role === 'user' ? 'user' : 'model',
@@ -257,12 +276,13 @@ async function tryGemini(apiKey: string, messages: any[], systemPrompt?: string)
     };
   }
 
-  for (const model of MODELS) {
+  for (const model of GEMINI_MODELS) {
     try {
       const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${apiKey}`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(requestBody),
+        signal: AbortSignal.timeout(4500),
       });
 
       if (response.ok) {
@@ -277,8 +297,37 @@ async function tryGemini(apiKey: string, messages: any[], systemPrompt?: string)
   return null;
 }
 
-async function tryGroq(groqKey: string, messages: any[], systemPrompt?: string): Promise<string | null> {
-  try {
+/**
+ * 2. Cloudflare Workers AI API (Free Tier or Custom Worker URL)
+ */
+async function tryCloudflareAI(
+  accountId?: string,
+  apiToken?: string,
+  customWorkerUrl?: string,
+  messages: any[] = [],
+  systemPrompt?: string
+): Promise<string | null> {
+  // Custom Cloudflare Worker proxy if specified
+  if (customWorkerUrl) {
+    try {
+      const response = await fetch(customWorkerUrl, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ messages, systemPrompt }),
+        signal: AbortSignal.timeout(4500),
+      });
+      if (response.ok) {
+        const data = await response.json();
+        const text = data.response || data.result?.response || (typeof data === 'string' ? data : null);
+        if (text) return text;
+      }
+    } catch (e) {
+      console.warn('[Cloudflare Custom Worker] Call failed:', e);
+    }
+  }
+
+  // Cloudflare Workers AI direct API if account ID + token provided
+  if (accountId && apiToken) {
     const formattedMessages: any[] = [];
     if (systemPrompt) {
       formattedMessages.push({ role: 'system', content: systemPrompt });
@@ -290,31 +339,82 @@ async function tryGroq(groqKey: string, messages: any[], systemPrompt?: string):
       });
     }
 
-    const response = await fetch('https://api.groq.com/openai/v1/chat/completions', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'Authorization': `Bearer ${groqKey}`,
-      },
-      body: JSON.stringify({
-        model: 'llama-3.3-70b-versatile',
-        messages: formattedMessages,
-        temperature: 0.7,
-        max_tokens: 1200,
-      }),
-    });
+    for (const model of CLOUDFLARE_AI_MODELS) {
+      try {
+        const response = await fetch(`https://api.cloudflare.com/client/v4/accounts/${accountId}/ai/run/${model}`, {
+          method: 'POST',
+          headers: {
+            'Authorization': `Bearer ${apiToken}`,
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            messages: formattedMessages,
+            max_tokens: 1200,
+          }),
+          signal: AbortSignal.timeout(4500),
+        });
 
-    if (response.ok) {
-      const data = await response.json();
-      const text = data.choices?.[0]?.message?.content;
-      if (text) return text;
+        if (response.ok) {
+          const data = await response.json();
+          const text = data.result?.response;
+          if (text) return text;
+        }
+      } catch (e) {
+        console.warn(`[Cloudflare Workers AI] Model ${model} failed:`, e);
+      }
     }
-  } catch (e) {
-    console.warn('[Groq API] Call failed:', e);
+  }
+
+  return null;
+}
+
+/**
+ * 3. Groq Free Tier API with timeout
+ */
+async function tryGroq(groqKey: string, messages: any[], systemPrompt?: string): Promise<string | null> {
+  const formattedMessages: any[] = [];
+  if (systemPrompt) {
+    formattedMessages.push({ role: 'system', content: systemPrompt });
+  }
+  for (const msg of messages) {
+    formattedMessages.push({
+      role: msg.role === 'user' ? 'user' : 'assistant',
+      content: msg.content
+    });
+  }
+
+  for (const model of GROQ_MODELS) {
+    try {
+      const response = await fetch('https://api.groq.com/openai/v1/chat/completions', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${groqKey}`,
+        },
+        body: JSON.stringify({
+          model,
+          messages: formattedMessages,
+          temperature: 0.7,
+          max_tokens: 1200,
+        }),
+        signal: AbortSignal.timeout(4500),
+      });
+
+      if (response.ok) {
+        const data = await response.json();
+        const text = data.choices?.[0]?.message?.content;
+        if (text) return text;
+      }
+    } catch (e) {
+      console.warn(`[Groq API] Model ${model} failed:`, e);
+    }
   }
   return null;
 }
 
+/**
+ * 4. Free Open LLM Gateway (Pollinations OpenAI Endpoint — 100% free, zero key required)
+ */
 async function tryPollinationsFreeLLM(messages: any[], systemPrompt?: string): Promise<string | null> {
   try {
     const formattedMessages: any[] = [];
@@ -338,6 +438,7 @@ async function tryPollinationsFreeLLM(messages: any[], systemPrompt?: string): P
         model: 'openai',
         seed: 42,
       }),
+      signal: AbortSignal.timeout(4500),
     });
 
     if (response.ok) {
@@ -346,8 +447,26 @@ async function tryPollinationsFreeLLM(messages: any[], systemPrompt?: string): P
       if (text) return text;
     }
   } catch (e) {
-    console.warn('[Pollinations Free LLM] Call failed:', e);
+    console.warn('[Pollinations Free LLM] POST call failed:', e);
   }
+
+  // Backup simple GET fallback on Pollinations
+  try {
+    const lastUserMsg = messages?.filter((m: any) => m.role === 'user').pop()?.content || '';
+    if (lastUserMsg) {
+      const url = `https://text.pollinations.ai/${encodeURIComponent(lastUserMsg)}?model=openai&system=${encodeURIComponent(systemPrompt || '')}`;
+      const res = await fetch(url, { signal: AbortSignal.timeout(4500) });
+      if (res.ok) {
+        const text = await res.text();
+        if (text && text.length > 5 && !text.includes('Error')) {
+          return text;
+        }
+      }
+    }
+  } catch (e) {
+    console.warn('[Pollinations Free LLM] GET backup failed:', e);
+  }
+
   return null;
 }
 
@@ -388,26 +507,35 @@ export default async function handler(req: Request) {
       process.env.GROQ_API_KEY || 
       process.env.VITE_GROQ_API_KEY;
 
+    const cfAccountId = process.env.CLOUDFLARE_ACCOUNT_ID || process.env.VITE_CLOUDFLARE_ACCOUNT_ID;
+    const cfApiToken = process.env.CLOUDFLARE_API_TOKEN || process.env.VITE_CLOUDFLARE_API_TOKEN;
+    const cfWorkerUrl = process.env.CLOUDFLARE_WORKER_URL || process.env.VITE_CLOUDFLARE_WORKER_URL;
+
     const lastUserMessage = messages?.filter((m: any) => m.role === 'user').pop()?.content || '';
 
     let textResponse: string | null = null;
 
-    // 1. Try Gemini API if key is available
-    if (geminiKey) {
+    // 1. Try Cloudflare Workers AI if configured (User preference)
+    if (cfWorkerUrl || (cfAccountId && cfApiToken)) {
+      textResponse = await tryCloudflareAI(cfAccountId, cfApiToken, cfWorkerUrl, messages, systemPrompt);
+    }
+
+    // 2. Try Gemini API if key is available
+    if (!textResponse && geminiKey) {
       textResponse = await tryGemini(geminiKey, messages, systemPrompt);
     }
 
-    // 2. Try Groq Free Tier if Gemini wasn't available or failed
+    // 3. Try Groq Free Tier if Gemini wasn't available or failed
     if (!textResponse && groqKey) {
       textResponse = await tryGroq(groqKey, messages, systemPrompt);
     }
 
-    // 3. Try Free Open LLM Gateway (Pollinations OpenAI Endpoint — 100% free, zero key required)
+    // 4. Try Free Open LLM Gateway (Pollinations OpenAI Endpoint — 100% free, zero key required)
     if (!textResponse) {
       textResponse = await tryPollinationsFreeLLM(messages, systemPrompt);
     }
 
-    // 4. Intelligent pedagogical fallback if network or all endpoints fail
+    // 5. Intelligent pedagogical fallback if network or all endpoints fail
     if (!textResponse) {
       console.warn('[AI Service] All remote LLMs unreachable; using domain-aware local pedagogical fallback.');
       textResponse = generateFallbackResponse(lastUserMessage, systemPrompt);
@@ -420,11 +548,10 @@ export default async function handler(req: Request) {
   } catch (error) {
     console.error('API Error:', error);
     return new Response(JSON.stringify({ 
-      response: "👋 আমি **নিনি (Nini)**, তোমার এআই টিউটর! সাময়িক নেটওয়ার্ক সমস্যার কারণে সংযোগ ব্যাহত হয়েছে। দয়া করে কিছুক্ষণ পর আবার প্রশ্ন করো।" 
+      response: "👋 I am **Nini**, your AI Tutor! There was a momentary network latency. Please ask your question again in a moment." 
     }), {
       status: 200,
       headers: corsHeaders,
     });
   }
 }
-

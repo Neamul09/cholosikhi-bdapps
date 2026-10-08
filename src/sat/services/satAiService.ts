@@ -1,30 +1,29 @@
 const API_URL = '/api/gemini';
 
-export const SAT_SYSTEM_PROMPT = `You are 'নিনি' (Nini), the Digital SAT AI Master Coach and Mentor on CholoSikhi SAT Suite.
-You specialize in the College Board Digital SAT:
-1. SAT Math:
-   - Algebra (linear equations, linear inequalities, systems of linear equations, linear functions)
-   - Advanced Math (quadratic equations, polynomials, exponential functions, radicals, rational expressions)
-   - Problem Solving & Data Analysis (ratios, rates, percentages, two-way tables, probability, mean/median/standard deviation)
-   - Geometry & Trigonometry (area/volume, circle equations $(x-h)^2 + (y-k)^2 = r^2$, similar triangles, right triangle trigonometry $\\sin, \\cos, \\tan$, radians)
-   - Desmos Graphing Calculator shortcuts and strategies (finding intersections, finding zeros, using regression ~y1~mx1+b, testing choices)
-2. SAT Reading & Writing:
-   - Information and Ideas (Central Ideas and Details, Command of Evidence - Textual & Quantitative, Inferences)
-   - Craft and Structure (Words in Context, Text Structure and Purpose, Cross-Text Connections)
-   - Expression of Ideas (Rhetorical Synthesis / bullet point synthesis, Transitions)
-   - Standard English Conventions (Boundaries: semicolons, periods, commas; Form, Structure & Sense: subject-verb agreement, verb tense; Dangling Modifiers)
-3. Pedagogy & Style:
-   - Provide Socratic explanations: break down question archetypes, explain why the correct answer works, and expose trap answer choices.
-   - Use clean Markdown and standard LaTeX / KaTeX math formatting ($...$ for inline math, $$...$$ for block formulas).
-   - Communicate clearly in Bengali (বাংলা) or English as requested by the user.
-   - Keep answers structured, encouraging, and focused on high-yield SAT scoring strategies.`;
+export const SAT_SYSTEM_PROMPT = `You are 'Nini' (নিনি), the Digital SAT AI Master Coach and Mentor on CholoSikhi SAT Suite.
+
+PRIMARY LANGUAGE & TONE:
+- Primary Language: English. You must explain and answer in English by default with clear Markdown and LaTeX/KaTeX math formatting ($...$ inline, $$...$$ block).
+- If the student writes to you in Bengali (বাংলা) or explicitly asks for Bengali, respond fluently in Bengali.
+- Tone: Encouraging, authoritative, clear, and focused on high-yield College Board exam mastery.
+
+STRICT DOMAIN GUARDRAILS & SCOPE:
+- You are STRICTLY RESTRICTED to Digital SAT, College Board test preparation, SAT Math (Algebra, Advanced Math, Problem Solving, Geometry, Trigonometry, Desmos graphing shortcuts), and SAT Reading & Writing (Conventions, Transitions, Words in Context, Command of Evidence, Rhetorical Synthesis).
+- If the user asks about ANY off-topic subject (for example: coding questions, general news, entertainment, non-SAT academic subjects, chit-chat, or unrelated tasks), you MUST politely and concisely decline:
+  "I am Nini, dedicated exclusively to your Digital SAT success. Let's focus on SAT Math, Desmos tricks, Reading & Writing, or College Board exam strategies! What SAT question or topic can we master together?"
+
+PEDAGOGY & STYLE:
+- Break down question archetypes step-by-step using Socratic logic.
+- Highlight traps in multiple-choice questions.
+- Teach 15-second shortcuts and Desmos calculator methods for Math.
+- Format all equations using KaTeX ($...$ and $$...$$), bold key takeaways, and use structured bullet points.`;
 
 export interface SatChatMessage {
   role: 'user' | 'assistant';
   content: string;
 }
 
-export function generateLocalSatResponse(userPrompt: string, isEnglish = false): string {
+export function generateLocalSatResponse(userPrompt: string, isEnglish = true): string {
   // Desmos, graphing, roots, systems of equations, calculator shortcuts
   if (
     /\b(desmos|graph|roots?|systems?|intersection|intercept|calculator|tricks?)\b/i.test(userPrompt) ||
@@ -196,6 +195,7 @@ async function tryDirectGemini(messages: SatChatMessage[], systemPrompt: string)
           systemInstruction: { parts: [{ text: systemPrompt }] },
           generationConfig: { temperature: 0.7, maxOutputTokens: 1200 }
         }),
+        signal: AbortSignal.timeout(4500),
       }
     );
 
@@ -227,6 +227,7 @@ async function tryDirectPollinations(messages: SatChatMessage[], systemPrompt: s
         model: 'openai',
         seed: 42,
       }),
+      signal: AbortSignal.timeout(4500),
     });
 
     if (response.ok) {
@@ -247,13 +248,19 @@ export const chatWithSatTutor = async (
   if (context?.section) {
     enrichedPrompt += `\nActive Focus: ${context.section} section. Target Score: ${context.currentScore || 1500}+.`;
   }
+  if (context?.language === 'bn') {
+    enrichedPrompt += `\nUser Preference: Respond in Bengali (বাংলা).`;
+  } else {
+    enrichedPrompt += `\nUser Preference: Respond in English.`;
+  }
 
-  // 1. Try serverless /api/gemini route (which supports Gemini, Groq, and Pollinations)
+  // 1. Try serverless /api/gemini route
   try {
     const response = await fetch(API_URL, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ messages, systemPrompt: enrichedPrompt }),
+      signal: AbortSignal.timeout(5500),
     });
 
     if (response.ok) {
@@ -274,7 +281,8 @@ export const chatWithSatTutor = async (
 
   // 4. Offline intelligent SAT pedagogical response
   const lastUserPrompt = messages.filter(m => m.role === 'user').pop()?.content || '';
-  return generateLocalSatResponse(lastUserPrompt, context?.language === 'en');
+  const isBangla = /[\u0980-\u09FF]/.test(lastUserPrompt) || context?.language === 'bn';
+  return generateLocalSatResponse(lastUserPrompt, !isBangla);
 };
 
 /**
@@ -291,7 +299,7 @@ export async function explainSatQuestion(
     test?: string;
   },
   userAnswer?: string,
-  isEnglish = false
+  isEnglish = true
 ): Promise<string> {
   const optionsText = question.options?.map(o => `${o.id}) ${o.content}`).join('\n') || '';
   const langText = isEnglish ? "Respond in English with clear Markdown and LaTeX math." : "বাংলায় সহজ ভাষায় বুঝিয়ে বলো, সঙ্গে Markdown ও LaTeX Math ব্যবহার করো।";
@@ -321,7 +329,7 @@ ${langText}`;
  */
 export async function generateMistakeRemediationPlan(
   mistakes: { microType: string; skill: string; section: string; errorReason?: string }[],
-  isEnglish = false
+  isEnglish = true
 ): Promise<string> {
   const summary = mistakes.slice(0, 10).map((m, i) => `${i + 1}. [${m.section}] ${m.skill} (${m.microType}) - Reason: ${m.errorReason || 'Unspecified'}`).join('\n');
   const langText = isEnglish ? "Respond in English." : "বাংলায় গুছিয়ে বলো।";
@@ -348,7 +356,7 @@ export async function generateScoreBoosterPlan(
   targetScore: number,
   mathScore: number,
   rwScore: number,
-  isEnglish = false
+  isEnglish = true
 ): Promise<string> {
   const langText = isEnglish ? "Respond in English with formatting." : "বাংলায় অনুপ্রেরণামূলকভাবে বুঝিয়ে দাও।";
 
@@ -371,7 +379,7 @@ ${langText}`;
 export async function generateVocabMnemonic(
   word: string,
   definition: string,
-  isEnglish = false
+  isEnglish = true
 ): Promise<string> {
   const langText = isEnglish ? "Provide the response in English." : "বাংলায় সহজে মনে রাখার টিপস ও অর্থ দাও।";
 
@@ -379,7 +387,7 @@ export async function generateVocabMnemonic(
 Definition: ${definition}
 
 Please provide:
-1. 💡 An easy-to-remember Mnemonic / Memory Hook (বাংলা বা ইংরেজি সহজ ট্রিক).
+1. 💡 An easy-to-remember Mnemonic / Memory Hook.
 2. 🏛️ An authentic College Board Digital SAT style sentence using this word.
 3. 🎯 3 high-frequency Synonyms and 1 Antonym.
 
