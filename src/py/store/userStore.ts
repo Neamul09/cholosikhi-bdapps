@@ -398,34 +398,43 @@ export const useUserStore = create<UserState>()(
 
           if (!error && data && data.length > 0) {
             const session = useAuthStore.getState().session;
-            return data.map((p): LeaderboardUser => ({
+            const currentUserId = session?.id;
+            const mapped = data.map((p): LeaderboardUser => ({
               id: p.id,
-              name: p.name || (p.id.substring(0, 4) === 'bot_' ? 'CholoSikhi Bot' : 'Sikhi Student'),
+              name: p.name || 'Sikhi Student',
               avatar: p.avatar || 'code',
               avatarUrl: p.avatar_url ?? null,
               total_xp: p.total_xp ?? 0,
               xp: (p.weekly_xp != null ? p.weekly_xp : p.total_xp) ?? 0,
               league: p.league ?? 'wood',
               streak: p.streak ?? 0,
-              isMe: p.id === session?.id,
+              isMe: p.id === currentUserId,
             }));
+
+            // If current user is not in the league top list, append current user
+            if (currentUserId && !mapped.some(u => u.isMe)) {
+              mapped.push({
+                id: currentUserId,
+                name: state.name || 'You',
+                avatar: state.avatar || 'code',
+                avatarUrl: state.avatarUrl ?? null,
+                total_xp: state.totalXp,
+                xp: state.weeklyXp,
+                league: state.league,
+                streak: state.streak,
+                isMe: true,
+              });
+              mapped.sort((a, b) => (b.xp ?? 0) - (a.xp ?? 0));
+            }
+            return mapped;
           }
         } catch {
-          // Fall through to lively league peers
+          // Fall through
         }
-
-        // Engaging fallback cohort so the leaderboard is lively in guest mode or when database is offline
-        const demoPeers = [
-          { id: 'peer_1', name: 'সাকিব আহমেদ', avatar: 'trophy', xp: Math.max(state.weeklyXp + 60, 240), streak: 5 },
-          { id: 'peer_2', name: 'তানভীর হাসান', avatar: 'star', xp: Math.max(state.weeklyXp + 20, 180), streak: 3 },
-          { id: 'peer_3', name: 'আফরিন জাহান', avatar: 'heart', xp: Math.max(state.weeklyXp - 10, 120), streak: 4 },
-          { id: 'peer_4', name: 'রাফি ইসলাম', avatar: 'zap', xp: Math.max(state.weeklyXp - 30, 90), streak: 2 },
-          { id: 'peer_5', name: 'মেহেরুন নাহার', avatar: 'gem', xp: Math.max(state.weeklyXp - 50, 60), streak: 1 },
-        ];
 
         const currentUser: LeaderboardUser = {
           id: 'me',
-          name: state.name || 'তুমি (গেস্ট শিক্ষার্থী)',
+          name: state.name || 'You',
           avatar: state.avatar || 'code',
           avatarUrl: state.avatarUrl ?? null,
           total_xp: state.totalXp,
@@ -435,29 +444,14 @@ export const useUserStore = create<UserState>()(
           isMe: true,
         };
 
-        const combined: LeaderboardUser[] = [
-          ...demoPeers.map(p => ({
-            id: p.id,
-            name: p.name,
-            avatar: p.avatar,
-            avatarUrl: null,
-            total_xp: p.xp * 2,
-            xp: p.xp,
-            league: state.league,
-            streak: p.streak,
-            isMe: false,
-          })),
-          currentUser,
-        ].sort((a, b) => (b.xp ?? 0) - (a.xp ?? 0));
-
-        return combined;
+        return [currentUser];
       },
 
       loadFriendsLeaderboard: async () => {
         const state = get();
         const currentUser: LeaderboardUser = {
           id: 'me',
-          name: state.name || 'তুমি (গেস্ট শিক্ষার্থী)',
+          name: state.name || 'You',
           avatar: state.avatar || 'code',
           avatarUrl: state.avatarUrl ?? null,
           total_xp: state.totalXp,
