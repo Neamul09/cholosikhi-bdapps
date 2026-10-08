@@ -340,6 +340,7 @@ async function tryCloudflareAI(
     }
 
     for (const model of CLOUDFLARE_AI_MODELS) {
+      // 1. Try Authorization: Bearer
       try {
         const response = await fetch(`https://api.cloudflare.com/client/v4/accounts/${accountId}/ai/run/${model}`, {
           method: 'POST',
@@ -360,7 +361,31 @@ async function tryCloudflareAI(
           if (text) return text;
         }
       } catch (e) {
-        console.warn(`[Cloudflare Workers AI] Model ${model} failed:`, e);
+        console.warn(`[Cloudflare Workers AI] Bearer attempt on ${model} failed:`, e);
+      }
+
+      // 2. Try X-Auth-Key
+      try {
+        const response = await fetch(`https://api.cloudflare.com/client/v4/accounts/${accountId}/ai/run/${model}`, {
+          method: 'POST',
+          headers: {
+            'X-Auth-Key': apiToken,
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            messages: formattedMessages,
+            max_tokens: 1200,
+          }),
+          signal: AbortSignal.timeout(4500),
+        });
+
+        if (response.ok) {
+          const data = await response.json();
+          const text = data.result?.response;
+          if (text) return text;
+        }
+      } catch (e) {
+        console.warn(`[Cloudflare Workers AI] X-Auth-Key attempt on ${model} failed:`, e);
       }
     }
   }
@@ -507,9 +532,20 @@ export default async function handler(req: Request) {
       process.env.GROQ_API_KEY || 
       process.env.VITE_GROQ_API_KEY;
 
-    const cfAccountId = process.env.CLOUDFLARE_ACCOUNT_ID || process.env.VITE_CLOUDFLARE_ACCOUNT_ID;
-    const cfApiToken = process.env.CLOUDFLARE_API_TOKEN || process.env.VITE_CLOUDFLARE_API_TOKEN;
-    const cfWorkerUrl = process.env.CLOUDFLARE_WORKER_URL || process.env.VITE_CLOUDFLARE_WORKER_URL;
+    const cfAccountId = 
+      process.env.CLOUDFLARE_ACCOUNT_ID || 
+      process.env.VITE_CLOUDFLARE_ACCOUNT_ID || 
+      'f7e96f492a07821f9b71b65591eee766';
+
+    const cfApiToken = 
+      process.env.CLOUDFLARE_API_TOKEN || 
+      process.env.VITE_CLOUDFLARE_API_TOKEN || 
+      process.env.CLOUDFLARE_API_KEY || 
+      'ba1f0ac76db93e320011eef3fd9a70e0d93253da2c16ea520a60e2a7cc6bef9b';
+
+    const cfWorkerUrl = 
+      process.env.CLOUDFLARE_WORKER_URL || 
+      process.env.VITE_CLOUDFLARE_WORKER_URL;
 
     const lastUserMessage = messages?.filter((m: any) => m.role === 'user').pop()?.content || '';
 
