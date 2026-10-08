@@ -88,8 +88,8 @@ async function tryDirectCloudflareAI(messages: ChatMessage[], systemPrompt: stri
 
     const models = [
       '@cf/meta/llama-3.2-3b-instruct',
+      '@cf/meta/llama-3.2-1b-instruct',
       '@cf/meta/llama-3.1-8b-instruct',
-      '@cf/mistral/mistral-7b-instruct-v0.2',
     ];
 
     for (const model of models) {
@@ -104,9 +104,9 @@ async function tryDirectCloudflareAI(messages: ChatMessage[], systemPrompt: stri
             },
             body: JSON.stringify({
               messages: formattedMessages,
-              max_tokens: 750,
+              max_tokens: 500,
             }),
-            signal: AbortSignal.timeout(4500),
+            signal: AbortSignal.timeout(5500),
           }
         );
 
@@ -176,7 +176,7 @@ async function tryDirectPollinations(messages: ChatMessage[], systemPrompt: stri
         model: 'openai',
         seed: 42,
       }),
-      signal: AbortSignal.timeout(4500),
+      signal: AbortSignal.timeout(3000),
     });
 
     if (response.ok) {
@@ -225,7 +225,7 @@ export const chatWithHistory = async (
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ messages, systemPrompt: enrichedPrompt }),
-      signal: AbortSignal.timeout(5500),
+      signal: AbortSignal.timeout(9000),
     });
 
     if (response.ok) {

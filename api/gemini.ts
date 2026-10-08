@@ -17,10 +17,8 @@ const GROQ_MODELS = [
 
 const CLOUDFLARE_AI_MODELS = [
   '@cf/meta/llama-3.2-3b-instruct',
+  '@cf/meta/llama-3.2-1b-instruct',
   '@cf/meta/llama-3.1-8b-instruct',
-  '@cf/meta/llama-3.1-8b-fast-v2',
-  '@cf/meta/llama-3-8b-instruct',
-  '@cf/mistral/mistral-7b-instruct-v0.2',
 ];
 
 /**
@@ -57,7 +55,7 @@ function generateFallbackResponse(userPrompt: string, systemPrompt?: string, mes
   }
 
   const isExampleRequest = 
-    /\b(example|sample|question|problem|practice|show me|give me|test me|exercise|drill)\b/i.test(userPrompt) ||
+    /\b(example|sample|question|questions|problem|problems|practice|show me|give me|test me|exercise|drill)\b/i.test(userPrompt) ||
     /উদাহরণ|প্রশ্ন|অনুশীলন|স্যাম্পল|প্র্যাকটিস/.test(userPrompt);
 
   // --- PYTHON & CODING DOMAIN FALLBACKS ---
@@ -79,11 +77,11 @@ function generateFallbackResponse(userPrompt: string, systemPrompt?: string, mes
 
       return `🔍 **Python Debugging & Common Error Checklist:**
 
-1. **Syntax & Missing Colons (`SyntaxError`):**
+1. **Syntax & Missing Colons (\`SyntaxError\`):**
    - Ensure a colon (\`:\`) is at the end of every \`if\`, \`for\`, \`while\`, \`def\`, and \`class\` statement.
-2. **Indentation Consistency (`IndentationError`):**
+2. **Indentation Consistency (\`IndentationError\`):**
    - Never mix tabs and spaces. Use a consistent 4 spaces per indentation level.
-3. **Name & Type Consistency (`NameError` / `TypeError`):**
+3. **Name & Type Consistency (\`NameError\` / \`TypeError\`):**
    - Verify variable spelling and case-sensitivity.
    - Avoid adding strings directly to numbers without conversion (use \`str(val)\` or f-strings \`f"{val}"\`).
 
@@ -268,6 +266,7 @@ How many real $(x, y)$ coordinate solutions satisfy the system of equations abov
 1. Type \`y = 2x + 5\` on line 1.
 2. Type \`y = x^2 - 4x + 14\` on line 2.
 3. Observe the intersection point: The line is tangent to the parabola at exactly $(3, 11)$.
+4. Algebraically: $x^2 - 6x + 9 = 0 \\implies (x - 3)^2 = 0 \\implies x = 3$.
 
 ✅ **Correct Answer:** **B) Exactly 1**`
           : `🎯 **ডিজিটাল SAT সমীকরণ জোট প্রশ্ন:**
@@ -275,6 +274,78 @@ $$\\begin{cases} y = 2x + 5 \\\\ y = x^2 - 4x + 14 \\end{cases}$$
 প্রদত্ত সমীকরণ জোটের ঠিক ১টি বাস্তব সমাধান বিন্দু রয়েছে $(3, 11)$।
 ✅ **সঠিক উত্তর:** **B) ঠিক ১টি**`;
       }
+
+      if (/\b(transition|however|furthermore|therefore|reading|writing|grammar)\b/i.test(combinedText) || /ট্রানজিশন/.test(combinedText)) {
+        return isEnglish
+          ? `🎯 **Authentic Digital SAT Reading & Writing Question (Transitions):**
+
+**Text:**
+Biologist Dr. Elena Vance initially hypothesized that the cave-dwelling salamanders relied solely on chemical trails for navigation. __________, recent thermal imaging revealed that the species also detects ambient infrared radiation to map subterranean obstacles.
+
+Which choice completes the text with the most logical transition?
+
+**A)** Furthermore,  
+**B)** However,  
+**C)** Consequently,  
+**D)** For example,  
+
+---
+
+💡 **Logic & Elimination:**
+- **Sentence 1:** Salamanders relied *solely* on chemical trails (initial belief).
+- **Sentence 2:** Recent imaging shows they *also* use infrared radiation (contrast with "solely").
+- **Relationship:** Contrast / Contradiction $\\rightarrow$ **However,**
+
+✅ **Correct Answer:** **B) However,**`
+          : `🎯 **SAT Reading & Writing ট্রানজিশন প্রশ্ন:**
+প্যাসেজে ১ম বাক্যের প্রাথমিক ধারণার সাথে ২য় বাক্যের নতুন আবিষ্কারের **বিপরীত সম্পর্ক** রয়েছে। তাই সঠিক ট্রানজিশন হবে **However,**।
+✅ **সঠিক উত্তর:** **B) However,**`;
+      }
+
+      // General Hard SAT Practice Challenge (default if no specific topic specified)
+      return isEnglish
+        ? `🎯 **Authentic Digital SAT Hard Challenge Set:**
+
+### 📐 Math Challenge (Advanced Algebra & Constants):
+**Question 1:**
+The quadratic equation $x^2 - 6x + c = 0$ has exactly one real solution. What is the value of the constant $c$?
+
+**A)** $-9$  
+**B)** $3$  
+**C)** $6$  
+**D)** $9$  
+
+💡 **Discriminant Method (10 Seconds):**
+For exactly one real solution, the discriminant $\\Delta = b^2 - 4ac$ must equal $0$:
+$$(-6)^2 - 4(1)(c) = 0 \\implies 36 = 4c \\implies c = 9$$
+✅ **Correct Answer:** **D) 9**
+
+---
+
+### ✍️ Reading & Writing Challenge (Logical Transitions):
+**Question 2:**
+Researchers initially suspected that nocturnal moths relied exclusively on celestial visual cues for nocturnal navigation. __________, subsequent controlled laboratory experiments in absolute darkness proved that the species utilizes geomagnetic inclination to orient their flight paths.
+
+Which choice completes the text with the most logical transition?
+
+**A)** In addition,  
+**B)** However,  
+**C)** Consequently,  
+**D)** For instance,  
+
+💡 **Logic:** Sentence 1 states the initial exclusive assumption; Sentence 2 provides contradictory evidence. Hence, a contrast transition (**However,**) is required.
+✅ **Correct Answer:** **B) However,**
+
+---
+Which SAT section or micro-type would you like to master next?`
+        : `🎯 **ডিজিটাল SAT হার্ড প্র্যাকটিস চ্যালেঞ্জ:**
+
+### 📐 Math প্রশ্ন (দ্বিঘাত সমীকরণ ও নিশ্চয়ক):
+$x^2 - 6x + c = 0$ সমীকরণের ঠিক ১টি বাস্তব সমাধান থাকলে ধ্রুবক $c$-এর মান কত?
+**উত্তর:** নিশ্চয়ক $b^2 - 4ac = 0 \\implies 36 - 4c = 0 \\implies c = 9$।
+
+### ✍️ Reading/Writing প্রশ্ন (Transitions):
+প্রাথমিক ধারণার সাথে নতুন প্রমাণের বৈপরীত্য থাকলে সঠিক ট্রানজিশন হবে **However,**।`;
     }
 
     // Desmos / Graphing / Systems & Roots
@@ -446,7 +517,7 @@ async function tryGemini(apiKey: string, messages: any[], systemPrompt?: string)
 }
 
 /**
- * 2. Cloudflare Workers AI API (Free Tier or Custom Worker URL)
+ * 2. Cloudflare Workers AI API (Direct Workers AI Gateway)
  */
 async function tryCloudflareAI(
   accountId?: string,
@@ -464,7 +535,7 @@ async function tryCloudflareAI(
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ messages: recentMessages, systemPrompt }),
-        signal: AbortSignal.timeout(4500),
+        signal: AbortSignal.timeout(5500),
       });
       if (response.ok) {
         const data = await response.json();
@@ -490,7 +561,6 @@ async function tryCloudflareAI(
     }
 
     for (const model of CLOUDFLARE_AI_MODELS) {
-      // 1. Try Authorization: Bearer
       try {
         const response = await fetch(`https://api.cloudflare.com/client/v4/accounts/${accountId}/ai/run/${model}`, {
           method: 'POST',
@@ -500,9 +570,9 @@ async function tryCloudflareAI(
           },
           body: JSON.stringify({
             messages: formattedMessages,
-            max_tokens: 750,
+            max_tokens: 500,
           }),
-          signal: AbortSignal.timeout(4500),
+          signal: AbortSignal.timeout(6000),
         });
 
         if (response.ok) {
@@ -511,31 +581,7 @@ async function tryCloudflareAI(
           if (text) return text;
         }
       } catch (e) {
-        console.warn(`[Cloudflare Workers AI] Bearer attempt on ${model} failed:`, e);
-      }
-
-      // 2. Try X-Auth-Key
-      try {
-        const response = await fetch(`https://api.cloudflare.com/client/v4/accounts/${accountId}/ai/run/${model}`, {
-          method: 'POST',
-          headers: {
-            'X-Auth-Key': apiToken,
-            'Content-Type': 'application/json',
-          },
-          body: JSON.stringify({
-            messages: formattedMessages,
-            max_tokens: 750,
-          }),
-          signal: AbortSignal.timeout(4500),
-        });
-
-        if (response.ok) {
-          const data = await response.json();
-          const text = data.result?.response || data.result?.choices?.[0]?.message?.content || data.response;
-          if (text) return text;
-        }
-      } catch (e) {
-        console.warn(`[Cloudflare Workers AI] X-Auth-Key attempt on ${model} failed:`, e);
+        console.warn(`[Cloudflare Workers AI] Attempt on ${model} failed:`, e);
       }
     }
   }
@@ -571,7 +617,7 @@ async function tryGroq(groqKey: string, messages: any[], systemPrompt?: string):
           model,
           messages: formattedMessages,
           temperature: 0.7,
-          max_tokens: 750,
+          max_tokens: 500,
         }),
         signal: AbortSignal.timeout(4500),
       });
@@ -614,7 +660,7 @@ async function tryPollinationsFreeLLM(messages: any[], systemPrompt?: string): P
         model: 'openai',
         seed: 42,
       }),
-      signal: AbortSignal.timeout(4500),
+      signal: AbortSignal.timeout(3000),
     });
 
     if (response.ok) {
@@ -631,7 +677,7 @@ async function tryPollinationsFreeLLM(messages: any[], systemPrompt?: string): P
     const lastUserMsg = messages?.filter((m: any) => m.role === 'user').pop()?.content || '';
     if (lastUserMsg) {
       const url = `https://text.pollinations.ai/${encodeURIComponent(lastUserMsg)}?model=openai&system=${encodeURIComponent(systemPrompt || '')}`;
-      const res = await fetch(url, { signal: AbortSignal.timeout(4500) });
+      const res = await fetch(url, { signal: AbortSignal.timeout(3000) });
       if (res.ok) {
         const text = await res.text();
         if (text && text.length > 5 && !text.includes('Error')) {
@@ -670,8 +716,15 @@ export default async function handler(req: Request) {
     });
   }
 
+  let lastUserMessage = '';
+  let messages: any[] = [];
+  let systemPrompt: string | undefined = undefined;
+
   try {
-    const { messages, systemPrompt } = await req.json();
+    const parsed = await req.json();
+    messages = parsed.messages || [];
+    systemPrompt = parsed.systemPrompt;
+    lastUserMessage = messages.filter((m: any) => m.role === 'user').pop()?.content || '';
 
     const geminiKey = 
       process.env.GEMINI_API_KEY || 
@@ -695,8 +748,6 @@ export default async function handler(req: Request) {
     const cfWorkerUrl = 
       process.env.CLOUDFLARE_WORKER_URL || 
       process.env.VITE_CLOUDFLARE_WORKER_URL;
-
-    const lastUserMessage = messages?.filter((m: any) => m.role === 'user').pop()?.content || '';
 
     let textResponse: string | null = null;
 
@@ -732,8 +783,9 @@ export default async function handler(req: Request) {
     });
   } catch (error) {
     console.error('API Error:', error);
+    const fallbackText = generateFallbackResponse(lastUserMessage, systemPrompt, messages);
     return new Response(JSON.stringify({ 
-      response: "👋 I am **Nini**, your AI Tutor! There was a momentary network latency. Please ask your question again in a moment." 
+      response: fallbackText 
     }), {
       status: 200,
       headers: corsHeaders,

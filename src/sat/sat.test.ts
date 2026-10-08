@@ -358,6 +358,16 @@ describe('SAT Suite SQA Analysis & Integrity Tests', () => {
       expect(rendered).not.toContain('katex-error');
       expect(rendered).not.toContain('color:#cc0000');
     });
+
+    it('should generate authentic hard questions when requested without previous context', async () => {
+      const { generateLocalSatResponse } = await import('./services/satAiService');
+      const resp = generateLocalSatResponse('Give me some hard SAT questions', true, []);
+
+      expect(resp).toContain('Authentic Digital SAT Hard Practice Challenge');
+      expect(resp).toContain('Math Challenge');
+      expect(resp).toContain('Reading & Writing Challenge');
+      expect(resp).not.toContain('momentary network latency');
+    });
   });
 });
 

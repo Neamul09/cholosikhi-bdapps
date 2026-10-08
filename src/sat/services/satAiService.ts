@@ -33,7 +33,7 @@ export function generateLocalSatResponse(
   const combinedText = `${contextHistory} ${userLower}`;
 
   const isExampleRequest = 
-    /\b(example|sample|question|problem|practice|show me|give me|test me|exercise|drill)\b/i.test(userPrompt) ||
+    /\b(example|sample|question|questions|problem|problems|practice|show me|give me|test me|exercise|drill)\b/i.test(userPrompt) ||
     /উদাহরণ|প্রশ্ন|অনুশীলন|স্যাম্পল|প্র্যাকটিস/.test(userPrompt);
 
   // --- EXAMPLE QUESTIONS GENERATOR ---
@@ -177,6 +177,51 @@ $x^2 + y^2 - 8x + 6y = 24$ সমীকরণকে পূর্ণবর্গ 
 অতএব ব্যাসার্ধ $r = 7$।
 ✅ **সঠিক উত্তর:** **B) 7**`;
     }
+
+    // General Hard SAT Practice Challenge (default if no specific topic specified)
+    return isEnglish
+      ? `🎯 **Authentic Digital SAT Hard Practice Challenge:**
+
+### 📐 Math Challenge (Advanced Algebra & Constants):
+**Question 1:**
+The quadratic equation $x^2 - 6x + c = 0$ has exactly one real solution. What is the value of the constant $c$?
+
+**A)** $-9$  
+**B)** $3$  
+**C)** $6$  
+**D)** $9$  
+
+💡 **Discriminant Method (10 Seconds):**
+For exactly one real solution, the discriminant $\\Delta = b^2 - 4ac$ must equal $0$:
+$$(-6)^2 - 4(1)(c) = 0 \\implies 36 = 4c \\implies c = 9$$
+✅ **Correct Answer:** **D) 9**
+
+---
+
+### ✍️ Reading & Writing Challenge (Logical Transitions):
+**Question 2:**
+Researchers initially suspected that nocturnal moths relied exclusively on celestial visual cues for navigation. __________, subsequent controlled laboratory experiments in absolute darkness proved that the species utilizes geomagnetic inclination to orient their flight paths.
+
+Which choice completes the text with the most logical transition?
+
+**A)** In addition,  
+**B)** However,  
+**C)** Consequently,  
+**D)** For instance,  
+
+💡 **Logic:** Sentence 1 states the initial exclusive assumption; Sentence 2 provides contradictory evidence. Hence, a contrast transition (**However,**) is required.
+✅ **Correct Answer:** **B) However,**
+
+---
+Which question archetype or topic would you like to drill next?`
+      : `🎯 **ডিজিটাল SAT হার্ড প্র্যাকটিস চ্যালেঞ্জ:**
+
+### 📐 Math প্রশ্ন (দ্বিঘাত সমীকরণ ও নিশ্চয়ক):
+$x^2 - 6x + c = 0$ সমীকরণের ঠিক ১টি বাস্তব সমাধান থাকলে ধ্রুবক $c$-এর মান কত?
+**উত্তর:** নিশ্চয়ক $b^2 - 4ac = 0 \\implies 36 - 4c = 0 \\implies c = 9$।
+
+### ✍️ Reading/Writing প্রশ্ন (Transitions):
+প্রাথমিক ধারণার সাথে নতুন প্রমাণের বৈপরীত্য থাকলে সঠিক ট্রানজিশন হবে **However,**।`;
   }
 
   // Desmos, graphing, roots, systems of equations, calculator shortcuts
@@ -366,8 +411,8 @@ async function tryDirectCloudflareAI(messages: SatChatMessage[], systemPrompt: s
 
     const models = [
       '@cf/meta/llama-3.2-3b-instruct',
+      '@cf/meta/llama-3.2-1b-instruct',
       '@cf/meta/llama-3.1-8b-instruct',
-      '@cf/mistral/mistral-7b-instruct-v0.2',
     ];
 
     for (const model of models) {
@@ -382,9 +427,9 @@ async function tryDirectCloudflareAI(messages: SatChatMessage[], systemPrompt: s
             },
             body: JSON.stringify({
               messages: formattedMessages,
-              max_tokens: 750,
+              max_tokens: 500,
             }),
-            signal: AbortSignal.timeout(4500),
+            signal: AbortSignal.timeout(5500),
           }
         );
 
@@ -454,7 +499,7 @@ async function tryDirectPollinations(messages: SatChatMessage[], systemPrompt: s
         model: 'openai',
         seed: 42,
       }),
-      signal: AbortSignal.timeout(4500),
+      signal: AbortSignal.timeout(3000),
     });
 
     if (response.ok) {
@@ -487,7 +532,7 @@ export const chatWithSatTutor = async (
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ messages, systemPrompt: enrichedPrompt }),
-      signal: AbortSignal.timeout(5500),
+      signal: AbortSignal.timeout(9000),
     });
 
     if (response.ok) {

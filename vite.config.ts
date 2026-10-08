@@ -47,8 +47,8 @@ function devGeminiApiPlugin(): Plugin {
 
                   const models = [
                     '@cf/meta/llama-3.2-3b-instruct',
+                    '@cf/meta/llama-3.2-1b-instruct',
                     '@cf/meta/llama-3.1-8b-instruct',
-                    '@cf/mistral/mistral-7b-instruct-v0.2',
                   ];
 
                   for (const model of models) {
@@ -61,7 +61,7 @@ function devGeminiApiPlugin(): Plugin {
                         },
                         body: JSON.stringify({
                           messages: formattedMessages,
-                          max_tokens: 750,
+                          max_tokens: 500,
                         }),
                       });
 
@@ -82,13 +82,16 @@ function devGeminiApiPlugin(): Plugin {
                   res.statusCode = 200;
                   res.end(JSON.stringify({ response: responseText }));
                 } else {
-                  res.statusCode = 503;
-                  res.end(JSON.stringify({ error: 'Dev AI gateway unavailable' }));
+                  res.statusCode = 200;
+                  res.end(JSON.stringify({ 
+                    response: null,
+                    error: 'Dev AI gateway unavailable, use client fallback' 
+                  }));
                 }
               } catch (err) {
-                res.statusCode = 500;
+                res.statusCode = 200;
                 res.setHeader('Content-Type', 'application/json');
-                res.end(JSON.stringify({ error: String(err) }));
+                res.end(JSON.stringify({ response: null, error: String(err) }));
               }
             });
             return;
