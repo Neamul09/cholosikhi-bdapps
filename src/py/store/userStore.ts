@@ -637,10 +637,11 @@ export const useUserStore = create<UserState>()(
         let profile = initialProfile;
 
         if (loadError && loadError.code !== 'PGRST116') {
-          if (import.meta.env.DEV) console.error('Supabase Load Error:', loadError);
+          if (import.meta.env.DEV) console.warn('[userStore] Supabase Load Profile Note:', loadError.message || loadError);
         }
 
-        if (!profile) {
+        // Only create new profile if user definitely does not exist (not on schema/network error)
+        if (!profile && (!loadError || loadError.code === 'PGRST116')) {
           // First time login - create profile with generous defaults
           const { data: newProfile, error: createError } = await supabase
             .from('profiles')
@@ -664,7 +665,7 @@ export const useUserStore = create<UserState>()(
             .maybeSingle();
 
           if (createError) {
-            if (import.meta.env.DEV) console.error('Supabase Create Profile Error:', createError);
+            if (import.meta.env.DEV) console.warn('[userStore] Supabase Create Profile Note:', createError.message || createError);
           }
 
           if (!createError) profile = newProfile;
