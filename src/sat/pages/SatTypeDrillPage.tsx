@@ -3,6 +3,7 @@ import { useSearchParams, useNavigate } from 'react-router-dom';
 import {
   ChevronLeft,
   ChevronRight,
+  ChevronDown,
   BookOpen,
   Award,
   Calculator,
@@ -33,8 +34,9 @@ export default function SatTypeDrillPage() {
     return t.section === selectedSection;
   });
 
-  // Read active type from query param or default to first
-  const queryTypeId = searchParams.get('type');
+  // Read active type from query param, or saved localStorage, or default to first
+  const savedTypeId = typeof window !== 'undefined' ? localStorage.getItem('cs_sat_last_visited_type') : null;
+  const queryTypeId = searchParams.get('type') || savedTypeId;
   const initialIndex = availableTypes.findIndex(t => t.id === queryTypeId);
   const [currentIndex, setCurrentIndex] = useState(initialIndex >= 0 ? initialIndex : 0);
 
@@ -99,10 +101,13 @@ export default function SatTypeDrillPage() {
 
   const activeQuestion: SatQuestion | undefined = typeQuestions[activeQuestionIdx];
 
-  // User mastery metrics for current micro-type
+  // User mastery metrics for current micro-type: correct / total archetype bank questions
   const attempts = userState.attempts.filter(a => a.microType === currentType.id);
   const correctCount = attempts.filter(a => a.isCorrect).length;
-  const masteryPercentage = attempts.length > 0 ? Math.round((correctCount / attempts.length) * 100) : 0;
+  const totalQuestionsInType = typeQuestions.length || ALL_QUESTIONS.filter(q => q.microType === currentType.id).length;
+  const masteryPercentage = totalQuestionsInType > 0
+    ? Math.min(100, Math.round((correctCount / totalQuestionsInType) * 100))
+    : 0;
 
   const getMasteryBadge = (pct: number, total: number) => {
     if (total === 0) return { label: 'Not Started', color: 'text-slate-400 bg-slate-500/10 border-slate-500/20' };
@@ -116,8 +121,14 @@ export default function SatTypeDrillPage() {
   const goToType = (index: number) => {
     play('tap');
     if (index >= 0 && index < availableTypes.length) {
+      const targetType = availableTypes[index];
       setCurrentIndex(index);
-      setSearchParams({ type: availableTypes[index].id });
+      setSearchParams({ type: targetType.id });
+      try {
+        localStorage.setItem('cs_sat_last_visited_type', targetType.id);
+      } catch {
+        /* noop */
+      }
     }
   };
 
@@ -232,23 +243,26 @@ export default function SatTypeDrillPage() {
 
         {/* Center: Current Index & Quick Dropdown Picker */}
         <div className="flex items-center gap-3 text-center">
-          <span className="text-xs font-black uppercase tracking-wider text-blue-400 px-3 py-1 rounded-xl bg-blue-500/10 border border-blue-500/20">
+          <span className="text-xs font-black uppercase tracking-wider text-blue-400 px-3 py-1 rounded-xl bg-blue-500/10 border border-blue-500/20 shrink-0">
             Type {currentIndex + 1} of {availableTypes.length}
           </span>
-          <select
-            value={currentType.id}
-            onChange={(e) => {
-              const idx = availableTypes.findIndex(t => t.id === e.target.value);
-              if (idx >= 0) goToType(idx);
-            }}
-            className="px-3 py-1.5 rounded-xl bg-panel border border-border-subtle text-xs font-bold text-app-fg outline-none max-w-[220px] sm:max-w-xs truncate cursor-pointer"
-          >
-            {availableTypes.map((t, idx) => (
-              <option key={t.id} value={t.id}>
-                #{idx + 1}: {t.title}
-              </option>
-            ))}
-          </select>
+          <div className="relative">
+            <select
+              value={currentType.id}
+              onChange={(e) => {
+                const idx = availableTypes.findIndex(t => t.id === e.target.value);
+                if (idx >= 0) goToType(idx);
+              }}
+              className="appearance-none pl-3.5 pr-8 py-2 rounded-xl bg-panel/90 hover:bg-panel border border-border-subtle hover:border-blue-500/40 text-xs font-black text-app-fg focus:outline-none focus:ring-2 focus:ring-blue-500/30 max-w-[210px] sm:max-w-xs truncate cursor-pointer transition-all shadow-inner"
+            >
+              {availableTypes.map((t, idx) => (
+                <option key={t.id} value={t.id} className="bg-slate-900 text-white font-bold py-1">
+                  #{idx + 1}: {t.title}
+                </option>
+              ))}
+            </select>
+            <ChevronDown size={14} className="pointer-events-none absolute right-2.5 top-1/2 -translate-y-1/2 text-app-fg/40" />
+          </div>
         </div>
 
         {/* Next Button */}
@@ -310,8 +324,8 @@ export default function SatTypeDrillPage() {
             </div>
 
             <div className="flex items-center justify-between text-xs font-bold text-app-fg/50">
-              <span>{correctCount} correct / {attempts.length} attempts</span>
-              <span>{typeQuestions.length} bank Qs</span>
+              <span>{correctCount} / {totalQuestionsInType} mastered</span>
+              <span>{attempts.length} attempted</span>
             </div>
 
             {/* Quick Actions */}

@@ -13,8 +13,7 @@
  * This module is **store-agnostic** — it owns its own `enabled` flag and
  * exposes `setSoundEnabled(v)` so callers (Zustand stores, React state,
  * or any other source of truth) can push their preference in. Default is
- * `false` — sound is intentionally locked off until better sounds ship;
- * callers push `true` via `setSoundEnabled` once the feature is re-enabled.
+ * `true` so users hear UI feedback immediately.
  *
  * Browser autoplay policy is respected: `unlockAudio()` must be called
  * from the first user gesture (e.g. a `pointerdown`/`keydown` listener)
@@ -32,11 +31,122 @@ export type SoundName =
   | 'streak'
   | 'toggle';
 
-/** Module-level enabled flag. Default off; callers push via `setSoundEnabled`. */
+/** Module-level enabled flag. Default disabled. */
 let enabled = false;
 /** Subscribers that want to mirror the value (e.g. UI store listeners). */
 type EnabledListener = (v: boolean) => void;
 const enabledListeners = new Set<EnabledListener>();
+
+/** Synthesizer audio context for instant, high-fidelity sound synthesis fallback */
+let audioCtx: AudioContext | null = null;
+const getAudioContext = (): AudioContext | null => {
+  if (typeof window === 'undefined') return null;
+  if (!audioCtx) {
+    const AudioContextClass = window.AudioContext || (window as unknown as { webkitAudioContext: typeof AudioContext }).webkitAudioContext;
+    if (AudioContextClass) {
+      audioCtx = new AudioContextClass();
+    }
+  }
+  if (audioCtx && audioCtx.state === 'suspended') {
+    audioCtx.resume().catch(() => {});
+  }
+  return audioCtx;
+};
+
+/** Web Audio synthesizers for UI effects */
+const playSynthesizedSound = (name: SoundName): void => {
+  const ctx = getAudioContext();
+  if (!ctx) return;
+
+  const now = ctx.currentTime;
+
+  switch (name) {
+    case 'tap':
+    case 'toggle': {
+      const osc = ctx.createOscillator();
+      const gain = ctx.createGain();
+      osc.type = 'sine';
+      osc.frequency.setValueAtTime(580, now);
+      osc.frequency.exponentialRampToValueAtTime(320, now + 0.05);
+      gain.gain.setValueAtTime(0.12, now);
+      gain.gain.exponentialRampToValueAtTime(0.001, now + 0.05);
+      osc.connect(gain);
+      gain.connect(ctx.destination);
+      osc.start(now);
+      osc.stop(now + 0.05);
+      break;
+    }
+    case 'correct': {
+      // Duolingo-style pleasant ascending major chord (C5 -> E5 -> G5)
+      const freqs = [523.25, 659.25, 783.99, 1046.50];
+      freqs.forEach((freq, idx) => {
+        const osc = ctx.createOscillator();
+        const gain = ctx.createGain();
+        const startTime = now + idx * 0.07;
+        osc.type = 'triangle';
+        osc.frequency.setValueAtTime(freq, startTime);
+        gain.gain.setValueAtTime(0.15, startTime);
+        gain.gain.exponentialRampToValueAtTime(0.001, startTime + 0.25);
+        osc.connect(gain);
+        gain.connect(ctx.destination);
+        osc.start(startTime);
+        osc.stop(startTime + 0.25);
+      });
+      break;
+    }
+    case 'incorrect': {
+      // Soft low thud dissonance
+      [220, 207.65].forEach((freq) => {
+        const osc = ctx.createOscillator();
+        const gain = ctx.createGain();
+        osc.type = 'sawtooth';
+        osc.frequency.setValueAtTime(freq, now);
+        osc.frequency.exponentialRampToValueAtTime(freq * 0.7, now + 0.22);
+        gain.gain.setValueAtTime(0.1, now);
+        gain.gain.exponentialRampToValueAtTime(0.001, now + 0.22);
+        osc.connect(gain);
+        gain.connect(ctx.destination);
+        osc.start(now);
+        osc.stop(now + 0.22);
+      });
+      break;
+    }
+    case 'streak':
+    case 'achievement':
+    case 'levelUp':
+    case 'lessonComplete': {
+      // Fanfare arpeggio
+      const notes = [440, 554.37, 659.25, 880];
+      notes.forEach((freq, idx) => {
+        const osc = ctx.createOscillator();
+        const gain = ctx.createGain();
+        const startTime = now + idx * 0.09;
+        osc.type = 'sine';
+        osc.frequency.setValueAtTime(freq, startTime);
+        gain.gain.setValueAtTime(0.18, startTime);
+        gain.gain.exponentialRampToValueAtTime(0.001, startTime + 0.35);
+        osc.connect(gain);
+        gain.connect(ctx.destination);
+        osc.start(startTime);
+        osc.stop(startTime + 0.35);
+      });
+      break;
+    }
+    case 'xpTick': {
+      const osc = ctx.createOscillator();
+      const gain = ctx.createGain();
+      osc.type = 'sine';
+      osc.frequency.setValueAtTime(800, now);
+      gain.gain.setValueAtTime(0.08, now);
+      gain.gain.exponentialRampToValueAtTime(0.001, now + 0.04);
+      osc.connect(gain);
+      gain.connect(ctx.destination);
+      osc.start(now);
+      osc.stop(now + 0.04);
+      break;
+    }
+  }
+};
 
 /** Read the current enabled flag (no side effects). */
 export const getSoundEnabled = (): boolean => enabled;
@@ -166,8 +276,22 @@ export const play = (name: SoundName): void => {
     // Reset to start in case it's a paused-but-not-finished element.
     if (chosen.currentTime > 0) chosen.currentTime = 0;
     const p = chosen.play();
-    if (p && typeof p.catch === 'function') p.catch(() => {});
+    if (p && typeof p.catch === 'function') {
+      p.catch(() => {
+        // Fallback to Web Audio synthesis
+        try {
+          playSynthesizedSound(name);
+        } catch {
+          /* noop */
+        }
+      });
+    }
   } catch {
-    /* never throw from audio */
+    // Fallback directly to Web Audio synthesis if HTMLAudioElement throws
+    try {
+      playSynthesizedSound(name);
+    } catch {
+      /* never throw from audio */
+    }
   }
 };

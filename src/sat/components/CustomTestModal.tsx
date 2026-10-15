@@ -19,8 +19,8 @@ export default function CustomTestModal({ isOpen, onClose }: CustomTestModalProp
   const [selectedTopics, setSelectedTopics] = useState<string[]>([]);
   const [difficulty, setDifficulty] = useState<string>('all');
   const [difficultyMix, setDifficultyMix] = useState<'balanced' | 'hard' | 'all'>('balanced');
-  const [questionCount, setQuestionCount] = useState<number>(98);
-  const [countInput, setCountInput] = useState<string>('98');
+  const [questionCount, setQuestionCount] = useState<number>(10);
+  const [countInput, setCountInput] = useState<string>('10');
   const [isTimed, setIsTimed] = useState<boolean>(true);
 
   const mathDomains = [
@@ -169,7 +169,13 @@ export default function CustomTestModal({ isOpen, onClose }: CustomTestModalProp
             <div className="grid grid-cols-2 gap-2.5">
               <button
                 type="button"
-                onClick={() => { play('tap'); setQuizType('exam'); }}
+                onClick={() => {
+                  play('tap');
+                  setQuizType('exam');
+                  const examDefault = section === 'math' ? 44 : section === 'reading_writing' ? 54 : 98;
+                  setQuestionCount(examDefault);
+                  setCountInput(String(examDefault));
+                }}
                 className={`p-3.5 rounded-2xl border-2 text-left transition-all ${
                   quizType === 'exam'
                     ? 'bg-blue-500/15 border-blue-500 text-blue-500 dark:text-blue-400 shadow-md'
@@ -187,7 +193,12 @@ export default function CustomTestModal({ isOpen, onClose }: CustomTestModalProp
 
               <button
                 type="button"
-                onClick={() => { play('tap'); setQuizType('drill'); }}
+                onClick={() => {
+                  play('tap');
+                  setQuizType('drill');
+                  setQuestionCount(10);
+                  setCountInput('10');
+                }}
                 className={`p-3.5 rounded-2xl border-2 text-left transition-all ${
                   quizType === 'drill'
                     ? 'bg-emerald-500/15 border-emerald-500 text-emerald-600 dark:text-emerald-400 shadow-md'

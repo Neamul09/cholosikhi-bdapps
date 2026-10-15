@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Target, Calendar, Clock, Save } from 'lucide-react';
+import { Target, Calendar, Clock, Save, ChevronDown } from 'lucide-react';
 import { loadSatUserState, saveRoutinePlan } from '../lib/satStorage';
 import type { RoutinePlan } from '../types';
 import { play } from '../../lib/audio';
@@ -137,16 +137,19 @@ export default function SatRoutinePage() {
               <Clock size={14} className="text-blue-400" />
               <span>Weekly Dedicated Study Hours</span>
             </label>
-            <select
-              value={weeklyHours}
-              onChange={(e) => setWeeklyHours(Number(e.target.value))}
-              className="w-full px-4 py-3 rounded-2xl bg-panel border border-border-subtle text-app-fg font-bold text-sm focus:outline-none"
-            >
-              <option value="3">Light: ~3 hours / week (25 mins / day)</option>
-              <option value="6">Recommended: ~6 hours / week (50 mins / day)</option>
-              <option value="10">Intensive: ~10 hours / week (1.5 hours / day)</option>
-              <option value="15">Bootcamp: ~15 hours / week (2+ hours / day)</option>
-            </select>
+            <div className="relative">
+              <select
+                value={weeklyHours}
+                onChange={(e) => setWeeklyHours(Number(e.target.value))}
+                className="w-full appearance-none pl-4 pr-10 py-3 rounded-2xl bg-panel/90 hover:bg-panel border border-border-subtle hover:border-blue-500/40 text-app-fg font-black text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/30 cursor-pointer transition-all shadow-inner"
+              >
+                <option value="3" className="bg-slate-900 text-white font-bold py-1">Light: ~3 hours / week (25 mins / day)</option>
+                <option value="6" className="bg-slate-900 text-white font-bold py-1">Recommended: ~6 hours / week (50 mins / day)</option>
+                <option value="10" className="bg-slate-900 text-white font-bold py-1">Intensive: ~10 hours / week (1.5 hours / day)</option>
+                <option value="15" className="bg-slate-900 text-white font-bold py-1">Bootcamp: ~15 hours / week (2+ hours / day)</option>
+              </select>
+              <ChevronDown size={16} className="pointer-events-none absolute right-3.5 top-1/2 -translate-y-1/2 text-app-fg/40" />
+            </div>
           </div>
         </div>
 

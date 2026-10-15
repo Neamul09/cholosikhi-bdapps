@@ -10,7 +10,10 @@ import {
   Play,
   Calendar,
   Zap,
-  BookOpen
+  BookOpen,
+  CheckCircle2,
+  Flame,
+  AlertTriangle
 } from 'lucide-react';
 import { clsx } from 'clsx';
 import ScorePredictionCard from '../components/ScorePredictionCard';
@@ -20,7 +23,7 @@ import CustomTestModal from '../components/CustomTestModal';
 import { loadSatUserState, loadSatUserStateFromCloud } from '../lib/satStorage';
 import { calculatePredictedScore } from '../lib/scorePredictor';
 import { MICRO_TYPES } from '../data/microtypes';
-import { getMicroTypeStats, getHardestQuestionForMicroType, getHardestQuestions } from '../data/questionsRepo';
+import { getAllQuestions, getMicroTypeStats, getHardestQuestionForMicroType, getHardestQuestions } from '../data/questionsRepo';
 import type { SatUserState, MicroTypeInfo } from '../types';
 import { play } from '../../lib/audio';
 
@@ -65,6 +68,7 @@ export default function SatDashboard({ onOpenCustomTest }: SatDashboardProps = {
   // Calculate overall and section stats
   const totalAttempted = userState.attempts.length;
   const totalCorrect = userState.attempts.filter(a => a.isCorrect).length;
+  const totalWrong = Math.max(0, totalAttempted - totalCorrect);
   const overallAccuracy = totalAttempted > 0 ? Math.round((totalCorrect / totalAttempted) * 100) : 0;
 
   const mathAttempts = userState.attempts.filter(a => a.section === 'math');
@@ -74,6 +78,8 @@ export default function SatDashboard({ onOpenCustomTest }: SatDashboardProps = {
   const rwAttempts = userState.attempts.filter(a => a.section === 'reading_writing');
   const rwCorrect = rwAttempts.filter(a => a.isCorrect).length;
   const rwAccuracy = rwAttempts.length > 0 ? Math.round((rwCorrect / rwAttempts.length) * 100) : 0;
+
+  const unresolvedMistakesCount = userState.mistakes.filter(m => !m.resolved).length;
 
   // Average time per question & pacing
   const totalQuizQuestions = userState.quizzes.reduce((sum, q) => sum + (q.totalQuestions || 0), 0);
@@ -130,6 +136,28 @@ export default function SatDashboard({ onOpenCustomTest }: SatDashboardProps = {
       navigate(`/sat/quiz?mode=drill&microType=${microType.id}`);
     }
   };
+
+  // Question bank total & circular solve progress
+  const totalBankQuestions = getAllQuestions().length;
+  const solveMilestone = totalAttempted < 50
+    ? 50
+    : totalAttempted < 100
+    ? 100
+    : totalAttempted < 250
+    ? 250
+    : totalAttempted < 500
+    ? 500
+    : totalAttempted < 1000
+    ? 1000
+    : totalBankQuestions;
+
+  const CIRCLE_CIRCUMFERENCE = 238.761; // 2 * pi * 38
+  const correctArcLength = totalAttempted > 0
+    ? (totalCorrect / totalAttempted) * CIRCLE_CIRCUMFERENCE
+    : 0;
+  const wrongArcLength = totalAttempted > 0
+    ? (totalWrong / totalAttempted) * CIRCLE_CIRCUMFERENCE
+    : 0;
 
   return (
     <div className="space-y-10 pb-24">
@@ -191,6 +219,19 @@ export default function SatDashboard({ onOpenCustomTest }: SatDashboardProps = {
             <Skull size={15} />
             <span>Hardest Vault</span>
           </button>
+
+          {unresolvedMistakesCount > 0 && (
+            <button
+              onClick={() => {
+                play('tap');
+                navigate('/sat/mistakes');
+              }}
+              className="px-4 py-2.5 rounded-2xl bg-rose-500/15 border border-rose-500/40 text-rose-300 hover:bg-rose-500/25 text-xs font-black transition-all flex items-center gap-2 shadow-[0_0_12px_rgba(244,63,94,0.25)]"
+            >
+              <AlertTriangle size={15} className="text-rose-400" />
+              <span>Review Mistakes ({unresolvedMistakesCount})</span>
+            </button>
+          )}
         </div>
       </section>
 
@@ -206,30 +247,30 @@ export default function SatDashboard({ onOpenCustomTest }: SatDashboardProps = {
           {/* ─── Micro-Type Mastery & Hardest Questions Mastery Row (Fills Space) ─── */}
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5">
             {/* Card 1: Micro-Type Mastery Percentage */}
-            <div className="p-5 rounded-[2rem] bg-panel border border-border-subtle hover:border-blue-500/40 transition-all shadow-sm flex flex-col justify-between space-y-4">
+            <div className="p-5 sm:p-6 rounded-[2rem] bg-panel border border-border-subtle hover:border-blue-500/40 transition-all shadow-sm flex flex-col justify-between space-y-4">
               <div className="flex items-center justify-between">
                 <div className="flex items-center gap-2.5">
-                  <div className="w-9 h-9 rounded-xl bg-blue-500/10 border border-blue-500/20 flex items-center justify-center text-blue-400">
-                    <BookOpen size={18} />
+                  <div className="w-10 h-10 rounded-2xl bg-blue-500/10 border border-blue-500/20 flex items-center justify-center text-blue-400 shrink-0">
+                    <BookOpen size={20} />
                   </div>
                   <div>
                     <h3 className="text-xs font-black uppercase tracking-wider text-app-fg">Micro-Type Mastery</h3>
                     <p className="text-[10px] font-bold text-app-fg/50">Digital SAT Archetypes</p>
                   </div>
                 </div>
-                <div className="px-2.5 py-1 rounded-full bg-blue-500/10 border border-blue-500/30 text-blue-400 text-[10px] font-black">
+                <div className="px-3 py-1 rounded-full bg-blue-500/10 border border-blue-500/30 text-blue-400 text-xs font-black shrink-0">
                   {masteredTypesCount} / {totalTypesCount} Types
                 </div>
               </div>
 
-              <div className="space-y-2">
+              <div className="space-y-2.5">
                 <div className="flex items-baseline justify-between">
-                  <span className="text-3xl font-black tracking-tight text-app-fg">{typeMasteryPct}%</span>
-                  <span className="text-[11px] font-bold text-app-fg/60">
-                    Math: <strong className="text-blue-400">{mathMasteredCount}/{mathTypes.length}</strong> · R&W: <strong className="text-violet-400">{rwMasteredCount}/{rwTypes.length}</strong>
+                  <span className="text-4xl sm:text-5xl font-black tracking-tight text-app-fg">{typeMasteryPct}%</span>
+                  <span className="text-xs font-bold text-app-fg/70">
+                    Math: <strong className="text-blue-400 font-black">{mathMasteredCount}/{mathTypes.length}</strong> · R&W: <strong className="text-violet-400 font-black">{rwMasteredCount}/{rwTypes.length}</strong>
                   </span>
                 </div>
-                <div className="h-2.5 w-full bg-app-bg/80 rounded-full overflow-hidden p-0.5 border border-border-subtle/40">
+                <div className="h-3 w-full bg-app-bg/80 rounded-full overflow-hidden p-0.5 border border-border-subtle/50">
                   <div
                     className="h-full bg-gradient-to-r from-blue-500 via-cyan-400 to-emerald-400 rounded-full transition-all duration-700"
                     style={{ width: `${typeMasteryPct}%` }}
@@ -237,7 +278,7 @@ export default function SatDashboard({ onOpenCustomTest }: SatDashboardProps = {
                 </div>
               </div>
 
-              <div className="flex items-center justify-between pt-1 border-t border-border-subtle/40">
+              <div className="flex items-center justify-between pt-2 border-t border-border-subtle/40">
                 <span className="text-[10px] font-bold text-app-fg/40">
                   Target: 80%+ accuracy per type
                 </span>
@@ -252,48 +293,132 @@ export default function SatDashboard({ onOpenCustomTest }: SatDashboardProps = {
               </div>
             </div>
 
-            {/* Card 2: Hardest Questions Mastery Percentage */}
-            <div className="p-5 rounded-[2rem] bg-panel border border-border-subtle hover:border-pink-500/40 transition-all shadow-sm flex flex-col justify-between space-y-4">
+            {/* Card 2: Total Questions Solved (Circular Ring Gauge: Correct then Wrong) */}
+            <div className="p-5 sm:p-6 rounded-[2rem] bg-panel border border-border-subtle hover:border-emerald-500/40 transition-all shadow-sm flex flex-col justify-between space-y-4">
               <div className="flex items-center justify-between">
                 <div className="flex items-center gap-2.5">
-                  <div className="w-9 h-9 rounded-xl bg-pink-500/10 border border-pink-500/20 flex items-center justify-center text-pink-400">
-                    <Skull size={18} />
+                  <div className="w-10 h-10 rounded-2xl bg-emerald-500/10 border border-emerald-500/20 flex items-center justify-center text-emerald-400 shrink-0">
+                    <CheckCircle2 size={20} />
                   </div>
                   <div>
-                    <h3 className="text-xs font-black uppercase tracking-wider text-app-fg">Hard Questions Mastery</h3>
-                    <p className="text-[10px] font-bold text-app-fg/50">99th Percentile Traps</p>
+                    <h3 className="text-xs font-black uppercase tracking-wider text-app-fg">Questions Solved</h3>
+                    <p className="text-[10px] font-bold text-app-fg/50">Correct vs Wrong Volume</p>
                   </div>
                 </div>
-                <div className="px-2.5 py-1 rounded-full bg-pink-500/10 border border-pink-500/30 text-pink-400 text-[10px] font-black">
-                  {hardestSolved} / {totalHardest} Mastered
+                <div className="px-3 py-1 rounded-full bg-emerald-500/10 border border-emerald-500/30 text-emerald-400 text-xs font-black shrink-0">
+                  {totalCorrect} Correct • {totalWrong} Wrong
                 </div>
               </div>
 
-              <div className="space-y-2">
-                <div className="flex items-baseline justify-between">
-                  <span className="text-3xl font-black tracking-tight text-app-fg">{hardestMasteryPct}%</span>
-                  <span className="text-[11px] font-bold text-app-fg/60">
-                    Hard Accuracy: <strong className="text-pink-400">{hardestAccuracy}%</strong> ({hardestSolved} solved)
-                  </span>
+              <div className="flex items-center gap-4">
+                {/* Circular Progress Ring */}
+                <div className="relative w-26 h-26 sm:w-28 sm:h-28 shrink-0 flex items-center justify-center">
+                  <svg className="w-full h-full" viewBox="0 0 96 96">
+                    {/* Background Track */}
+                    <circle
+                      cx="48"
+                      cy="48"
+                      r="38"
+                      fill="none"
+                      stroke="rgba(255,255,255,0.08)"
+                      strokeWidth="7"
+                    />
+                    {/* Correct Solved Arc (Emerald) */}
+                    {correctArcLength > 0 && (
+                      <circle
+                        cx="48"
+                        cy="48"
+                        r="38"
+                        fill="none"
+                        stroke="#10b981"
+                        strokeWidth="7"
+                        strokeDasharray={`${correctArcLength} 238.761`}
+                        strokeDashoffset="0"
+                        strokeLinecap="round"
+                        transform="rotate(-90 48 48)"
+                        className="transition-all duration-700 ease-out"
+                      >
+                        <title>Correct Solved: {totalCorrect} ({overallAccuracy}%)</title>
+                      </circle>
+                    )}
+                    {/* Wrong Arc (Rose) */}
+                    {wrongArcLength > 0 && (
+                      <circle
+                        cx="48"
+                        cy="48"
+                        r="38"
+                        fill="none"
+                        stroke="#f43f5e"
+                        strokeWidth="7"
+                        strokeDasharray={`${wrongArcLength} 238.761`}
+                        strokeDashoffset={`-${correctArcLength}`}
+                        strokeLinecap="round"
+                        transform="rotate(-90 48 48)"
+                        className="transition-all duration-700 ease-out"
+                      >
+                        <title>Wrong: {totalWrong} ({totalAttempted > 0 ? Math.round((totalWrong / totalAttempted) * 100) : 0}%)</title>
+                      </circle>
+                    )}
+                  </svg>
+                  <div className="absolute inset-0 flex flex-col items-center justify-center text-center pointer-events-none">
+                    <span className="text-2xl sm:text-3xl font-black text-emerald-400 leading-none tracking-tight">
+                      {totalCorrect}
+                    </span>
+                    <span className="text-[9px] font-black uppercase tracking-wider text-app-fg/60 mt-1">
+                      Correct
+                    </span>
+                    <span className="text-[8.5px] font-bold text-app-fg/40 leading-none mt-0.5">
+                      {totalAttempted} touched
+                    </span>
+                  </div>
                 </div>
-                <div className="h-2.5 w-full bg-app-bg/80 rounded-full overflow-hidden p-0.5 border border-border-subtle/40">
-                  <div
-                    className="h-full bg-gradient-to-r from-pink-500 via-rose-500 to-amber-400 rounded-full transition-all duration-700"
-                    style={{ width: `${hardestMasteryPct}%` }}
-                  />
+
+                {/* Stats Breakdown beside circle: Correct, then Wrong, then Sections */}
+                <div className="flex-1 space-y-2 min-w-0">
+                  <div className="flex items-center justify-between text-xs font-bold">
+                    <span className="text-app-fg/80 flex items-center gap-1.5 truncate">
+                      <span className="w-2.5 h-2.5 rounded-full bg-emerald-400 shadow-[0_0_6px_rgba(16,185,129,0.5)] shrink-0" />
+                      <span>Correct</span>
+                    </span>
+                    <span className="text-sm sm:text-base text-emerald-400 font-black shrink-0">
+                      {totalCorrect} <span className="text-app-fg/40 font-normal text-xs">({overallAccuracy}%)</span>
+                    </span>
+                  </div>
+
+                  <div className="flex items-center justify-between text-xs font-bold">
+                    <span className="text-app-fg/80 flex items-center gap-1.5 truncate">
+                      <span className="w-2.5 h-2.5 rounded-full bg-rose-500 shadow-[0_0_6px_rgba(244,63,94,0.5)] shrink-0" />
+                      <span>Wrong</span>
+                    </span>
+                    <span className="text-sm sm:text-base text-rose-400 font-black shrink-0">
+                      {totalWrong} <span className="text-app-fg/40 font-normal text-xs">({totalAttempted > 0 ? Math.round((totalWrong / totalAttempted) * 100) : 0}%)</span>
+                    </span>
+                  </div>
+
+                  {/* Section Split: Math vs R&W */}
+                  <div className="grid grid-cols-2 gap-1.5 pt-1.5 border-t border-border-subtle/50 text-[11px] font-bold">
+                    <div className="flex items-center justify-between px-2.5 py-1.5 rounded-xl bg-blue-500/[0.08] border border-blue-500/20">
+                      <span className="text-blue-400 font-bold">Math</span>
+                      <span className="text-app-fg font-black">{mathCorrect}/{mathAttempts.length}</span>
+                    </div>
+                    <div className="flex items-center justify-between px-2.5 py-1.5 rounded-xl bg-violet-500/[0.08] border border-violet-500/20">
+                      <span className="text-violet-400 font-bold">R&W</span>
+                      <span className="text-app-fg font-black">{rwCorrect}/{rwAttempts.length}</span>
+                    </div>
+                  </div>
                 </div>
               </div>
 
-              <div className="flex items-center justify-between pt-1 border-t border-border-subtle/40">
+              <div className="flex items-center justify-between pt-2 border-t border-border-subtle/40">
                 <span className="text-[10px] font-bold text-app-fg/40">
-                  Official College Board Level 5
+                  Goal: {totalCorrect} / {solveMilestone} Solves • Bank: {totalAttempted} / {totalBankQuestions}
                 </span>
                 <Link
-                  to="/sat/hardest"
+                  to="/sat/quick-practice"
                   onClick={() => play('tap')}
-                  className="text-xs font-black text-pink-400 hover:text-pink-300 flex items-center gap-1 transition-colors"
+                  className="text-xs font-black text-emerald-400 hover:text-emerald-300 flex items-center gap-1 transition-colors"
                 >
-                  <span>Hardest Vault</span>
+                  <span>Quick Practice</span>
                   <ChevronRight size={14} />
                 </Link>
               </div>
@@ -360,82 +485,155 @@ export default function SatDashboard({ onOpenCustomTest }: SatDashboardProps = {
           </div>
         </div>
 
-        {/* Right Col: Mascot Nini + Diagnostic Stats Strip with Hardest Mastery */}
-        <div className="glass p-6 rounded-[2.5rem] border border-border-subtle flex flex-col justify-between space-y-5">
-          {/* Mascot Nini Coach compact card */}
-          <div className="p-4 rounded-2xl bg-panel border border-border-subtle space-y-3">
-            <NiniCoach
-              mood={totalAttempted > 0 && overallAccuracy > 65 ? 'happy' : 'thoughtful'}
-              message={
-                totalAttempted === 0
-                  ? "Welcome! Let's take your first diagnostic drill or chat with me for advice."
-                  : `Solved ${totalAttempted} Qs with ${overallAccuracy}% accuracy. Keep rolling!`
-              }
-              size="sm"
-            />
-            <div className="pt-2 border-t border-border-subtle/50 flex justify-end">
+        {/* Right Col: Mascot Nini Coach HUD + Diagnostic Stats Strip */}
+        <div className="glass p-5 sm:p-6 rounded-[2.5rem] border border-border-subtle flex flex-col justify-between gap-4 h-full">
+          {/* Mascot Nini Coach expanded coaching card */}
+          <div className="p-4 sm:p-5 rounded-3xl bg-panel border border-border-subtle shadow-sm space-y-4">
+            <div className="flex items-center justify-between border-b border-border-subtle/50 pb-3">
+              <div className="flex items-center gap-2">
+                <span className="w-2.5 h-2.5 rounded-full bg-emerald-400 animate-pulse" />
+                <span className="text-xs font-black uppercase tracking-wider text-app-fg">Nini Coach Advice</span>
+              </div>
+              <span className="text-[10px] font-black uppercase px-2.5 py-0.5 rounded-full bg-blue-500/10 text-blue-400 border border-blue-500/20">
+                AI Diagnostic
+              </span>
+            </div>
+
+            <div className="flex flex-col sm:flex-row items-center sm:items-start gap-3.5">
+              <NiniCoach
+                mood={totalAttempted > 0 && overallAccuracy > 65 ? 'happy' : 'thoughtful'}
+                size="md"
+                className="shrink-0"
+              />
+              <div className="space-y-2 text-center sm:text-left flex-1">
+                <p className="text-xs sm:text-sm font-bold text-app-fg leading-relaxed">
+                  {totalAttempted === 0
+                    ? "Welcome to Digital SAT Prep! Let's start with a quick Diagnostic or Type Drill to assess your baseline score."
+                    : unresolvedMistakesCount > 0
+                    ? `You have ${unresolvedMistakesCount} questions waiting in your Mistake Bank. Reviewing them unlocks the fastest score jump!`
+                    : overallAccuracy >= 80
+                    ? `Brilliant accuracy (${overallAccuracy}%)! Push into the Hardest Vault to lock in a 1550+ score.`
+                    : `You've solved ${totalCorrect} questions with ${overallAccuracy}% accuracy. Focus on weak archetypes today!`}
+                </p>
+
+                {/* Score Gap Metric */}
+                <div className="inline-flex items-center gap-2 px-3 py-1 rounded-xl bg-app-bg text-[11px] font-black text-app-fg/70 border border-border-subtle">
+                  <span>Target: {userState.routine?.targetScore || 1520}</span>
+                  <span className="text-app-fg/30">•</span>
+                  <span className={prediction.compositeScore >= (userState.routine?.targetScore || 1520) ? "text-emerald-400" : "text-amber-400"}>
+                    {prediction.compositeScore >= (userState.routine?.targetScore || 1520) ? "Goal Reached! 🌟" : `${(userState.routine?.targetScore || 1520) - prediction.compositeScore} pts to go`}
+                  </span>
+                </div>
+              </div>
+            </div>
+
+            {/* Quick Practice Prompt */}
+            <button
+              onClick={() => {
+                play('tap');
+                if (unresolvedMistakesCount > 0) {
+                  navigate('/sat/mistakes');
+                } else {
+                  navigate('/sat/quick-practice');
+                }
+              }}
+              className="w-full py-2.5 px-4 rounded-2xl btn-duo btn-duo-blue text-xs font-black flex items-center justify-center gap-2"
+            >
+              <Zap size={14} />
+              <span>{unresolvedMistakesCount > 0 ? 'Clear Mistakes Now' : 'Start 5-Min Warmup'}</span>
+            </button>
+          </div>
+
+          {/* Hard Questions Mastery Card */}
+          <div className="p-4 sm:p-5 rounded-2xl bg-panel border border-border-subtle hover:border-pink-500/40 transition-all space-y-3 shadow-sm">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-2.5">
+                <div className="w-9 h-9 rounded-xl bg-pink-500/10 border border-pink-500/20 flex items-center justify-center text-pink-400 shrink-0">
+                  <Skull size={18} />
+                </div>
+                <div>
+                  <h3 className="text-xs font-black uppercase tracking-wider text-app-fg">Hard Questions Mastery</h3>
+                  <p className="text-[10px] font-bold text-app-fg/50">99th Percentile Traps</p>
+                </div>
+              </div>
+              <div className="px-2.5 py-1 rounded-full bg-pink-500/10 border border-pink-500/30 text-pink-400 text-[10px] font-black shrink-0">
+                {hardestSolved} / {totalHardest} Mastered
+              </div>
+            </div>
+
+            <div className="space-y-2">
+              <div className="flex items-baseline justify-between">
+                <span className="text-3xl sm:text-4xl font-black tracking-tight text-app-fg">{hardestMasteryPct}%</span>
+                <span className="text-xs font-bold text-app-fg/70">
+                  Hard Accuracy: <strong className="text-pink-400 font-black">{hardestAccuracy}%</strong> ({hardestSolved} solved)
+                </span>
+              </div>
+              <div className="h-3 w-full bg-app-bg rounded-full overflow-hidden p-0.5 border border-border-subtle/50">
+                <div
+                  className="h-full bg-gradient-to-r from-pink-500 via-rose-500 to-amber-400 rounded-full transition-all duration-700"
+                  style={{ width: `${hardestMasteryPct}%` }}
+                />
+              </div>
+            </div>
+
+            <div className="flex items-center justify-between pt-2 border-t border-border-subtle/40 text-[10px] font-bold text-app-fg/40">
+              <span>Official College Board Level 5</span>
               <Link
-                to="/sat/ai-tutor"
+                to="/sat/hardest"
                 onClick={() => play('tap')}
-                className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-gradient-to-r from-blue-500/20 to-cyan-500/20 hover:from-blue-500/30 hover:to-cyan-500/30 border border-cyan-500/30 text-cyan-300 hover:text-white font-black text-xs transition-all shadow-sm group"
+                className="text-xs font-black text-pink-400 hover:text-pink-300 flex items-center gap-1 transition-colors"
               >
-                <Sparkles size={12} className="text-cyan-400 group-hover:scale-110 transition-transform" />
-                <span>Ask Nini AI 24/7 →</span>
+                <span>Hardest Vault</span>
+                <ChevronRight size={13} />
               </Link>
             </div>
           </div>
 
-          <div className="space-y-3">
-            <div className="flex items-center justify-between p-3.5 rounded-2xl bg-panel border border-border-subtle">
-              <span className="text-xs font-bold text-app-fg/60">Total Questions Solved</span>
-              <span className="text-lg font-black text-app-fg">{totalAttempted}</span>
-            </div>
-
-            <div className="flex items-center justify-between p-3.5 rounded-2xl bg-panel border border-border-subtle">
-              <span className="text-xs font-bold text-app-fg/60">Overall Accuracy</span>
-              <span className="text-lg font-black text-emerald-400">{overallAccuracy}%</span>
-            </div>
-
-            {/* Micro-Type Coverage Progress */}
-            <div className="p-3.5 rounded-2xl bg-panel border border-border-subtle space-y-2">
-              <div className="flex items-center justify-between">
-                <span className="text-xs font-bold text-app-fg/70 flex items-center gap-1.5">
-                  <BookOpen size={14} className="text-blue-400" />
-                  <span>Type Mastery Coverage</span>
+          {/* Habit, Mistake & Countdown Hub */}
+          <div className="space-y-2.5">
+            <div className="grid grid-cols-2 gap-2.5">
+              <div className="p-3.5 rounded-2xl bg-panel border border-border-subtle flex flex-col justify-between">
+                <span className="text-[10px] font-bold text-app-fg/60 flex items-center gap-1">
+                  <Flame size={14} className="text-amber-500 fill-amber-500" />
+                  <span>Daily Streak</span>
                 </span>
-                <span className="text-xs font-black text-blue-400">{typeMasteryPct}%</span>
+                <span className="text-2xl font-black text-amber-400 mt-1.5">{userState.streak} Days</span>
+                <span className="text-[9px] font-semibold text-app-fg/40 mt-0.5">Current Streak</span>
               </div>
-              <div className="h-2 w-full bg-app-bg rounded-full overflow-hidden">
-                <div
-                  className="h-full bg-gradient-to-r from-blue-500 to-cyan-400 rounded-full transition-all duration-700"
-                  style={{ width: `${typeMasteryPct}%` }}
-                />
-              </div>
-              <div className="flex items-center justify-between text-[10px] font-bold text-app-fg/40">
-                <span>{masteredTypesCount} / {totalTypesCount} types</span>
-                <Link to="/sat/types" className="text-blue-400 hover:underline">
-                  Drill →
-                </Link>
-              </div>
-            </div>
 
-            <div className="flex items-center justify-between p-3.5 rounded-2xl bg-panel border border-border-subtle">
-              <span className="text-xs font-bold text-app-fg/60">Mistake Bank</span>
               <Link
                 to="/sat/mistakes"
                 onClick={() => play('tap')}
-                className="text-xs font-black text-pink-400 hover:underline flex items-center gap-1"
+                className={clsx(
+                  "p-3.5 rounded-2xl border transition-all flex flex-col justify-between group",
+                  unresolvedMistakesCount > 0
+                    ? "bg-rose-500/10 border-rose-500/30 hover:border-rose-500/50"
+                    : "bg-panel border-border-subtle hover:border-blue-500/30"
+                )}
               >
-                <span>{userState.mistakes.filter(m => !m.resolved).length} Pending</span>
-                <ChevronRight size={14} />
+                <span className="text-[10px] font-bold text-app-fg/60 flex items-center justify-between">
+                  <span>Mistake Bank</span>
+                  {unresolvedMistakesCount > 0 && (
+                    <span className="w-1.5 h-1.5 rounded-full bg-rose-400 animate-ping" />
+                  )}
+                </span>
+                <span className="text-2xl font-black text-rose-400 flex items-center justify-between mt-1.5">
+                  <span>{unresolvedMistakesCount} Pending</span>
+                  <ChevronRight size={14} className="text-app-fg/40 group-hover:translate-x-0.5 transition-transform" />
+                </span>
+                <span className="text-[9px] font-semibold text-rose-400/60 mt-0.5">
+                  {unresolvedMistakesCount > 0 ? "Review to Clear" : "All Traps Cleared"}
+                </span>
               </Link>
             </div>
 
             <div className="flex items-center justify-between p-3.5 rounded-2xl bg-panel border border-border-subtle">
-              <span className="text-xs font-bold text-app-fg/60">Exam Countdown</span>
-              <span className="text-xs font-black text-app-fg flex items-center gap-1.5">
-                <Calendar size={13} className="text-blue-400" />
-                <span>{userState.routine?.daysRemaining || 33} Days Left</span>
+              <span className="text-xs font-bold text-app-fg/60 flex items-center gap-1.5">
+                <Calendar size={14} className="text-blue-400" />
+                <span>Exam Countdown</span>
+              </span>
+              <span className="text-sm font-black text-app-fg">
+                {userState.routine?.daysRemaining || 33} Days Left
               </span>
             </div>
           </div>
@@ -443,7 +641,7 @@ export default function SatDashboard({ onOpenCustomTest }: SatDashboardProps = {
           <Link
             to="/sat/routine"
             onClick={() => play('tap')}
-            className="w-full py-2.5 rounded-xl bg-panel border border-border-subtle hover:bg-white/10 text-xs font-black text-center text-app-fg transition-all block"
+            className="w-full py-3 rounded-2xl bg-panel border border-border-subtle hover:bg-white/10 text-xs font-black text-center text-app-fg transition-all block"
           >
             Adjust Target Date & Score →
           </Link>

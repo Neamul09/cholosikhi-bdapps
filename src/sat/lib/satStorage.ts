@@ -11,6 +11,7 @@ import type {
 import { calculatePredictedScore } from './scorePredictor';
 import { supabase, isSupabaseConfigured } from '../../lib/supabase';
 import { MICRO_TYPES } from '../data/microtypes';
+import { getMicroTypeStats } from '../data/questionsRepo';
 
 const KEYS = {
   ATTEMPTS: 'cs_sat_attempts_v1',
@@ -112,15 +113,92 @@ export function updateSatStreak(state: SatUserState): number {
 }
 
 /**
- * Wipe all cached SAT user state from localStorage
+ * Wipe all cached SAT user state from localStorage and sessionStorage
  */
 export function clearSatUserState(): void {
   if (typeof window === 'undefined') return;
   try {
     Object.values(KEYS).forEach(key => localStorage.removeItem(key));
     localStorage.removeItem('cs_sat_user_name');
+    localStorage.removeItem('cs_sat_formula_mastery');
+    localStorage.removeItem('cs_sat_formula_answers_v2');
+    localStorage.removeItem('cs_sat_formula_answers');
+    localStorage.removeItem('cs_sat_nini_toast_ts');
+    sessionStorage.removeItem('cs_sat_test_in_progress');
+
+    // Clean up any remaining cs_sat_ keys except sidebar preference
+    const toRemove: string[] = [];
+    for (let i = 0; i < localStorage.length; i++) {
+      const k = localStorage.key(i);
+      if (k && k.startsWith('cs_sat_') && k !== 'cs_sat_sidebar_collapsed') {
+        toRemove.push(k);
+      }
+    }
+    toRemove.forEach(k => localStorage.removeItem(k));
   } catch (e) {
     console.debug('[satStorage] clearSatUserState error:', e);
+  }
+}
+
+/**
+ * Completely resets SAT progress across both local storage and cloud database (Supabase).
+ * Deletes question attempts, mastery logs, mistake bank, test results, vocab progress, and routines.
+ */
+export async function resetSatProgress(): Promise<void> {
+  // 1. Wipe local cache immediately
+  clearSatUserState();
+
+  // 2. Wipe cloud database if authenticated
+  if (isSupabaseConfigured) {
+    try {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (user) {
+        // Run cloud deletes in parallel across all SAT tables
+        await Promise.allSettled([
+          supabase.from('sat_user_progress').delete().eq('user_id', user.id),
+          supabase.from('sat_wrong_answers').delete().eq('user_id', user.id),
+          supabase.from('sat_quiz_attempts').delete().eq('user_id', user.id),
+          supabase.from('sat_vocab_progress').delete().eq('user_id', user.id),
+          supabase.from('sat_user_routines').delete().eq('user_id', user.id),
+        ]);
+
+        // Defensive zero-out for sat_user_progress in case RLS blocked delete on this table
+        try {
+          await supabase.from('sat_user_progress').update({
+            attempted: 0,
+            correct: 0,
+            mastery_percentage: 0,
+            status: 'novice',
+            last_practiced_at: new Date().toISOString()
+          }).eq('user_id', user.id);
+        } catch {
+          // ignore
+        }
+
+        // Defensive reset for sat_user_routines: ensure routine row has empty daily_tasks and no stale attempts/XP
+        try {
+          await supabase.from('sat_user_routines').upsert({
+            user_id: user.id,
+            exam_date: '2026-11-07',
+            target_score: 1520,
+            weekly_hours: 6,
+            daily_tasks: [],
+            updated_at: new Date().toISOString()
+          }, { onConflict: 'user_id' });
+        } catch {
+          // ignore
+        }
+      }
+    } catch (err) {
+      console.error('[satStorage] Error resetting SAT progress in cloud:', err);
+    }
+  }
+
+  // 3. Dispatch events to notify active listeners
+  if (typeof window !== 'undefined') {
+    window.dispatchEvent(new CustomEvent('cs_sat_streak_updated', { detail: { streak: 0 } }));
+    window.dispatchEvent(new CustomEvent('sat_state_updated'));
+    window.dispatchEvent(new Event('storage'));
   }
 }
 
@@ -225,12 +303,15 @@ export function recordQuestionAttempt(
 
   currentMastery.attempted++;
   if (isCorrect) currentMastery.correct++;
-  currentMastery.masteryPercentage = Math.round((currentMastery.correct / currentMastery.attempted) * 100);
+  const statsMap = getMicroTypeStats();
+  const totalInType = statsMap[microTypeId]?.total || Math.max(1, currentMastery.attempted);
+  currentMastery.masteryPercentage = Math.min(100, Math.round((currentMastery.correct / totalInType) * 100));
   currentMastery.lastPracticed = new Date().toISOString();
 
-  if (currentMastery.masteryPercentage >= 85 && currentMastery.attempted >= 3) {
+  // Status considers both coverage mastery and accuracy
+  if (currentMastery.masteryPercentage >= 80 || (currentMastery.correct >= 5 && currentMastery.correct / currentMastery.attempted >= 0.85)) {
     currentMastery.status = 'mastered';
-  } else if (currentMastery.masteryPercentage >= 65) {
+  } else if (currentMastery.masteryPercentage >= 40 || (currentMastery.correct >= 2 && currentMastery.correct / currentMastery.attempted >= 0.65)) {
     currentMastery.status = 'proficient';
   } else if (currentMastery.attempted >= 1) {
     currentMastery.status = 'practicing';
@@ -240,13 +321,6 @@ export function recordQuestionAttempt(
 
   // 3. Handle Mistake Bank with Spaced Repetition (SRS)
   const todayStr = new Date().toISOString().split('T')[0];
-
-  function getSrsNextDate(stage: number): string {
-    const d = new Date();
-    const days = stage === 1 ? 1 : stage === 2 ? 3 : stage === 3 ? 7 : 0;
-    d.setDate(d.getDate() + days);
-    return d.toISOString().split('T')[0];
-  }
 
   if (!isCorrect) {
     const existingMistakeIndex = state.mistakes.findIndex(m => m.questionId === questionId);
@@ -278,24 +352,16 @@ export function recordQuestionAttempt(
       });
     }
   } else {
-    // If was previously mistaken and now answered correctly
-    const existingMistake = state.mistakes.find(m => m.questionId === questionId && !m.resolved);
-    if (existingMistake) {
-      existingMistake.timesRetried++;
-      existingMistake.lastReviewedAt = new Date().toISOString();
-      const currentStage = existingMistake.srsStage ?? 0;
-      const nextStage = currentStage + 1;
-
-      if (nextStage >= 4) {
-        existingMistake.srsStage = 4;
-        existingMistake.resolved = true;
-        existingMistake.nextReviewDate = undefined;
-      } else {
-        existingMistake.srsStage = nextStage;
-        existingMistake.nextReviewDate = getSrsNextDate(nextStage);
-        existingMistake.resolved = false;
+    // If was previously mistaken and now answered correctly -> mark ALL matching mistake records resolved
+    state.mistakes.forEach(m => {
+      if (m.questionId === questionId && !m.resolved) {
+        m.timesRetried++;
+        m.lastReviewedAt = new Date().toISOString();
+        m.resolved = true;
+        m.srsStage = 4;
+        m.nextReviewDate = undefined;
       }
-    }
+    });
   }
   localStorage.setItem(KEYS.MISTAKES, JSON.stringify(state.mistakes));
 
@@ -319,6 +385,11 @@ export function recordQuestionAttempt(
   state.xp += xpEarned;
   localStorage.setItem(KEYS.XP, String(state.xp));
   updateSatStreak(state);
+
+  // Broadcast state change immediately so all cards and counts re-render synchronously
+  if (typeof window !== 'undefined') {
+    window.dispatchEvent(new CustomEvent('sat_state_updated'));
+  }
 
   // 5. Sync to Supabase in background if authenticated
   syncToSupabase(state);
@@ -470,6 +541,7 @@ export function recordQuizSession(result: QuizSessionResult) {
   try {
     const rawStatus = localStorage.getItem(KEYS.QUESTION_STATUS);
     const statusMap = rawStatus ? JSON.parse(rawStatus) : {};
+    let mistakesUpdated = false;
     for (const qs of result.questionStates) {
       if (qs.userAnswer) {
         const existing = statusMap[qs.question.id];
@@ -478,9 +550,24 @@ export function recordQuizSession(result: QuizSessionResult) {
           attemptsCount: (existing?.attemptsCount || 0) + 1,
           lastAttemptedAt: new Date().toISOString()
         };
+
+        if (qs.isCorrect) {
+          const m = state.mistakes.find(item => item.questionId === qs.question.id && !item.resolved);
+          if (m) {
+            m.resolved = true;
+            m.srsStage = 4;
+            m.timesRetried++;
+            m.lastReviewedAt = new Date().toISOString();
+            m.nextReviewDate = undefined;
+            mistakesUpdated = true;
+          }
+        }
       }
     }
     localStorage.setItem(KEYS.QUESTION_STATUS, JSON.stringify(statusMap));
+    if (mistakesUpdated) {
+      localStorage.setItem(KEYS.MISTAKES, JSON.stringify(state.mistakes));
+    }
   } catch {
     // ignore
   }
@@ -767,18 +854,20 @@ export async function loadSatUserStateFromCloud(): Promise<SatUserState | null> 
       }
 
       // Cloud data strictly authoritative for authenticated users
-      local.xp = cloudXp > 0 ? cloudXp : local.xp;
+      local.xp = typeof cloudXp === 'number' ? cloudXp : local.xp;
       localStorage.setItem(KEYS.XP, String(local.xp));
 
-      if (cloudStreak > 0 && cloudStreak >= local.streak) {
+      const totalAttemptsCount = (cloudAttempts !== null ? cloudAttempts.length : local.attempts.length);
+      if (cloudStreak > 0) {
         local.streak = cloudStreak;
-        localStorage.setItem(KEYS.STREAK, String(local.streak));
+      } else if (totalAttemptsCount === 0) {
+        local.streak = 0;
       } else if (local.streak > 0) {
-        localStorage.setItem(KEYS.STREAK, String(local.streak));
-      } else if (local.attempts.length > 0 || (cloudAttempts && cloudAttempts.length > 0)) {
+        // preserve current valid local streak
+      } else {
         local.streak = 1;
-        localStorage.setItem(KEYS.STREAK, '1');
       }
+      localStorage.setItem(KEYS.STREAK, String(local.streak));
 
       local.routine = {
         examDate: routineData.exam_date,
@@ -790,11 +879,13 @@ export async function loadSatUserStateFromCloud(): Promise<SatUserState | null> 
       };
       localStorage.setItem(KEYS.ROUTINE, JSON.stringify(local.routine));
 
-      local.attempts = cloudAttempts || local.attempts || [];
+      local.attempts = cloudAttempts !== null ? cloudAttempts : (local.attempts || []);
       localStorage.setItem(KEYS.ATTEMPTS, JSON.stringify(local.attempts));
 
       if (cloudQuestionStatus && typeof cloudQuestionStatus === 'object') {
         localStorage.setItem(KEYS.QUESTION_STATUS, JSON.stringify(cloudQuestionStatus));
+      } else {
+        localStorage.setItem(KEYS.QUESTION_STATUS, '{}');
       }
     } else {
       if (local.attempts.length > 0) {
@@ -818,8 +909,9 @@ export async function loadSatUserStateFromCloud(): Promise<SatUserState | null> 
       .eq('user_id', user.id);
 
     local.mastery = {};
-    if (progressData && progressData.length > 0) {
-      for (const p of progressData) {
+    const validProgressData = (progressData || []).filter(p => p.attempted > 0);
+    if (validProgressData.length > 0) {
+      for (const p of validProgressData) {
         local.mastery[p.micro_type_id] = {
           microTypeId: p.micro_type_id,
           attempted: p.attempted,
@@ -832,10 +924,10 @@ export async function loadSatUserStateFromCloud(): Promise<SatUserState | null> 
     }
     localStorage.setItem(KEYS.MASTERY, JSON.stringify(local.mastery));
 
-    // If attempts was empty and we have progress records, reconstruct attempts
-    if (local.attempts.length === 0 && progressData && progressData.length > 0) {
+    // If attempts was empty and we have valid progress records, reconstruct attempts
+    if (local.attempts.length === 0 && validProgressData.length > 0) {
       const reconstructedAttempts: QuestionAttemptLog[] = [];
-      for (const p of progressData) {
+      for (const p of validProgressData) {
         for (let i = 0; i < p.correct; i++) {
           reconstructedAttempts.push({
             section: p.section,
@@ -875,23 +967,51 @@ export async function loadSatUserStateFromCloud(): Promise<SatUserState | null> 
       .select('*')
       .eq('user_id', user.id);
 
-    local.mistakes = (mistakesData || []).map(m => ({
-      id: m.id,
-      questionId: m.question_id,
-      userAnswer: m.user_answer,
-      correctAnswer: m.correct_answer,
-      section: m.section as SatTestSection,
-      domain: m.domain,
-      skill: m.skill,
-      microType: m.micro_type_id,
-      recordedAt: m.created_at,
-      errorReason: m.error_reason,
-      resolved: m.resolved,
-      timesRetried: m.times_retried,
-      srsStage: m.srs_stage ?? (m.resolved ? 4 : 0),
-      nextReviewDate: m.next_review_date,
-      lastReviewedAt: m.last_reviewed_at
-    }));
+    // Build map of locally known mistake resolutions to avoid cloud race clobbering
+    const locallyResolvedIds = new Set(
+      local.mistakes.filter(m => m.resolved).map(m => m.questionId)
+    );
+
+    const fetchedMistakes = (mistakesData || []).map(m => {
+      const isResolved = Boolean(m.resolved) || locallyResolvedIds.has(m.question_id);
+      return {
+        id: m.id,
+        questionId: m.question_id,
+        userAnswer: m.user_answer,
+        correctAnswer: m.correct_answer,
+        section: m.section as SatTestSection,
+        domain: m.domain,
+        skill: m.skill,
+        microType: m.micro_type_id,
+        recordedAt: m.created_at,
+        errorReason: m.error_reason,
+        resolved: isResolved,
+        timesRetried: m.times_retried,
+        srsStage: m.srs_stage ?? (isResolved ? 4 : 0),
+        nextReviewDate: isResolved ? undefined : m.next_review_date,
+        lastReviewedAt: m.last_reviewed_at
+      };
+    });
+
+    // Deduplicate by questionId
+    const mistakeMap = new Map<string, MistakeRecord>();
+    for (const m of fetchedMistakes) {
+      const existing = mistakeMap.get(m.questionId);
+      if (!existing || (m.resolved && !existing.resolved)) {
+        mistakeMap.set(m.questionId, m);
+      }
+    }
+    for (const m of local.mistakes) {
+      if (!mistakeMap.has(m.questionId)) {
+        mistakeMap.set(m.questionId, m);
+      } else if (m.resolved) {
+        const item = mistakeMap.get(m.questionId)!;
+        item.resolved = true;
+        item.srsStage = 4;
+      }
+    }
+
+    local.mistakes = Array.from(mistakeMap.values());
     localStorage.setItem(KEYS.MISTAKES, JSON.stringify(local.mistakes));
 
     // 5. Fetch vocab progress from sat_vocab_progress

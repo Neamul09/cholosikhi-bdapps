@@ -1,6 +1,7 @@
 import { useState, useRef, useEffect } from 'react';
 import { X, Maximize2, Minimize2, RotateCcw, Calculator } from 'lucide-react';
 import { play } from '../../lib/audio';
+import { clsx } from 'clsx';
 
 interface DesmosModalProps {
   isOpen: boolean;
@@ -11,6 +12,7 @@ export default function DesmosModal({ isOpen, onClose }: DesmosModalProps) {
   const [sizeMode, setSizeMode] = useState<'standard' | 'expanded' | 'fullscreen'>('standard');
   const [iframeKey, setIframeKey] = useState(0);
   const [isLoading, setIsLoading] = useState(true);
+  const [hasEverOpened, setHasEverOpened] = useState(isOpen);
 
   // Position state for floating window (drag support)
   const [position, setPosition] = useState<{ x: number; y: number } | null>(null);
@@ -22,23 +24,22 @@ export default function DesmosModal({ isOpen, onClose }: DesmosModalProps) {
     posY: 0
   });
 
-  // Reset position when reopened
+  // Track opening & default position on desktop
   useEffect(() => {
     if (isOpen) {
-      // Default to right side on desktop
+      setHasEverOpened(true);
       const isMobile = window.innerWidth < 768;
       if (isMobile) {
         setPosition(null);
-      } else {
+      } else if (!position) {
         const defaultX = Math.max(20, window.innerWidth - 840);
         const defaultY = 70;
         setPosition({ x: defaultX, y: defaultY });
       }
-      setIsLoading(true);
     }
-  }, [isOpen]);
+  }, [isOpen, position]);
 
-  if (!isOpen) return null;
+  if (!hasEverOpened) return null;
 
   const handleReset = () => {
     play('tap');
@@ -96,11 +97,12 @@ export default function DesmosModal({ isOpen, onClose }: DesmosModalProps) {
             }
           : undefined
       }
-      className={
+      className={clsx(
+        !isOpen && "hidden invisible pointer-events-none",
         !isFloating
           ? 'fixed inset-0 z-50 flex items-center justify-center p-2 sm:p-4 bg-black/40 backdrop-blur-sm pointer-events-auto'
           : 'pointer-events-auto'
-      }
+      )}
     >
       <div
         style={isFloating ? { resize: 'both', overflow: 'hidden', minWidth: '400px', minHeight: '420px' } : undefined}

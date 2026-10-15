@@ -112,31 +112,33 @@ export default function SatApp() {
       {/* Main Page Content Workspace (Responsive to Sidebar Collapse) */}
       <main
         className={clsx(
-          "flex-1 min-h-screen pt-16 md:pt-6 pb-24 md:pb-8 px-3 sm:px-6 w-full max-w-7xl mx-auto overflow-x-hidden transition-all duration-300 ease-in-out",
-          !isSidebarCollapsed ? "md:pl-64 lg:pl-72" : "md:pl-6 lg:pl-8"
+          "flex-1 min-h-screen pt-16 md:pt-6 pb-24 md:pb-8 w-full overflow-x-hidden transition-all duration-300 ease-in-out",
+          !isSidebarCollapsed ? "md:ml-64 lg:ml-72" : "md:ml-0"
         )}
       >
-        <Routes>
-          {/* Always accessible even when unpaid / pending charge */}
-          <Route path="/leaderboard" element={<SatLeaderboard />} />
-          <Route path="/profile" element={<SatProfilePage />} />
+        <div className="w-full max-w-7xl mx-auto px-3 sm:px-6 lg:px-8">
+          <Routes>
+            {/* Always accessible even when unpaid / pending charge */}
+            <Route path="/leaderboard" element={<SatLeaderboard />} />
+            <Route path="/profile" element={<SatProfilePage />} />
 
-          {/* Paid / Active Subscription Protected Routes */}
-          <Route element={<SubscriptionGuard suite="sat" />}>
-            <Route path="/" element={<SatDashboard onOpenCustomTest={() => setShowCustomQuizModal(true)} />} />
-            <Route path="/dashboard" element={<SatDashboard onOpenCustomTest={() => setShowCustomQuizModal(true)} />} />
-            <Route path="/quick-practice" element={<SatQuickPracticePage />} />
-            <Route path="/types" element={<SatTypeDrillPage />} />
-            <Route path="/quiz" element={<SatQuizPage />} />
-            <Route path="/hardest" element={<SatHardestVault />} />
-            <Route path="/mistakes" element={<SatMistakeBank />} />
-            <Route path="/routine" element={<SatRoutinePage />} />
-            <Route path="/vocab" element={<SatVocabPage />} />
-            <Route path="/resources" element={<SatResourcesPage />} />
-            <Route path="/ai-tutor" element={<SatAiTutor />} />
-          </Route>
-          <Route path="*" element={<Navigate to="/sat" replace />} />
-        </Routes>
+            {/* Paid / Active Subscription Protected Routes */}
+            <Route element={<SubscriptionGuard suite="sat" />}>
+              <Route path="/" element={<SatDashboard onOpenCustomTest={() => setShowCustomQuizModal(true)} />} />
+              <Route path="/dashboard" element={<SatDashboard onOpenCustomTest={() => setShowCustomQuizModal(true)} />} />
+              <Route path="/quick-practice" element={<SatQuickPracticePage />} />
+              <Route path="/types" element={<SatTypeDrillPage />} />
+              <Route path="/quiz" element={<SatQuizPage />} />
+              <Route path="/hardest" element={<SatHardestVault />} />
+              <Route path="/mistakes" element={<SatMistakeBank />} />
+              <Route path="/routine" element={<SatRoutinePage />} />
+              <Route path="/vocab" element={<SatVocabPage />} />
+              <Route path="/resources" element={<SatResourcesPage />} />
+              <Route path="/ai-tutor" element={<SatAiTutor />} />
+            </Route>
+            <Route path="*" element={<Navigate to="/sat" replace />} />
+          </Routes>
+        </div>
       </main>
 
       {/* Custom Quiz & Practice Test Modal */}

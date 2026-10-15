@@ -51,13 +51,13 @@ export interface QuizModuleDefinition {
 }
 
 function computeModulesForTest(pool: SatQuestion[], isExamMode: boolean): QuizModuleDefinition[] {
-  if (!isExamMode && pool.length < 40) {
+  if (!isExamMode) {
     return [
       {
         moduleIndex: 0,
         section: pool[0]?.test || 'math',
         sectionTitle: pool[0]?.test === 'reading_writing' ? 'Section 1: Reading and Writing' : 'Section 2: Math',
-        moduleTitle: 'Practice Drill',
+        moduleTitle: pool.length === 1 ? 'Question Practice' : 'Practice Drill',
         startIndex: 0,
         endIndex: pool.length,
         questionCount: pool.length,
@@ -310,7 +310,14 @@ export default function SatQuizPage() {
   useEffect(() => {
     let pool: SatQuestion[];
 
-    if (mode === 'hardest_drill' && microTypeParam) {
+    if (questionIdParam && (!countParam || countParam === 1)) {
+      const specific = getQuestionById(questionIdParam);
+      if (specific) {
+        pool = [specific];
+      } else {
+        pool = shuffleArray(getAllQuestions()).slice(0, 1);
+      }
+    } else if (mode === 'hardest_drill' && microTypeParam) {
       const allHardest = getAllHardestQuestionsForMicroType(microTypeParam);
       if (questionIdParam) {
         const specific = getQuestionById(questionIdParam);
@@ -504,7 +511,10 @@ export default function SatQuizPage() {
     setQuestionStates(evaluatedStates);
 
     const correctCount = evaluatedStates.filter(s => s.isCorrect).length;
-    const accuracy = Math.round((correctCount / questions.length) * 100);
+    const skippedCount = evaluatedStates.filter(s => Boolean(s.isSkipped || (!s.userAnswer && s.isSkipped !== false))).length;
+    const answeredCount = evaluatedStates.filter(s => Boolean(s.userAnswer)).length;
+    const incorrectCount = Math.max(0, answeredCount - correctCount);
+    const accuracy = questions.length > 0 ? Math.round((correctCount / questions.length) * 100) : 0;
 
     const result: QuizSessionResult = {
       id: 'session-' + Date.now(),
@@ -513,8 +523,9 @@ export default function SatQuizPage() {
       section: sectionParam === 'all' ? 'full' : sectionParam,
       totalQuestions: questions.length,
       correctCount,
-      incorrectCount: questions.length - correctCount,
-      unansweredCount: evaluatedStates.filter(s => !s.userAnswer).length,
+      incorrectCount,
+      unansweredCount: questions.length - answeredCount,
+      skippedCount,
       accuracy,
       timeSpentSeconds: questions.length * 80 - timeRemainingSeconds,
       xpEarned: correctCount * 20 + 25,
@@ -598,9 +609,16 @@ export default function SatQuizPage() {
     }
   }, [currentModuleIdx, handleFinishQuiz, modules]);
 
-  // Main active module timer countdown
+  // Check / Submit single question state for practice drill mode
+  const [submittedCurrent, setSubmittedCurrent] = useState(false);
+
   useEffect(() => {
-    if (isQuizCompleted || timedParam === 'false' || isOnBreak) return;
+    setSubmittedCurrent(false);
+  }, [currentIndex]);
+
+  // Main active module timer countdown (Freezes in practice mode when submitted to review explanation)
+  useEffect(() => {
+    if (isQuizCompleted || timedParam === 'false' || isOnBreak || (!isExamMode && submittedCurrent)) return;
     const timer = setInterval(() => {
       setTimeRemainingSeconds(prev => {
         if (prev <= 1) {
@@ -612,7 +630,7 @@ export default function SatQuizPage() {
       });
     }, 1000);
     return () => clearInterval(timer);
-  }, [isQuizCompleted, timedParam, isOnBreak, currentModuleIdx, modules, handleTimeExpiredAdvance]);
+  }, [isQuizCompleted, timedParam, isOnBreak, isExamMode, submittedCurrent, currentModuleIdx, modules, handleTimeExpiredAdvance]);
 
   // 10-Minute Break countdown timer
   useEffect(() => {
@@ -670,13 +688,6 @@ export default function SatQuizPage() {
     });
   };
 
-  // Check / Submit single question for practice drill mode
-  const [submittedCurrent, setSubmittedCurrent] = useState(false);
-
-  useEffect(() => {
-    setSubmittedCurrent(false);
-  }, [currentIndex]);
-
   const handleSubmitQuestion = () => {
     const ans = currentState.userAnswer?.trim();
     if (!ans) return;
@@ -709,6 +720,26 @@ export default function SatQuizPage() {
       copy[currentIndex] = { ...copy[currentIndex], isCorrect: isAnsCorrect };
       return copy;
     });
+  };
+
+  const handleSkipQuestion = () => {
+    play('tap');
+    setQuestionStates(prev => {
+      const copy = [...prev];
+      copy[currentIndex] = {
+        ...copy[currentIndex],
+        isSkipped: true
+      };
+      return copy;
+    });
+
+    if (isModuleBased) {
+      if (currentIndex + 1 < activeModule.endIndex) {
+        setCurrentIndex(currentIndex + 1);
+      }
+    } else if (currentIndex + 1 < questions.length) {
+      setCurrentIndex(currentIndex + 1);
+    }
   };
 
   const handlePracticeMoreInMicroType = () => {
@@ -849,7 +880,10 @@ export default function SatQuizPage() {
   // ─── Quiz Results Screen ──────────────────────────────────────────
   if (isQuizCompleted) {
     const correctCount = questionStates.filter(s => s.isCorrect).length;
-    const accuracy = Math.round((correctCount / questions.length) * 100);
+    const skippedCount = questionStates.filter(s => Boolean(s.isSkipped || (!s.userAnswer && s.isSkipped !== false))).length;
+    const answeredCount = questionStates.filter(s => Boolean(s.userAnswer)).length;
+    const wrongCount = Math.max(0, answeredCount - correctCount);
+    const accuracy = questions.length > 0 ? Math.round((correctCount / questions.length) * 100) : 0;
     const xpGained = correctCount * 20 + 25;
     const microTypeInfo = microTypeParam ? MICRO_TYPE_MAP.get(microTypeParam) : null;
 
@@ -884,18 +918,22 @@ export default function SatQuizPage() {
             />
           </div>
 
-          <div className="grid grid-cols-3 gap-3 max-w-md mx-auto pt-4">
+          <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 max-w-lg mx-auto pt-4">
             <div className="p-4 rounded-2xl bg-panel border border-border-subtle">
               <span className="text-[10px] font-black uppercase tracking-wider text-app-fg/40 block">Correct</span>
               <span className="text-2xl font-black text-emerald-400">{correctCount}</span>
             </div>
             <div className="p-4 rounded-2xl bg-panel border border-border-subtle">
-              <span className="text-[10px] font-black uppercase tracking-wider text-app-fg/40 block">Accuracy</span>
-              <span className="text-2xl font-black text-blue-400">{accuracy}%</span>
+              <span className="text-[10px] font-black uppercase tracking-wider text-app-fg/40 block">Wrong</span>
+              <span className="text-2xl font-black text-rose-400">{wrongCount}</span>
             </div>
             <div className="p-4 rounded-2xl bg-panel border border-border-subtle">
-              <span className="text-[10px] font-black uppercase tracking-wider text-app-fg/40 block">XP Gained</span>
-              <span className="text-2xl font-black text-amber-400">+{xpGained}</span>
+              <span className="text-[10px] font-black uppercase tracking-wider text-app-fg/40 block">Skipped</span>
+              <span className="text-2xl font-black text-amber-400">{skippedCount}</span>
+            </div>
+            <div className="p-4 rounded-2xl bg-panel border border-border-subtle">
+              <span className="text-[10px] font-black uppercase tracking-wider text-app-fg/40 block">Accuracy</span>
+              <span className="text-2xl font-black text-blue-400">{accuracy}%</span>
             </div>
           </div>
 
@@ -988,6 +1026,7 @@ export default function SatQuizPage() {
         onFinishQuiz={handleFinishQuiz}
         onOpenQuestionGrid={() => setShowQuestionGrid(true)}
         onExit={() => setShowExitConfirm(true)}
+        onSkip={handleSkipQuestion}
         timeRemainingSeconds={timeRemainingSeconds}
         isPracticeMode={mode !== 'practice_test'}
         moduleTitle={isModuleBased ? activeModule.moduleTitle : undefined}
@@ -1030,6 +1069,7 @@ export default function SatQuizPage() {
                 const s = questionStates[globalIdx];
                 const isCurrent = globalIdx === currentIndex;
                 const isAnswered = Boolean(s?.userAnswer);
+                const isSkipped = Boolean(s?.isSkipped);
                 const isFlagged = Boolean(s?.isMarkedForReview);
 
                 return (
@@ -1046,6 +1086,8 @@ export default function SatQuizPage() {
                         ? "border-blue-500 bg-blue-500/20 text-blue-400 scale-105"
                         : isAnswered
                         ? "border-emerald-500/40 bg-emerald-500/10 text-emerald-400"
+                        : isSkipped
+                        ? "border-amber-500/50 bg-amber-500/15 text-amber-400"
                         : "border-border-subtle bg-panel text-app-fg/70 hover:border-app-fg/40"
                     )}
                   >
@@ -1065,6 +1107,9 @@ export default function SatQuizPage() {
               </span>
               <span className="flex items-center gap-1.5">
                 <span className="w-3 h-3 rounded-full bg-emerald-500/40 border border-emerald-500" /> Answered
+              </span>
+              <span className="flex items-center gap-1.5">
+                <span className="w-3 h-3 rounded-full bg-amber-500/40 border border-amber-500" /> Skipped
               </span>
               <span className="flex items-center gap-1.5">
                 <span className="w-2.5 h-2.5 rounded-full bg-amber-400" /> Flagged

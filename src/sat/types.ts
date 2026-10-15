@@ -105,6 +105,7 @@ export interface QuizQuestionState {
   question: SatQuestion;
   userAnswer?: string;
   isCorrect?: boolean;
+  isSkipped?: boolean;
   timeSpentSeconds: number;
   isMarkedForReview: boolean;
   eliminatedOptions: string[]; // ['A', 'C']
@@ -120,6 +121,7 @@ export interface QuizSessionResult {
   correctCount: number;
   incorrectCount: number;
   unansweredCount: number;
+  skippedCount?: number;
   accuracy: number; // 0 - 100
   timeSpentSeconds: number;
   xpEarned: number;

@@ -7,7 +7,7 @@ import { useSettingsStore } from '@/store/settingsStore';
 import { useAuthStore } from '@/store/authStore';
 import { play } from '@/lib/audio';
 import Confirm from '@/pages/profile/Confirm';
-import { clearSatUserState, loadSatUserState, saveRoutinePlan } from '../../lib/satStorage';
+import { loadSatUserState, saveRoutinePlan, resetSatProgress } from '../../lib/satStorage';
 import { supabase } from '../../../lib/supabase';
 import UnsubscribeModal from '../../../components/UnsubscribeModal';
 
@@ -25,6 +25,7 @@ export default function SatSettingsTab() {
   const [dailyQuestionGoal, setDailyQuestionGoal] = useState(20);
 
   const [resetOpen, setResetOpen] = useState(false);
+  const [isResetting, setIsResetting] = useState(false);
   const [signOutOpen, setSignOutOpen] = useState(false);
   const [savedToast, setSavedToast] = useState(false);
 
@@ -66,11 +67,18 @@ export default function SatSettingsTab() {
     }
   };
 
-  const confirmReset = useCallback(() => {
-    clearSatUserState();
-    setUserState(loadSatUserState());
-    setResetOpen(false);
-    window.location.reload();
+  const confirmReset = useCallback(async () => {
+    setIsResetting(true);
+    try {
+      await resetSatProgress();
+      setUserState(loadSatUserState());
+      setResetOpen(false);
+      window.location.reload();
+    } catch (err) {
+      console.error('[SatSettingsTab] confirmReset error:', err);
+      setIsResetting(false);
+      setResetOpen(false);
+    }
   }, []);
 
   const confirmSignOut = useCallback(async () => {
@@ -153,10 +161,12 @@ export default function SatSettingsTab() {
         open={resetOpen}
         title={tx.resetTitle}
         body={tx.resetBody}
-        confirmLabel={tx.resetConfirm}
+        confirmLabel={isResetting ? (language === 'bn' ? 'মুছে ফেলা হচ্ছে...' : 'Resetting...') : tx.resetConfirm}
         cancelLabel={tx.resetCancel}
         onConfirm={confirmReset}
-        onCancel={() => setResetOpen(false)}
+        onCancel={() => {
+          if (!isResetting) setResetOpen(false);
+        }}
       />
       <Confirm
         open={signOutOpen}
@@ -374,9 +384,10 @@ export default function SatSettingsTab() {
         <div className="flex flex-col sm:flex-row gap-3 pt-1">
           <button
             onClick={() => setResetOpen(true)}
-            className="px-5 py-2.5 rounded-xl font-black text-xs bg-rose-500/20 text-rose-400 hover:bg-rose-500 hover:text-white transition-colors"
+            disabled={isResetting}
+            className="px-5 py-2.5 rounded-xl font-black text-xs bg-rose-500/20 text-rose-400 hover:bg-rose-500 hover:text-white transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
           >
-            {tx.reset}
+            {isResetting ? (language === 'bn' ? 'মুছে ফেলা হচ্ছে...' : 'Resetting...') : tx.reset}
           </button>
 
           <button
